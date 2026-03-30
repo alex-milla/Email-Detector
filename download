@@ -1,0 +1,37 @@
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Configuración con credenciales (usar .env.example como plantilla)
+config/.env
+config/ssl/
+
+# Datos y modelos entrenados (pueden ser grandes)
+data/
+models/
+results/
+
+# Logs
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Base de datos local
+*.db
+*.sqlite3
+
+# Backups generados por el sistema
+*.bak_*
+
+# macOS / editores
+.DS_Store
+.idea/
+.vscode/
+*.swp

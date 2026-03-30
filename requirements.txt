@@ -1,0 +1,36 @@
+# Email Malware Detector — dependencias Python
+# Instalar con: pip install -r requirements.txt
+
+# --- Core ML ---
+scikit-learn
+pandas
+numpy
+joblib
+imbalanced-learn          # imblearn
+
+# --- Modelos opcionales (GPU opcional en xgboost/lightgbm) ---
+xgboost
+lightgbm
+catboost
+
+# --- Web ---
+flask
+flask-cors
+gunicorn
+werkzeug
+bcrypt
+
+# --- Conectores de correo ---
+imaplib2
+msal                        # Microsoft 365 / Azure AD
+google-auth
+google-auth-oauthlib
+google-api-python-client    # Gmail OAuth
+
+# --- Utilidades ---
+requests
+python-dotenv
+pyyaml
+
+# --- Escaneo de adjuntos ---
+pyclamd                     # ClamAV (requiere clamd corriendo)
