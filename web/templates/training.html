@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrenamiento — Email Malware Detector</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',system-ui,sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; }
+        .container { max-width:900px; margin:0 auto; padding:20px; }
+
+        nav { background:#1e293b; border-bottom:2px solid #3b82f6; }
+        nav .nav-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; }
+        nav .nav-brand { padding:16px 24px; font-size:1.1em; font-weight:700; border-right:1px solid #334155; }
+        nav .nav-brand span { color:#3b82f6; }
+        nav a.nav-link { padding:18px 22px; color:#94a3b8; text-decoration:none; font-weight:500; border-bottom:3px solid transparent; transition:all 0.2s; }
+        nav a.nav-link:hover { color:#e2e8f0; background:rgba(59,130,246,0.08); }
+        nav a.nav-link.active { color:#3b82f6; border-bottom-color:#3b82f6; }
+        .nav-right { margin-left:auto; padding:0 20px; display:flex; align-items:center; gap:12px; }
+        .nav-user  { color:#64748b; font-size:0.9em; }
+        nav a.nav-logout { color:#ef4444; text-decoration:none; font-size:0.9em; }
+
+        .page-header { margin:30px 0 24px; }
+        .page-header h1 { font-size:1.5em; }
+        .page-header p  { color:#64748b; margin-top:5px; font-size:0.9em; }
+
+        .card { background:#1e293b; border-radius:12px; padding:24px; margin-bottom:20px; }
+        .card-header { margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid #334155; }
+        .card-header h2 { font-size:1.1em; }
+        .card-header p  { color:#64748b; font-size:0.85em; margin-top:4px; }
+
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:20px; }
+        .stat-card { background:#0f172a; border-radius:10px; padding:16px; border-left:4px solid #3b82f6; }
+        .stat-card.success { border-left-color:#22c55e; }
+        .stat-card.danger  { border-left-color:#ef4444; }
+        .stat-card.warning { border-left-color:#eab308; }
+        .stat-number { font-size:1.8em; font-weight:bold; }
+        .stat-label  { color:#94a3b8; font-size:0.82em; margin-top:4px; }
+
+        .model-meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-top:16px; }
+        .meta-item  { background:#0f172a; border-radius:8px; padding:12px; }
+        .meta-label { color:#64748b; font-size:0.78em; margin-bottom:4px; }
+        .meta-value { font-weight:600; }
+
+        .feedback-banner { background:#0f172a; border:1px solid #334155; border-radius:10px; padding:14px 18px; margin-bottom:20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+        .feedback-banner .fb-count { font-size:1.4em; font-weight:700; }
+        .feedback-banner .fb-detail { color:#64748b; font-size:0.85em; }
+        .feedback-banner .fb-hint   { font-size:0.82em; margin-left:auto; }
+        .fb-hint.ok      { color:#22c55e; }
+        .fb-hint.warn    { color:#eab308; }
+        .fb-hint.neutral { color:#475569; }
+
+        .btn { padding:10px 20px; border:none; border-radius:8px; cursor:pointer; font-size:0.9em; font-weight:600; transition:all 0.2s; display:inline-flex; align-items:center; gap:6px; }
+        .btn-primary   { background:#3b82f6; color:white; }
+        .btn-primary:hover  { background:#2563eb; }
+        .btn-success   { background:#22c55e; color:white; }
+        .btn-success:hover  { background:#16a34a; }
+        .btn-secondary { background:#1a2535; color:#94a3b8; border:1px solid #334155; }
+        .btn-secondary:hover { background:#243044; color:#e2e8f0; }
+        .btn:disabled  { opacity:0.5; cursor:not-allowed; }
+
+        .btn-group { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+
+        .status-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; min-height:32px; }
+        .status-text { font-size:0.9em; color:#94a3b8; }
+
+        .log-box { background:#0a1020; border:1px solid #334155; border-radius:8px; padding:14px; font-family:monospace; font-size:0.83em; white-space:pre-wrap; max-height:380px; overflow-y:auto; color:#64748b; display:none; margin-top:12px; }
+        .log-box.visible { display:block; }
+        .log-box.success { border-color:#22c55e; color:#86efac; }
+        .log-box.error   { border-color:#ef4444; color:#fca5a5; }
+        .log-box.running { border-color:#3b82f6; color:#93c5fd; }
+
+        .spinner { display:none; width:24px; height:24px; border:3px solid #334155; border-top:3px solid #3b82f6; border-radius:50%; animation:spin 1s linear infinite; flex-shrink:0; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        .step { display:flex; gap:14px; padding:14px 0; border-bottom:1px solid #1e293b; }
+        .step:last-child { border-bottom:none; }
+        .step-num { background:#3b82f6; color:white; border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.82em; flex-shrink:0; margin-top:2px; }
+        .step-body h4 { margin-bottom:3px; }
+        .step-body p  { color:#64748b; font-size:0.87em; }
+
+        .locked-msg { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:12px 16px; color:#64748b; font-size:0.88em; margin-top:14px; }
+
+        .models-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:16px;}
+        .model-card{background:#0f172a;border-radius:10px;padding:14px 16px;border:1px solid #283548;position:relative;}
+        .model-card.best{border-color:#3b82f6;}
+        .mc-badge{position:absolute;top:10px;right:10px;font-size:0.7em;padding:2px 8px;border-radius:10px;font-weight:700;}
+        .mc-badge.best{background:rgba(59,130,246,0.15);color:#60a5fa;}
+        .mc-badge.bagging{background:rgba(34,197,94,0.12);color:#4ade80;}
+        .mc-badge.boosting{background:rgba(234,179,8,0.12);color:#facc15;}
+        .mc-badge.base{background:rgba(148,163,184,0.1);color:#94a3b8;}
+        .mc-name{font-weight:700;font-size:0.95em;margin-bottom:8px;padding-right:60px;}
+        .mc-auc{font-size:1.4em;font-weight:700;color:#3b82f6;}
+        .mc-label{color:#64748b;font-size:0.75em;margin-top:2px;}
+        .mc-cv{font-size:0.78em;color:#475569;margin-top:6px;}
+        .mc-err{font-size:0.78em;color:#f87171;margin-top:6px;}
+        .ensemble-banner{background:#0f172a;border:1px solid #3b82f6;border-radius:10px;
+                         padding:14px 18px;margin-top:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+        .eb-num{font-size:1.6em;font-weight:700;color:#3b82f6;}
+        .eb-txt{font-size:0.88em;color:#94a3b8;}
+        .gpu-badge{display:inline-flex;align-items:center;gap:5px;font-size:0.78em;padding:3px 10px;border-radius:10px;margin-left:auto;}
+        .gpu-badge.on{background:rgba(34,197,94,0.1);color:#22c55e;}
+        .gpu-badge.off{background:rgba(100,116,139,0.1);color:#64748b;}
+        .model-toggle{position:absolute;bottom:12px;right:12px;}
+        .mt-input{display:none;}
+        .mt-slider{display:inline-block;width:36px;height:20px;background:#1a2535;
+                   border:1px solid #2d3f55;border-radius:20px;cursor:pointer;transition:.25s;position:relative;}
+        .mt-slider:before{content:"";position:absolute;width:14px;height:14px;
+                          top:2px;left:2px;background:#475569;border-radius:50%;transition:.25s;}
+        .mt-input:checked + .mt-slider{background:#3b82f6;border-color:#3b82f6;}
+        .mt-input:checked + .mt-slider:before{transform:translateX(16px);background:white;}
+        .model-card.disabled-card{opacity:0.42;filter:grayscale(55%);}
+        .model-card.disabled-card .mc-auc{color:#475569;}
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="nav-inner">
+        <div class="nav-brand">🛡️ Email <span>Malware</span> Detector</div>
+        <a href="/" class="nav-link">📊 Dashboard</a>
+        <a href="/training" class="nav-link active">🧠 Entrenamiento</a>
+        {% if user.role == 'admin' %}<a href="/users" class="nav-link">👥 Usuarios</a>{% endif %}
+        <a href="/settings" class="nav-link">⚙️ Mi configuración</a>
+        <div class="nav-right">
+            <span class="nav-user">{{ user.username }}</span>
+            <a href="/logout" class="nav-logout">Cerrar sesión</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="page-header">
+        <h1>🧠 Entrenamiento del Modelo</h1>
+        <p>Gestiona el dataset y entrena la IA para mejorar las detecciones</p>
+    </div>
+
+    <!-- Estado del modelo -->
+    <div class="card">
+        <div class="card-header">
+            <h2>📊 Estado del Modelo</h2>
+            <p>Información sobre el modelo de IA actualmente cargado</p>
+        </div>
+
+        <!-- Feedback pendiente -->
+        <div class="feedback-banner" id="feedbackBanner">
+            <span class="fb-count" id="fbTotal">—</span>
+            <span class="fb-detail">correcciones pendientes de entrenar
+                (<span id="fbBenign" style="color:#22c55e">—</span> benignos,
+                 <span id="fbMalicious" style="color:#ef4444">—</span> maliciosos)
+            </span>
+            <span class="fb-hint neutral" id="fbHint"></span>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card {% if model_exists %}success{% else %}danger{% endif %}">
+                <div class="stat-number">{% if model_exists %}✅{% else %}❌{% endif %}</div>
+                <div class="stat-label">Modelo entrenado</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-number">{{ benign_count }}</div>
+                <div class="stat-label">Correos benignos</div>
+            </div>
+            <div class="stat-card danger">
+                <div class="stat-number">{{ malicious_count }}</div>
+                <div class="stat-label">Correos maliciosos</div>
+            </div>
+            <div class="stat-card {% if benign_count + malicious_count >= 200 %}success{% elif benign_count + malicious_count >= 50 %}warning{% else %}danger{% endif %}">
+                <div class="stat-number">{{ benign_count + malicious_count }}</div>
+                <div class="stat-label">Total dataset</div>
+            </div>
+        </div>
+
+        {% if model_exists and model_meta %}
+        <div class="model-meta">
+            <div class="meta-item"><div class="meta-label">Algoritmo</div><div class="meta-value">{{ model_meta.get('best_model','-') }}</div></div>
+            <div class="meta-item"><div class="meta-label">ROC AUC</div><div class="meta-value">{{ "%.4f"|format(model_meta.get('auc',0)) }}</div></div>
+            <div class="meta-item"><div class="meta-label">Entrenado</div><div class="meta-value">{{ model_meta.get('trained_at','-')[:16] }}</div></div>
+            <div class="meta-item"><div class="meta-label">Muestras</div><div class="meta-value">{{ model_meta.get('total_samples','-') }}</div></div>
+            <div class="meta-item"><div class="meta-label">SMOTE</div><div class="meta-value">{{ 'Sí' if model_meta.get('smote_applied') else 'No' }}</div></div>
+            <div class="meta-item"><div class="meta-label">Features</div><div class="meta-value">{{ model_meta.get('feature_names',[])| length }}</div></div>
+            <div class="meta-item"><div class="meta-label">GPU</div><div class="meta-value">{{ 'Si' if model_meta.get('gpu_used') else 'No (CPU)' }}</div></div>
+            <div class="meta-item"><div class="meta-label">Modelos ensemble</div><div class="meta-value">{{ model_meta.get('models_available',[])| length }}</div></div>
+        </div>
+
+        {% if model_exists and model_meta and model_meta.get('models_available') %}
+        <div class="ensemble-banner">
+            <span class="eb-num">{{ model_meta.get('models_available',[])| length }}</span>
+            <span class="eb-txt">modelos en votacion ensemble ponderada por AUC</span>
+            {% if model_meta.get('gpu_used') %}<span class="gpu-badge on">GPU activada</span>
+            {% else %}<span class="gpu-badge off">CPU</span>{% endif %}
+        </div>
+        {% endif %}
+
+        {% if model_exists and model_meta and model_meta.get('results') %}
+        <div style="margin-top:20px;">
+            <div style="font-size:0.85em;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Ranking de modelos por ROC AUC</div>
+            <div class="models-grid">
+            {% set type_map = {'DecisionTree':'base','RandomForest':'bagging','ExtraTrees':'bagging','Bagging':'bagging','GradientBoosting':'boosting','HistGradientBoosting':'boosting','AdaBoost':'boosting','XGBoost':'boosting','LightGBM':'boosting','CatBoost':'boosting'} %}
+            {% for name, res in model_meta.get('results', {}).items()|sort(attribute='1.auc_test', reverse=True) %}
+            {% set mtype = type_map.get(name, 'base') %}
+            {% set is_best = (name == model_meta.get('best_model')) %}
+            <div class="model-card {% if is_best %}best{% endif %}" data-model="{{ name }}">
+                {% if is_best %}<span class="mc-badge best">MEJOR</span>
+                {% else %}<span class="mc-badge {{ mtype }}">{{ mtype|capitalize }}</span>{% endif %}
+                <div class="mc-name">{{ name }}</div>
+                {% if res.get('auc_test') %}
+                <div class="mc-auc">{{ "%.4f"|format(res.auc_test) }}</div>
+                <div class="mc-label">ROC AUC test</div>
+                <div class="mc-cv">CV: {{ "%.4f"|format(res.get('auc_cv_mean',0)) }} +/- {{ "%.4f"|format(res.get('auc_cv_std',0)) }}</div>
+                {% elif res.get('error') %}<div class="mc-err">{{ res.error[:60] }}</div>
+                {% else %}<div class="mc-label" style="color:#475569;">No disponible</div>{% endif %}
+            </div>
+            {% endfor %}
+            <!-- Modelo 10: Anti-Clanker -->
+            <div class="model-card" data-model="10">
+                <span class="mc-badge" style="background:#6f42c1;color:#fff">Rule-based</span>
+                <div class="mc-name">Anti-Clanker</div>
+                <div class="mc-auc" id="model-10-auc">&#8212;</div>
+                <div class="mc-label">Score Anti-Clanker</div>
+                <div class="mc-cv" id="model-10-cv">Reglas: <span id="model-10-rules">&#8212;</span></div>
+                <label class="toggle-switch" title="Activar/desactivar en el ensemble">
+                    <input type="checkbox" checked id="toggle-model-10" data-model="10"
+                        onchange="toggleModel(10, this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% endif %}
+    </div>
+
+    <!-- Paso 1: Dataset (solo admin) -->
+    {% if user.role == 'admin' %}
+    <div class="card">
+        <div class="card-header">
+            <h2>📦 Paso 1 — Descargar Dataset</h2>
+            <p>Descarga el SpamAssassin Public Corpus (~6.000 correos ya etiquetados, ~25 MB). Solo una vez.</p>
+        </div>
+        <div class="status-row">
+            <div class="spinner" id="dlSpinner"></div>
+            <span class="status-text" id="dlStatus"></span>
+        </div>
+        <button class="btn btn-primary" onclick="downloadDataset()">⬇️ Descargar SpamAssassin Corpus</button>
+        <div class="log-box" id="dlLog"></div>
+    </div>
+    {% endif %}
+
+    <!-- Paso 2: Entrenar -->
+    <div class="card">
+        <div class="card-header">
+            <h2>🚀 Paso 2 — Entrenar el Modelo</h2>
+            <p>Extrae características de todos los correos etiquetados y entrena todos los modelos disponibles (hasta 9). La predicción usa votación ensemble ponderada por AUC.</p>
+        </div>
+        <div class="status-row">
+            <div class="spinner" id="trainSpinner"></div>
+            <span class="status-text" id="trainStatus"></span>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-success"   id="btnFullRetrain" onclick="fullRetrain()">🧠 Extraer features + Entrenar</button>
+            <button class="btn btn-secondary" id="btnTrainOnly"   onclick="trainOnly()">⚡ Solo re-entrenar (CSVs ya generados)</button>
+        </div>
+        <div class="log-box" id="trainLog"></div>
+    </div>
+
+    <!-- Guía -->
+    <div class="card">
+        <div class="card-header">
+            <h2>📖 Cuándo re-entrenar</h2>
+        </div>
+        <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-body">
+                <h4>Acumula correcciones</h4>
+                <p>Marca correos como BENIGNO o MALICIOSO desde el modal de detalle en el Dashboard. Se recomienda al menos 20 correcciones nuevas.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-body">
+                <h4>Pulsa "Extraer features + Entrenar"</h4>
+                <p>El proceso corre en background. Puedes seguir usando la web mientras entrena. Recibirás el resultado cuando termine.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-body">
+                <h4>Comprueba el ROC AUC</h4>
+                <p>Por encima de 0.95 es excelente. Si baja respecto al anterior, revisa la calidad de los datos etiquetados.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  FEEDBACK STATS
+// ═══════════════════════════════════════
+async function loadFeedbackStats() {
+    try {
+        const r    = await fetch('/feedback/stats');
+        const data = await r.json();
+        document.getElementById('fbTotal').textContent     = data.total;
+        document.getElementById('fbBenign').textContent    = data.benign;
+        document.getElementById('fbMalicious').textContent = data.malicious;
+        const hint = document.getElementById('fbHint');
+        if (data.total === 0) {
+            hint.textContent  = 'Sin correcciones pendientes';
+            hint.className    = 'fb-hint neutral';
+        } else if (data.total < 20) {
+            hint.textContent  = `⚠️ Se recomiendan al menos 20 antes de re-entrenar`;
+            hint.className    = 'fb-hint warn';
+        } else {
+            hint.textContent  = `✅ Listo para re-entrenar`;
+            hint.className    = 'fb-hint ok';
+        }
+    } catch(e) {}
+}
+loadFeedbackStats();
+
+// ═══════════════════════════════════════
+//  DESCARGA DATASET
+// ═══════════════════════════════════════
+async function downloadDataset() {
+    const spinner = document.getElementById('dlSpinner');
+    const status  = document.getElementById('dlStatus');
+    const log     = document.getElementById('dlLog');
+
+    spinner.style.display = 'inline-block';
+    status.textContent    = '⏳ Descargando dataset... (puede tardar varios minutos)';
+    log.className         = 'log-box visible running';
+    log.textContent       = 'Iniciando descarga del SpamAssassin Public Corpus...\n';
+
+    try {
+        const r    = await fetch('/dataset/download', { method:'POST' });
+        const data = await r.json();
+        if (data.success) {
+            log.className   = 'log-box visible success';
+            log.textContent = data.stdout || 'Dataset descargado correctamente';
+            status.textContent = '✅ Dataset descargado correctamente';
+        } else {
+            log.className   = 'log-box visible error';
+            log.textContent = data.stderr || data.error || 'Error desconocido';
+            status.textContent = '❌ Error en la descarga';
+        }
+    } catch(e) {
+        log.className   = 'log-box visible error';
+        log.textContent = e.message;
+        status.textContent = '❌ Error de conexión';
+    }
+    spinner.style.display = 'none';
+}
+
+// ═══════════════════════════════════════
+//  ENTRENAMIENTO EN BACKGROUND
+// ═══════════════════════════════════════
+let _poll = null;
+
+function setTrainingUI(running) {
+    const spinner = document.getElementById('trainSpinner');
+    const btnFull = document.getElementById('btnFullRetrain');
+    const btnOnly = document.getElementById('btnTrainOnly');
+    spinner.style.display = running ? 'inline-block' : 'none';
+    if (btnFull) btnFull.disabled = running;
+    if (btnOnly) btnOnly.disabled = running;
+}
+
+function startPoll() {
+    if (_poll) clearInterval(_poll);
+    _poll = setInterval(async () => {
+        try {
+            const r  = await fetch('/model/training-status');
+            const st = await r.json();
+            if (!st.running) {
+                clearInterval(_poll); _poll = null;
+                setTrainingUI(false);
+                const log = document.getElementById('trainLog');
+                if (st.success === true) {
+                    log.className   = 'log-box visible success';
+                    log.textContent = st.stdout || 'Entrenamiento completado';
+                    document.getElementById('trainStatus').textContent = '✅ Modelo entrenado correctamente';
+                    setTimeout(() => location.reload(), 3000);
+                } else if (st.success === false && st.stderr) {
+                    log.className   = 'log-box visible error';
+                    log.textContent = st.stderr || st.stdout || 'Error en el entrenamiento';
+                    document.getElementById('trainStatus').textContent = '❌ Error en el entrenamiento';
+                } else {
+                    // success=null o estado indeterminado: mostrar como completado
+                    log.className   = 'log-box visible success';
+                    log.textContent = st.stdout || 'Proceso finalizado';
+                    document.getElementById('trainStatus').textContent = '✅ Proceso finalizado';
+                    setTimeout(() => location.reload(), 3000);
+                }
+            } else {
+                const elapsed = st.started_at
+                    ? Math.round((Date.now() - new Date(st.started_at).getTime()) / 1000)
+                    : 0;
+                document.getElementById('trainStatus').textContent =
+                    `⏳ Entrenando... ${elapsed}s transcurridos (puedes navegar mientras esperas)`;
+            }
+        } catch(e) {}
+    }, 5000);
+}
+
+async function launchTraining(endpoint) {
+    const log    = document.getElementById('trainLog');
+    const status = document.getElementById('trainStatus');
+    setTrainingUI(true);
+    log.className   = 'log-box visible running';
+    log.textContent = 'Lanzando entrenamiento en background...\nEsto puede tardar varios minutos con datasets grandes.\n';
+    status.textContent = '⏳ Iniciando...';
+
+    try {
+        const r    = await fetch(endpoint, { method:'POST' });
+        const data = await r.json();
+        if (data.error) {
+            log.className   = 'log-box visible error';
+            log.textContent = data.error;
+            status.textContent = '❌ ' + data.error;
+            setTrainingUI(false);
+            return;
+        }
+        if (data.started) {
+            status.textContent = '⏳ Entrenando en background...';
+            startPoll();
+        }
+    } catch(e) {
+        log.className   = 'log-box visible error';
+        log.textContent = e.message;
+        status.textContent = '❌ Error de conexión';
+        setTrainingUI(false);
+    }
+}
+
+function fullRetrain() { launchTraining('/model/full-retrain'); }
+function trainOnly()   { launchTraining('/model/retrain'); }
+
+// Al cargar: comprobar si hay entrenamiento en curso
+(async function checkOnLoad() {
+    try {
+        const r  = await fetch('/model/training-status');
+        const st = await r.json();
+        // Solo actuar si hay un entrenamiento EN CURSO ahora mismo
+        if (st.running) {
+            setTrainingUI(true);
+            document.getElementById('trainStatus').textContent = '⏳ Entrenamiento en curso...';
+            document.getElementById('trainLog').className = 'log-box visible running';
+            document.getElementById('trainLog').textContent = 'Entrenamiento en progreso. Se actualizará al terminar.';
+            startPoll();
+        }
+        // Estados anteriores (success o error) no se muestran al recargar
+    } catch(e) {}
+})();
+</script>
+<script>
+(function(){
+var IS_ADMIN={{ 'true' if user.role == 'admin' else 'false' }};
+function applyState(name,enabled){
+  var c=document.querySelector('.model-card[data-model="'+name+'"]');
+  if(!c)return;
+  c.classList.toggle('disabled-card',!enabled);
+  var x=c.querySelector('.mt-input');if(x)x.checked=enabled;
+}
+async function loadModelStates(){
+  try{
+    var r=await fetch('/api/models/toggle');
+    var d=await r.json();
+    (d.models||[]).forEach(function(m){applyState(m.name,m.enabled);});
+  }catch(e){}
+}
+async function toggleModel(name,enabled){
+  if(!IS_ADMIN)return;
+  try{
+    var r=await fetch('/api/models/toggle',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:name,enabled:enabled})});
+    var d=await r.json();
+    if(d.ok){
+      applyState(name,enabled);
+      if(!document.querySelectorAll('.mt-input:checked').length)
+        alert('Atencion: todos los modelos deshabilitados.');
+    }else{alert('Error: '+(d.error||'?'));}
+  }catch(e){alert('Error de conexion');}
+}
+window.toggleModel=toggleModel;
+document.addEventListener('DOMContentLoaded',function(){
+  if(IS_ADMIN){
+    document.querySelectorAll('.model-card[data-model]').forEach(function(card){
+      var n=card.getAttribute('data-model');
+      var l=document.createElement('label');
+      l.className='model-toggle';l.title='Habilitar/Deshabilitar';
+      l.innerHTML='<input class="mt-input" type="checkbox" checked '
+        +'onchange="toggleModel(\''+n+'\',this.checked)">'
+        +'<span class="mt-slider"></span>';
+      card.appendChild(l);
+    });
+  }
+  loadModelStates();
+});
+})();
+</script>
+<script>
+(async function() {
+  try {
+    const r = await fetch('/api/clanker/status');
+    const d = await r.json();
+    if (!d.enabled) return;
+    const el = document.getElementById('model-10-rules');
+    if (el) el.textContent = d.active_rules + ' / ' + d.total_rules;
+  } catch(e) {}
+})();
+</script>
+</body>
+</html>

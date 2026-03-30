@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Malware Detector</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',system-ui,sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; }
+        .container { max-width:1200px; margin:0 auto; padding:20px; }
+
+        nav { background:#1e293b; border-bottom:2px solid #3b82f6; }
+        nav .nav-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; }
+        nav .nav-brand { padding:16px 24px; font-size:1.1em; font-weight:700; border-right:1px solid #334155; }
+        nav .nav-brand span { color:#3b82f6; }
+        nav a.nav-link { padding:18px 22px; color:#94a3b8; text-decoration:none; font-weight:500; border-bottom:3px solid transparent; transition:all 0.2s; }
+        nav a.nav-link:hover { color:#e2e8f0; background:rgba(59,130,246,0.08); }
+        nav a.nav-link.active { color:#3b82f6; border-bottom-color:#3b82f6; }
+        .nav-right { margin-left:auto; padding:0 20px; display:flex; align-items:center; gap:12px; }
+        .nav-user  { color:#64748b; font-size:0.9em; }
+        nav a.nav-logout { color:#ef4444; text-decoration:none; font-size:0.9em; }
+
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:15px; margin-bottom:30px; }
+        .stat-card { background:#1e293b; border-radius:12px; padding:20px; border-left:4px solid #3b82f6; }
+        .stat-card.danger  { border-left-color:#ef4444; }
+        .stat-card.success { border-left-color:#22c55e; }
+        .stat-card.info    { border-left-color:#8b5cf6; }
+        .stat-number { font-size:2em; font-weight:bold; }
+        .stat-label  { color:#94a3b8; font-size:0.9em; }
+
+        .section { background:#1e293b; border-radius:12px; padding:25px; margin-bottom:20px; }
+        .section h2 { font-size:1.3em; margin-bottom:15px; padding-bottom:10px; border-bottom:1px solid #334155; }
+
+        .upload-zone { border:2px dashed #475569; border-radius:12px; padding:40px; text-align:center; cursor:pointer; transition:all 0.3s; }
+        .upload-zone:hover, .upload-zone.dragover { border-color:#3b82f6; background:rgba(59,130,246,0.1); }
+        .upload-zone p { color:#94a3b8; margin-top:10px; }
+
+        .btn { padding:10px 20px; border:none; border-radius:8px; cursor:pointer; font-size:0.9em; font-weight:600; transition:all 0.2s; display:inline-flex; align-items:center; gap:6px; }
+        .btn-primary   { background:#3b82f6; color:white; }
+        .btn-primary:hover { background:#2563eb; }
+        .btn-danger    { background:#ef4444; color:white; }
+        .btn-secondary { background:#1a2535; color:#94a3b8; border:1px solid #334155; }
+        .btn-secondary:hover { background:#243044; color:#e2e8f0; }
+        .btn-benign    { background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid #22c55e; }
+        .btn-benign:hover { background:#22c55e; color:white; }
+        .btn-malicious { background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid #ef4444; }
+        .btn-malicious:hover { background:#ef4444; color:white; }
+        .btn-undo      { background:rgba(100,116,139,0.15); color:#94a3b8; border:1px solid #475569; font-size:0.82em; }
+        .btn-undo:hover { background:#475569; color:white; }
+        .btn:disabled  { opacity:0.5; cursor:not-allowed; }
+
+        .controls { display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap; }
+        label { display:flex; align-items:center; gap:6px; cursor:pointer; }
+        input[type=checkbox] { width:16px; height:16px; }
+        select, input[type=number], input[type=date] {
+            background:#0f172a; color:#e2e8f0; border:1px solid #334155;
+            border-radius:6px; padding:8px 12px; font-size:0.9em;
+        }
+
+        .result-card { background:#0f172a; border-radius:8px; padding:15px; margin-top:10px; border-left:4px solid #475569; cursor:pointer; transition:background 0.15s; }
+        .result-card:hover { background:#0d1829; }
+        .result-card.critico  { border-left-color:#ef4444; }
+        .result-card.alto     { border-left-color:#f97316; }
+        .result-card.medio    { border-left-color:#eab308; }
+        .result-card.bajo     { border-left-color:#22c55e; }
+        .result-card.minimo   { border-left-color:#6b7280; }
+
+        .risk-badge { display:inline-block; padding:3px 10px; border-radius:12px; font-weight:bold; font-size:0.82em; }
+        .risk-CRITICO, .risk-CRÍTICO { background:#ef4444; color:white; }
+        .risk-ALTO    { background:#f97316; color:white; }
+        .risk-MEDIO   { background:#eab308; color:#1e293b; }
+        .risk-BAJO    { background:#22c55e; color:white; }
+        .risk-MINIMO, .risk-MÍNIMO { background:#6b7280; color:white; }
+
+        .entropy-bar { height:8px; background:#334155; border-radius:4px; overflow:hidden; margin-top:4px; }
+        .entropy-fill { height:100%; border-radius:4px; transition:width 0.5s; }
+        .entropy-bar-sm { height:5px; background:#334155; border-radius:3px; margin-top:5px; overflow:hidden; }
+        .entropy-fill-sm { height:100%; border-radius:3px; }
+
+        table { width:100%; border-collapse:collapse; }
+        th { text-align:left; padding:10px; color:#94a3b8; border-bottom:1px solid #334155; font-size:0.82em; text-transform:uppercase; letter-spacing:0.04em; }
+        td { padding:10px; border-bottom:1px solid #1a2535; font-size:0.9em; }
+        tr:hover td { background:#1a2535; cursor:pointer; }
+
+        .pagination { display:flex; align-items:center; gap:8px; margin-top:14px; flex-wrap:wrap; }
+        .pagination .page-info { color:#64748b; font-size:0.88em; }
+        .pagination .total-info { color:#475569; font-size:0.82em; }
+
+        .spinner { display:none; width:36px; height:36px; border:4px solid #334155; border-top:4px solid #3b82f6; border-radius:50%; animation:spin 1s linear infinite; margin:16px auto; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        .date-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+        .date-row label { color:#94a3b8; font-size:0.85em; }
+
+        /* Modal */
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:1000; align-items:center; justify-content:center; padding:16px; }
+        .modal-overlay.open { display:flex; }
+        .modal { background:#1e293b; border-radius:14px; max-width:820px; width:100%; max-height:88vh; overflow-y:auto; border:1px solid #334155; }
+        .modal-header { padding:18px 24px; border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:#1e293b; z-index:1; }
+        .modal-header h3 { font-size:1em; word-break:break-all; }
+        .modal-close { background:none; border:none; color:#64748b; font-size:1.4em; cursor:pointer; padding:0 4px; line-height:1; }
+        .modal-close:hover { color:#e2e8f0; }
+        .modal-body { padding:20px 24px; }
+
+        .detail-section { margin-bottom:20px; }
+        .detail-section h4 { color:#64748b; font-size:0.78em; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #1e293b; }
+        .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .detail-item { background:#0f172a; border-radius:7px; padding:10px 12px; }
+        .detail-item .label { color:#64748b; font-size:0.75em; margin-bottom:3px; }
+        .detail-item .value { font-weight:600; font-size:0.92em; word-break:break-all; }
+
+        .url-list, .hash-list { list-style:none; }
+        .url-list li, .hash-list li { background:#0f172a; border-radius:6px; padding:8px 12px; margin-bottom:5px; font-size:0.82em; word-break:break-all; color:#94a3b8; }
+        .url-list li a { color:#60a5fa; text-decoration:none; }
+        .url-list li a:hover { text-decoration:underline; }
+
+        .feedback-bar { display:flex; gap:8px; align-items:center; margin-bottom:16px; padding:12px 16px; background:#0f172a; border-radius:10px; flex-wrap:wrap; }
+        .feedback-bar .fb-label { color:#64748b; font-size:0.85em; flex-shrink:0; margin-right:4px; }
+        .feedback-applied { padding:4px 12px; border-radius:12px; font-size:0.82em; font-weight:600; }
+        .feedback-applied.benign    { background:rgba(34,197,94,0.15); color:#22c55e; }
+        .feedback-applied.malicious { background:rgba(239,68,68,0.15); color:#ef4444; }
+
+        @media(max-width:600px) { .detail-grid { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="nav-inner">
+        <div class="nav-brand">🛡️ Email <span>Malware</span> Detector</div>
+        <a href="/" class="nav-link active">📊 Dashboard</a>
+        <a href="/training" class="nav-link">🧠 Entrenamiento</a>
+        {% if user.role == 'admin' %}<a href="/users" class="nav-link">👥 Usuarios</a>{% endif %}
+        <a href="/settings" class="nav-link">⚙️ Mi configuración</a>
+        <div class="nav-right">
+            <span class="nav-user">{{ user.username }}</span>
+            <a href="/logout" class="nav-logout">Cerrar sesión</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container" style="padding-top:24px">
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card info">
+            <div class="stat-number" id="stat-total">{{ total }}</div>
+            <div class="stat-label">Total analizados</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-number" id="stat-benign">{{ benign }}</div>
+            <div class="stat-label">Benignos</div>
+        </div>
+        <div class="stat-card danger">
+            <div class="stat-number" id="stat-malicious">{{ malicious }}</div>
+            <div class="stat-label">Maliciosos</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{% if model_exists %}✅{% else %}❌{% endif %}</div>
+            <div class="stat-label">Modelo: {{ model_meta.get('best_model','No entrenado') }}</div>
+        </div>
+    </div>
+
+    <!-- Analizar archivos subidos -->
+    <div class="section">
+        <h2>📤 Analizar Correos</h2>
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+            <div style="font-size:3em">📧</div>
+            <p><strong>Arrastra archivos .eml aquí</strong> o haz clic para seleccionar</p>
+            <p style="font-size:0.85em">Puedes subir varios a la vez</p>
+        </div>
+        <input type="file" id="fileInput" multiple accept=".eml" style="display:none">
+        <div class="controls">
+            <label><input type="checkbox" id="useVT" checked> Consultar VirusTotal</label>
+            <button class="btn btn-primary" id="analyzeBtn" disabled onclick="analyzeFiles()">Analizar archivos seleccionados</button>
+        </div>
+        <div class="spinner" id="analyzeSpinner"></div>
+        <div id="results"></div>
+    </div>
+
+    <!-- Descargar y analizar -->
+    <div class="section">
+        <h2>📥 Descargar y Analizar del Buzón</h2>
+        <div class="controls" style="margin-bottom:10px">
+            <select id="provider">
+                <option value="imap">IMAP genérico</option>
+                <option value="m365">Microsoft 365</option>
+            </select>
+            <select id="folder">
+                <option value="inbox">📥 Bandeja de entrada</option>
+                <option value="spam">🚫 Spam</option>
+                <option value="all">📂 Entrada + Spam</option>
+            </select>
+            <label>Máx: <input type="number" id="maxEmails" value="20" min="1" max="500" style="width:65px"></label>
+            <label><input type="checkbox" id="fetchVT"> VirusTotal</label>
+        </div>
+        <div class="date-row">
+            <label>Desde: <input type="date" id="dateFrom"></label>
+            <label>Hasta: <input type="date" id="dateTo"></label>
+            <button class="btn btn-secondary" onclick="setQuick(1)"  style="padding:7px 12px">Hoy</button>
+            <button class="btn btn-secondary" onclick="setQuick(7)"  style="padding:7px 12px">7d</button>
+            <button class="btn btn-secondary" onclick="setQuick(30)" style="padding:7px 12px">30d</button>
+            <button class="btn btn-primary"   onclick="fetchEmails()">⬇️ Descargar y analizar</button>
+        </div>
+        <div class="spinner" id="fetchSpinner"></div>
+        <div id="fetchResult"></div>
+    </div>
+
+    <!-- Historial -->
+    <div class="section">
+        <h2>📋 Historial
+            <small style="color:#475569;font-size:0.6em;font-weight:400">— haz clic en una fila para ver el detalle</small>
+        </h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th><th>Archivo</th><th>Asunto</th>
+                    <th>Resultado</th><th>Riesgo</th><th>Entropía</th><th>Feedback</th>
+                </tr>
+            </thead>
+            <tbody id="historyTable"></tbody>
+        </table>
+        <div class="pagination">
+            <button class="btn btn-secondary" id="btnPrev" onclick="changePage(currentPage-1)" style="padding:6px 14px">← Anterior</button>
+            <span class="page-info"  id="pageInfo"></span>
+            <button class="btn btn-secondary" id="btnNext" onclick="changePage(currentPage+1)" style="padding:6px 14px">Siguiente →</button>
+            <span class="total-info" id="totalInfo"></span>
+        </div>
+        <div style="margin-top:12px">
+            <button class="btn btn-danger" onclick="clearHistory()">Limpiar mi historial</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de detalle -->
+<div class="modal-overlay" id="detailModal" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modalTitle">Detalle del análisis</h3>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+    </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  ESTADO GLOBAL
+// ═══════════════════════════════════════════
+const _store    = {};   // cache de resultados completos
+let currentPage = 1;
+let totalPages  = 1;
+let currentDbId = null; // dbId del modal abierto
+
+// ═══════════════════════════════════════════
+//  UTILIDADES
+// ═══════════════════════════════════════════
+function nl(s) {
+    // Normaliza risk_level quitando tildes
+    return (s||'')
+        .replace('MÍNIMO','MINIMO').replace('MíNIMO','MINIMO')
+        .replace('CRÍTICO','CRITICO').replace('CRíTICO','CRITICO');
+}
+const ew = v => Math.min(((parseFloat(v)||0)/8)*100,100).toFixed(1);
+const ec = v => (parseFloat(v)||0)>5.5?'#ef4444':(parseFloat(v)||0)>4.5?'#eab308':'#22c55e';
+const colorMap = {CRITICO:'#ef4444',ALTO:'#f97316',MEDIO:'#eab308',BAJO:'#22c55e',MINIMO:'#6b7280'};
+const lcMap    = {CRITICO:'critico',ALTO:'alto',MEDIO:'medio',BAJO:'bajo',MINIMO:'minimo'};
+
+// ═══════════════════════════════════════════
+//  HISTORIAL — carga siempre desde API
+// ═══════════════════════════════════════════
+async function loadHistory(page) {
+    try {
+        const r    = await fetch(`/history/page/${page}`);
+        const data = await r.json();
+        currentPage = data.page;
+        totalPages  = data.pages;
+        renderHistoryTable(data.items);
+        updatePageControls(data.pages, data.total);
+    } catch(e) { console.error('loadHistory:', e); }
+}
+
+function changePage(page) {
+    if (page < 1 || page > totalPages) return;
+    loadHistory(page);
+}
+
+function renderHistoryTable(items) {
+    const tbody = document.getElementById('historyTable');
+    if (!tbody) return;
+    if (!items || items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#475569;padding:20px">Sin análisis todavía</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = items.map(r => {
+        const rl = nl(r.risk_level||'');
+        const fb = r.feedback_label !== null && r.feedback_label !== undefined
+            ? (r.feedback_label === 0
+                ? '<span style="color:#22c55e;font-size:0.8em">✅ Benigno</span>'
+                : '<span style="color:#ef4444;font-size:0.8em">⛔ Malicioso</span>')
+            : '<span style="color:#334155;font-size:0.8em">—</span>';
+        return `<tr onclick="openDetail(${r.id})">
+            <td style="white-space:nowrap">${(r.timestamp||'-').slice(0,16)}</td>
+            <td style="color:#64748b;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r.filename||'-').slice(0,28)}</td>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r.subject||'(sin asunto)').slice(0,40)}</td>
+            <td><span class="risk-badge risk-${rl}">${r.prediction||'-'}</span></td>
+            <td>${r.risk_score||0}%</td>
+            <td>${r.body_entropy||'-'}</td>
+            <td>${fb}</td>
+        </tr>`;
+    }).join('');
+}
+
+function updatePageControls(pages, total) {
+    const pi = document.getElementById('pageInfo');
+    const ti = document.getElementById('totalInfo');
+    const bp = document.getElementById('btnPrev');
+    const bn = document.getElementById('btnNext');
+    if (pi) pi.textContent = `Página ${currentPage} de ${pages}`;
+    if (ti) ti.textContent = `(${total} análisis en total)`;
+    if (bp) bp.disabled = currentPage <= 1;
+    if (bn) bn.disabled = currentPage >= pages;
+}
+
+async function updateStats() {
+    try {
+        const r    = await fetch('/history');
+        const hist = await r.json();
+        const el   = id => document.getElementById(id);
+        if(el('stat-total'))     el('stat-total').textContent     = hist.length;
+        if(el('stat-malicious')) el('stat-malicious').textContent = hist.filter(r=>r.prediction==='MALICIOSO').length;
+        if(el('stat-benign'))    el('stat-benign').textContent    = hist.filter(r=>r.prediction==='BENIGNO').length;
+    } catch(e) {}
+    loadHistory(1);
+}
+
+async function clearHistory() {
+    if (!confirm('¿Borrar todo tu historial?')) return;
+    await fetch('/history/clear', {method:'POST'});
+    loadHistory(1);
+    updateStats();
+}
+
+// ═══════════════════════════════════════════
+//  MODAL DE DETALLE
+// ═══════════════════════════════════════════
+async function openDetail(dbId) {
+    currentDbId = dbId;
+    // Usar cache si existe
+    if (_store[dbId]) { renderModal(_store[dbId]); return; }
+    try {
+        const r    = await fetch(`/history/${dbId}`);
+        const data = await r.json();
+        if (data.error) { alert('No se pudo cargar el detalle'); return; }
+        _store[dbId] = data;
+        renderModal(data);
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+function renderModal(r) {
+    const dbId = r._db_id || currentDbId;
+    const ea   = r.entropy_analysis || {};
+    const ft   = r.features         || {};
+    const md   = r.metadata         || {};
+    const vt   = r.virustotal       || {};
+    const vts  = vt.summary         || {};
+    const rl   = nl(r.risk_level||'');
+    const rc   = colorMap[rl] || '#6b7280';
+    const fb   = (r.feedback_label !== null && r.feedback_label !== undefined) ? r.feedback_label : null;
+
+    let html = `
+    <div style="background:#0f172a;border-radius:10px;padding:14px;margin-bottom:16px;border-left:4px solid ${rc}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
+            <div>
+                <div style="color:#94a3b8;font-size:0.78em">ASUNTO</div>
+                <div style="font-weight:600;margin-bottom:4px">${r.subject||'(sin asunto)'}</div>
+                <div style="color:#64748b;font-size:0.83em">De: ${r.from||'-'}</div>
+                <div style="color:#64748b;font-size:0.83em">Fecha: ${(r.timestamp||'').slice(0,16)}</div>
+                <div style="color:#64748b;font-size:0.83em">Analizado por: ${r.analyzed_by||'-'}</div>
+            </div>
+            <div style="text-align:right">
+                <div style="background:${rc};color:white;padding:5px 14px;border-radius:20px;font-weight:700">${r.prediction||'-'}</div>
+                <div style="color:${rc};font-weight:600;margin-top:5px">${r.risk_level||'-'} — ${r.risk_score||0}%</div>
+                <div style="color:#64748b;font-size:0.8em;margin-top:3px">Modelo: ${r.model_used||'-'}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FEEDBACK -->
+    <div class="feedback-bar" id="fbBar_${dbId}">
+        <span class="fb-label">¿Clasificación correcta?</span>
+        ${fb === null ? `
+            <button class="btn btn-benign"    style="padding:7px 14px" onclick="doFeedback(${dbId},0)">✅ Benigno</button>
+            <button class="btn btn-malicious" style="padding:7px 14px" onclick="doFeedback(${dbId},1)">⛔ Malicioso</button>
+        ` : `
+            <span class="feedback-applied ${fb===0?'benign':'malicious'}">
+                ${fb===0?'✅ Marcado BENIGNO':'⛔ Marcado MALICIOSO'}
+            </span>
+            <button class="btn btn-undo"      style="padding:6px 12px" onclick="doUndoFeedback(${dbId})">↩ Deshacer</button>
+            <button class="btn btn-benign"    style="padding:6px 12px" onclick="doFeedback(${dbId},0)">✅ Cambiar a Benigno</button>
+            <button class="btn btn-malicious" style="padding:6px 12px" onclick="doFeedback(${dbId},1)">⛔ Cambiar a Malicioso</button>
+        `}
+    </div>
+    <div id="fbMsg_${dbId}" style="margin-bottom:12px"></div>
+
+    <!-- ML -->
+    <div class="detail-section">
+        <h4>🤖 Predicción del modelo</h4>
+        <div class="detail-grid">
+            <div class="detail-item"><div class="label">Probabilidad BENIGNO</div><div class="value" style="color:#22c55e">${r.ml_prob_benign||0}%</div></div>
+            <div class="detail-item"><div class="label">Probabilidad MALICIOSO</div><div class="value" style="color:#ef4444">${r.ml_prob_malicious||0}%</div></div>
+        </div>
+    </div>
+
+    <!-- ENTROPÍA -->
+    <div class="detail-section">
+        <h4>📊 Entropía de Shannon</h4>
+        <div class="detail-grid">
+            ${[['Cuerpo',ea.body_entropy||0],['Asunto',ea.subject_entropy||0],
+               ['URL máxima',ea.url_entropy_max||0],['Contenido adj.',ea.attachment_content_entropy_max||0]]
+              .map(([l,v])=>`<div class="detail-item">
+                <div class="label">${l}</div><div class="value">${v} bits</div>
+                <div class="entropy-bar-sm"><div class="entropy-fill-sm" style="width:${ew(v)}%;background:${ec(v)}"></div></div>
+              </div>`).join('')}
+        </div>
+    </div>
+
+    <!-- FEATURES -->
+    <div class="detail-section">
+        <h4>🔢 Features del modelo</h4>
+        <div class="detail-grid">
+            ${[['URLs encontradas',ft.url_count||0],['Longitud URL media',ft.url_length_avg||0],
+               ['Palabras urgencia',ft.urgency_keywords||0],['URLs engañosas',ft.mismatched_urls||0],
+               ['SPF pass',ft.spf_pass?'✅ Sí':'❌ No'],['DKIM pass',ft.dkim_pass?'✅ Sí':'❌ No'],
+               ['DMARC pass',ft.dmarc_pass?'✅ Sí':'❌ No'],['Anomalías cabecera',ft.header_anomalies||0],
+               ['Tiene adjunto',ft.has_attachment?'✅ Sí':'❌ No'],['Riesgo extensión',ft.attachment_ext_risk||0],
+               ['Long. asunto',ft.subject_length||0],['Long. cuerpo',ft.body_length||0]]
+              .map(([l,v])=>`<div class="detail-item"><div class="label">${l}</div><div class="value">${v}</div></div>`).join('')}
+        </div>
+    </div>`;
+
+    // URLs
+    const urls = md.urls_found || [];
+    if (urls.length) {
+        html += `<div class="detail-section"><h4>🔗 URLs (${urls.length})</h4><ul class="url-list">`;
+        urls.forEach(u => { html += `<li><a href="${u}" target="_blank" rel="noopener">${u}</a></li>`; });
+        html += `</ul></div>`;
+    }
+
+    // Adjuntos
+    const hashes = md.attachment_hashes || [];
+    if (hashes.length) {
+        html += `<div class="detail-section"><h4>📎 Adjuntos</h4><ul class="hash-list">`;
+        hashes.forEach(h => {
+            html += `<li><strong>${h.filename}</strong> (${((h.size||0)/1024).toFixed(1)} KB) — Entropía: ${h.entropy||0}<br>
+                <span style="color:#64748b">MD5:</span> ${h.md5||'-'}<br>
+                <span style="color:#64748b">SHA256:</span> ${h.sha256||'-'}</li>`;
+        });
+        html += `</ul></div>`;
+    }
+
+    // VirusTotal
+    html += `<div class="detail-section"><h4>🔍 VirusTotal</h4>`;
+    if (vt && ((vt.files||[]).length + (vt.urls||[]).length > 0)) {
+        const hasT = (vts.malicious_files||0)+(vts.malicious_urls||0)>0;
+        html += `<div style="background:#0f172a;border-radius:8px;padding:11px;margin-bottom:10px">
+            <span style="color:${hasT?'#ef4444':'#22c55e'}">${hasT?'⚠️ Amenazas detectadas':'✅ Sin amenazas'}</span>
+            — ${vts.total_checked||0} consultas</div>`;
+        (vt.files||[]).forEach(f => {
+            html += `<div style="background:#0f172a;border-radius:6px;padding:9px;margin-bottom:5px;font-size:0.83em">
+                📄 <strong>${f.filename||'-'}</strong> —
+                ${f.found?`<span style="color:${(f.malicious||0)>0?'#ef4444':'#22c55e'}">${f.malicious}/${f.total} detecciones</span>`:'<span style="color:#64748b">No encontrado</span>'}
+            </div>`;
+        });
+        (vt.urls||[]).forEach(u => {
+            html += `<div style="background:#0f172a;border-radius:6px;padding:9px;margin-bottom:5px;font-size:0.83em;word-break:break-all">
+                🔗 ${(u.url||'-').slice(0,70)} —
+                ${u.found?`<span style="color:${(u.malicious||0)>0?'#ef4444':'#22c55e'}">${u.malicious}/${u.total} detecciones</span>`:'<span style="color:#64748b">No encontrada</span>'}
+            </div>`;
+        });
+    } else {
+        html += `<div style="background:#0f172a;border-radius:8px;padding:11px;color:#64748b;font-size:0.88em">No se consultó VirusTotal.</div>`;
+    }
+    if (dbId) {
+        html += `<button id="vtBtn_${dbId}" class="btn btn-secondary" style="margin-top:10px;font-size:0.85em" onclick="sendToVT(${dbId})">
+            🔍 Enviar a VirusTotal ahora
+        </button><div id="vtResult_${dbId}" style="margin-top:8px"></div>`;
+    }
+    html += `</div>`;
+
+    document.getElementById('modalTitle').textContent = (r.file||'Detalle').slice(0,60);
+    document.getElementById('modalBody').innerHTML    = html;
+    document.getElementById('detailModal').classList.add('open');
+}
+
+function closeModal() {
+    document.getElementById('detailModal').classList.remove('open');
+    currentDbId = null;
+}
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+
+// ═══════════════════════════════════════════
+//  FEEDBACK
+// ═══════════════════════════════════════════
+async function doFeedback(dbId, label) {
+    const msg = document.getElementById(`fbMsg_${dbId}`);
+    try {
+        const r    = await fetch(`/feedback/${dbId}`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({label})
+        });
+        const data = await r.json();
+        if (data.success) {
+            if (msg) msg.innerHTML = `<div style="padding:8px 14px;border-radius:7px;background:rgba(34,197,94,0.1);color:#22c55e;font-size:0.86em;border:1px solid rgba(34,197,94,0.25)">
+                ✅ ${data.message}. Ve a <a href="/training" style="color:#60a5fa">Entrenamiento</a> para re-entrenar cuando acumules suficientes correcciones.
+            </div>`;
+            // Actualizar cache y fila
+            if (_store[dbId]) _store[dbId].feedback_label = label;
+            loadHistory(currentPage);
+        } else {
+            if (msg) msg.innerHTML = `<div style="color:#ef4444;font-size:0.85em">❌ ${data.error}</div>`;
+        }
+    } catch(e) {
+        if (msg) msg.innerHTML = `<div style="color:#ef4444;font-size:0.85em">❌ Error: ${e.message}</div>`;
+    }
+}
+
+async function doUndoFeedback(dbId) {
+    const msg = document.getElementById(`fbMsg_${dbId}`);
+    try {
+        const r    = await fetch(`/feedback/${dbId}`, {method:'DELETE'});
+        const data = await r.json();
+        if (data.success) {
+            if (msg) msg.innerHTML = `<div style="padding:8px 14px;border-radius:7px;background:rgba(100,116,139,0.1);color:#94a3b8;font-size:0.86em">↩ Feedback eliminado</div>`;
+            if (_store[dbId]) _store[dbId].feedback_label = null;
+            loadHistory(currentPage);
+        }
+    } catch(e) {
+        if (msg) msg.innerHTML = `<div style="color:#ef4444;font-size:0.85em">❌ Error: ${e.message}</div>`;
+    }
+}
+
+// ═══════════════════════════════════════════
+//  VIRUSTOTAL
+// ═══════════════════════════════════════════
+async function sendToVT(dbId) {
+    const btn = document.getElementById(`vtBtn_${dbId}`);
+    const res = document.getElementById(`vtResult_${dbId}`);
+    btn.disabled    = true;
+    btn.textContent = '⏳ Consultando (~30s por URL/hash)...';
+    try {
+        const r    = await fetch(`/analyze/virustotal/${dbId}`, {method:'POST'});
+        const data = await r.json();
+        if (data.success) {
+            const vts = (data.virustotal||{}).summary || {};
+            const mf  = vts.malicious_files||0;
+            const mu  = vts.malicious_urls||0;
+            const ok  = mf+mu === 0;
+            res.innerHTML = `<div style="padding:10px;border-radius:8px;background:#0f172a;border:1px solid ${ok?'#22c55e':'#ef4444'}">
+                <span style="color:${ok?'#22c55e':'#ef4444'}">${ok?'✅ Sin amenazas':`⚠️ ${mf} archivos + ${mu} URLs maliciosas`}</span>
+                — ${vts.total_checked||0} consultas realizadas
+            </div>`;
+            if (_store[dbId]) _store[dbId].virustotal = data.virustotal;
+        } else {
+            res.innerHTML = `<div style="color:#ef4444;font-size:0.85em">❌ ${data.error}</div>`;
+        }
+    } catch(e) {
+        res.innerHTML = `<div style="color:#ef4444;font-size:0.85em">❌ Error: ${e.message}</div>`;
+    }
+    btn.disabled    = false;
+    btn.textContent = '🔍 Volver a consultar VirusTotal';
+}
+
+// ═══════════════════════════════════════════
+//  UPLOAD DE ARCHIVOS
+// ═══════════════════════════════════════════
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('fileInput');
+const analyzeBtn = document.getElementById('analyzeBtn');
+let selectedFiles = [];
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+    e.preventDefault(); uploadZone.classList.remove('dragover');
+    selectedFiles = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.eml'));
+    updateFileList();
+});
+fileInput.addEventListener('change', () => { selectedFiles = Array.from(fileInput.files); updateFileList(); });
+
+function updateFileList() {
+    analyzeBtn.disabled    = selectedFiles.length === 0;
+    analyzeBtn.textContent = `Analizar ${selectedFiles.length} archivo(s)`;
+}
+
+async function analyzeFiles() {
+    if (!selectedFiles.length) return;
+    const spinner    = document.getElementById('analyzeSpinner');
+    const resultsDiv = document.getElementById('results');
+    spinner.style.display = 'block';
+    analyzeBtn.disabled   = true;
+    resultsDiv.innerHTML  = '';
+    const formData = new FormData();
+    selectedFiles.forEach(f => formData.append('files', f));
+    formData.append('use_virustotal', document.getElementById('useVT').checked);
+    try {
+        const r    = await fetch('/analyze', {method:'POST', body:formData});
+        const data = await r.json();
+        (data.results||[]).forEach(r => { resultsDiv.innerHTML += renderCard(r); });
+        updateStats();
+    } catch(err) {
+        resultsDiv.innerHTML = `<div class="result-card" style="border-left-color:#ef4444">Error: ${err.message}</div>`;
+    }
+    spinner.style.display = 'none';
+    analyzeBtn.disabled   = false;
+}
+
+function renderCard(r) {
+    if (r.error) return `<div class="result-card">❌ ${r.error}</div>`;
+    const rl  = nl(r.risk_level||'');
+    const ea  = r.entropy_analysis||{};
+    const lc  = lcMap[rl]||'';
+    if (r._db_id) _store[r._db_id] = r;
+    const click = r._db_id ? `onclick="openDetail(${r._db_id})"` : '';
+    return `<div class="result-card ${lc}" ${click}>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
+            <div><strong>${r.file||''}</strong><br><small style="color:#94a3b8">${r.subject||'-'}</small></div>
+            <div style="text-align:right">
+                <span class="risk-badge risk-${rl}">${r.prediction} — ${r.risk_level}</span><br>
+                <small>Riesgo: ${r.risk_score}%</small>
+            </div>
+        </div>
+        <div style="margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+            <div><small style="color:#94a3b8">Cuerpo: ${ea.body_entropy||0}</small>
+                <div class="entropy-bar"><div class="entropy-fill" style="width:${ew(ea.body_entropy||0)}%;background:${ec(ea.body_entropy||0)}"></div></div></div>
+            <div><small style="color:#94a3b8">URL: ${ea.url_entropy_max||0}</small>
+                <div class="entropy-bar"><div class="entropy-fill" style="width:${ew(ea.url_entropy_max||0)}%;background:${ec(ea.url_entropy_max||0)}"></div></div></div>
+            <div><small style="color:#94a3b8">Adj: ${ea.attachment_content_entropy_max||0}</small>
+                <div class="entropy-bar"><div class="entropy-fill" style="width:${ew(ea.attachment_content_entropy_max||0)}%;background:${ec(ea.attachment_content_entropy_max||0)}"></div></div></div>
+        </div>
+        <small style="color:#475569;margin-top:5px;display:block">🔍 Clic para ver detalle</small>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════
+//  DESCARGA DE CORREOS
+// ═══════════════════════════════════════════
+(function initDates() {
+    const today = new Date();
+    const week  = new Date(today); week.setDate(today.getDate()-7);
+    const fmt   = d => d.toISOString().split('T')[0];
+    const df = document.getElementById('dateFrom');
+    const dt = document.getElementById('dateTo');
+    if (df) df.value = fmt(week);
+    if (dt) dt.value = fmt(today);
+})();
+
+function setQuick(days) {
+    const today = new Date();
+    const from  = new Date(today); from.setDate(today.getDate()-days+1);
+    const fmt   = d => d.toISOString().split('T')[0];
+    document.getElementById('dateFrom').value = fmt(from);
+    document.getElementById('dateTo').value   = fmt(today);
+}
+
+async function fetchEmails() {
+    const spinner = document.getElementById('fetchSpinner');
+    const rd      = document.getElementById('fetchResult');
+    spinner.style.display = 'block';
+    rd.innerHTML = '';
+    try {
+        const r = await fetch('/fetch-emails', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+                provider:       document.getElementById('provider').value,
+                folder:         document.getElementById('folder').value,
+                max_emails:     document.getElementById('maxEmails').value,
+                use_virustotal: document.getElementById('fetchVT').checked,
+                date_from:      document.getElementById('dateFrom').value,
+                date_to:        document.getElementById('dateTo').value,
+            })
+        });
+        const data = await r.json();
+        if (data.success) {
+            let html = `<div class="result-card bajo" style="margin-top:10px">
+                ✅ Descargados: <strong>${data.downloaded}</strong> | Analizados: <strong>${data.analyzed}</strong>
+                ${data.errors>0?` | ⚠️ Errores: ${data.errors}`:''}
+                <small style="color:#64748b;margin-left:8px">Clic en un resultado para ver el detalle</small>
+            </div>`;
+            (data.results||[]).forEach(r => { html += renderCard(r); });
+            rd.innerHTML = html;
+            updateStats();
+        } else {
+            rd.innerHTML = `<div class="result-card critico">❌ Error: ${data.error}</div>`;
+        }
+    } catch(err) {
+        rd.innerHTML = `<div class="result-card critico">❌ Error: ${err.message}</div>`;
+    }
+    spinner.style.display = 'none';
+}
+
+// ═══════════════════════════════════════════
+//  INICIALIZACIÓN
+// ═══════════════════════════════════════════
+loadHistory(1);
+</script>
+</body>
+</html>
