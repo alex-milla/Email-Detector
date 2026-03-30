@@ -1,0 +1,188 @@
+meta:
+  version: "1.0.0"
+  updated_at: "2025-01-01"
+  author: "Email Malware Detector Project"
+  description: "Reglas para detectar artefactos de LLMs en correos maliciosos"
+  update_url: ""
+
+rules:
+
+  - id: CLK-001
+    category: conversational_comment
+    pattern: '<!--\s*(Sure[,!]?|Of course[,!]?|Here you go|Here is|Certainly[,!]?)\b'
+    target: html_comment
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Comentario HTML con frases conversacionales tipicas de LLMs"
+    added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-002
+    category: conversational_comment
+    pattern: '<!--\s*(Note:|TODO:|IMPORTANT:|Remember to|Make sure to|Don.t forget)'
+    target: html_comment
+    severity: medium
+    confidence: medium
+    fp_risk: medium
+    enabled: true
+    description: "Comentario HTML con recordatorios estilo asistente"
+    added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-003
+    category: conversational_comment
+    pattern: '<!--\s*(You can|You should|The user|The recipient|Feel free to|Please note)\b'
+    target: html_comment
+    severity: medium
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Comentario HTML con frases dirigidas al operador"
+    added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-004
+    category: placeholder
+    pattern: '\[(?:Your Name|Sender Name|Company Name|Logo Here|Insert (?:Image|Link|URL|Content)|PLACEHOLDER|TBD|YOUR_\w+)\]'
+    target: html_body
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Placeholder sin reemplazar tipo [Your Name], [Company Name]"
+    added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-005
+    category: placeholder
+    pattern: '\{\{[\w\s]+\}\}'
+    target: html_body
+    severity: medium
+    confidence: medium
+    fp_risk: medium
+    enabled: true
+    description: "Placeholder de plantilla tipo {{variable}} no sustituido"
+    added_date: "2025-01-01"
+    source: "Investigacion propia"
+
+  - id: CLK-006
+    category: placeholder
+    pattern: 'Dear\s+\[(?:Customer|Client|User|Name|Recipient)\]'
+    target: html_body
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Saludo con placeholder de nombre sin reemplazar"
+    added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-007
+    category: yellow_highlight
+    pattern: 'background-color\s*:\s*yellow'
+    target: inline_style
+    severity: medium
+    confidence: medium
+    fp_risk: medium
+    enabled: true
+    description: "Estilo inline con fondo amarillo puro"
+    added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-008
+    category: yellow_highlight
+    pattern: 'background\s*:\s*yellow'
+    target: html_body
+    severity: medium
+    confidence: medium
+    fp_risk: medium
+    enabled: true
+    description: "Atributo style con background yellow en el body"
+    added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-009
+    category: localhost_url
+    pattern: 'https?://localhost[:/]'
+    target: href_attr
+    severity: critical
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "URL localhost en atributos href"
+    added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-010
+    category: localhost_url
+    pattern: 'https?://127\.0\.0\.\d+[:/]'
+    target: href_attr
+    severity: critical
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "URL 127.0.0.x en atributos href"
+    added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-011
+    category: localhost_url
+    pattern: 'https?://(?:example\.com|example\.org|test\.com|yourdomain\.com)'
+    target: href_attr
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Dominio placeholder generico en enlaces"
+    added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-012
+    category: verbose_code_comment
+    pattern: '<!--\s*(?:Main container|Header section|Footer section|Navigation bar|Content area|Call to action)\s*-->'
+    target: html_comment
+    severity: low
+    confidence: medium
+    fp_risk: high
+    enabled: true
+    description: "Comentario HTML con etiquetas de seccion excesivamente descriptivas"
+    added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-013
+    category: verbose_code_comment
+    pattern: '<!--\s*(?:End of|Close|Closing)\s+(?:header|footer|container|section|div|table)\s*-->'
+    target: html_comment
+    severity: low
+    confidence: medium
+    fp_risk: medium
+    enabled: true
+    description: "Comentario de cierre de bloque HTML"
+    added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-014
+    category: conversational_comment
+    pattern: '<!--\s*(?:This is a|This email|This template|Generated by|Created (?:with|using|by))\b'
+    target: html_comment
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Comentario de auto-descripcion del contenido generado"
+    added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-015
+    category: conversational_comment
+    pattern: '<!--\s*(?:Customize|Modify|Replace|Update|Change)\s+(?:this|the|your|as needed)'
+    target: html_comment
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Comentario con instruccion de personalizacion al operador"
+    added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
