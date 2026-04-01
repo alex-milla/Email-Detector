@@ -1,7 +1,7 @@
 {
   "version": "1.0.1",
-  "release_date": "2026-04-01",
-  "changelog": "Versión inicial con sistema de actualización integrado.",
+  "release_date": "2026-04-02",
+  "changelog": "CRIT-01: Contraseña inicial generada aleatoriamente en cada instalación. Fuerza cambio de contraseña en el primer login. Credenciales guardadas en config/initial_credentials.txt (solo root).",
   "min_version": "1.0.0",
-  "zip_url": ""
+  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.0.1/email-detector-v1.0.1.zip"
 }
