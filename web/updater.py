@@ -6,37 +6,92 @@ Responsabilidades:
   - Leer la versión instalada localmente (fichero VERSION)
   - Consultar la versión disponible en GitHub (version.json)
   - Comparar versiones y determinar si hay actualización
-  - (Fases futuras) Descargar ZIP, validar, hacer backup y aplicar
-
-No modifica ningún fichero existente. Solo lectura en esta fase.
+  - Descargar el ZIP de actualización
+  - Validar su contenido (lista blanca de rutas, sin path traversal)
+  - Hacer backup de los ficheros afectados
+  - Aplicar los nuevos ficheros
+  - Reiniciar el servicio systemd
+  - Rollback automático si el servicio no levanta
 """
 
 import os
 import json
+import shutil
+import subprocess
+import tempfile
+import threading
+import zipfile
+from datetime import datetime
+
 import requests
 from packaging.version import Version
 
-# ── Configuración ─────────────────────────────────────────────────────────────
+# ── Configuración ──────────────────────────────────────────────────────────────
 
-# URL del version.json en la rama main del repositorio público
 VERSION_JSON_URL = (
     "https://raw.githubusercontent.com/alex-milla/Email-Detector/main/version.json"
 )
 
-# Ruta al fichero VERSION local (raíz del proyecto, un nivel arriba de web/)
-_BASE_DIR    = os.path.join(os.path.dirname(__file__), "..")
+_BASE_DIR    = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 VERSION_FILE = os.path.join(_BASE_DIR, "VERSION")
+BACKUP_DIR   = os.path.join(_BASE_DIR, "config", "update_backups")
+SERVICE_NAME = "email-detector"
+REQUEST_TIMEOUT = 15
 
-# Timeout para peticiones HTTP (segundos)
-REQUEST_TIMEOUT = 10
+# Rutas permitidas dentro del ZIP (lista blanca)
+# Ningún fichero fuera de estas rutas se aplicará nunca
+ALLOWED_PATHS = {
+    "web/",
+    "scripts/",
+    "config/clanker_rules.yaml",
+    "VERSION",
+    "version.json",
+    "requirements.txt",
+}
 
-# ── Funciones públicas ────────────────────────────────────────────────────────
+# ── Estado global del proceso de actualización ────────────────────────────────
+
+_update_state = {
+    "running":     False,
+    "success":     None,
+    "log":         [],
+    "started_at":  None,
+    "ended_at":    None,
+    "backup_path": None,
+}
+_update_lock = threading.Lock()
+
+
+def get_update_state() -> dict:
+    """Devuelve una copia del estado actual del proceso."""
+    with _update_lock:
+        return {
+            "running":     _update_state["running"],
+            "success":     _update_state["success"],
+            "log":         list(_update_state["log"]),
+            "started_at":  _update_state["started_at"],
+            "ended_at":    _update_state["ended_at"],
+            "backup_path": _update_state["backup_path"],
+        }
+
+
+def _log(msg: str):
+    """Añade una línea al log con timestamp."""
+    ts   = datetime.now().strftime("%H:%M:%S")
+    line = f"[{ts}] {msg}"
+    print(line)
+    with _update_lock:
+        _update_state["log"].append(line)
+
+
+def _set_state(**kwargs):
+    with _update_lock:
+        _update_state.update(kwargs)
+
+
+# ── Versiones ──────────────────────────────────────────────────────────────────
 
 def get_local_version() -> str:
-    """
-    Lee la versión instalada desde el fichero VERSION en la raíz del proyecto.
-    Devuelve '0.0.0' si el fichero no existe (instalación antigua sin versionado).
-    """
     try:
         with open(VERSION_FILE, "r", encoding="utf-8") as f:
             return f.read().strip()
@@ -47,23 +102,6 @@ def get_local_version() -> str:
 
 
 def get_remote_version_info() -> dict:
-    """
-    Descarga el version.json del repositorio GitHub y lo devuelve como dict.
-
-    Devuelve un dict con esta estructura en caso de éxito:
-        {
-            "version":      "1.1.0",
-            "release_date": "2026-04-10",
-            "changelog":    "Descripción de cambios",
-            "min_version":  "1.0.0",
-            "zip_url":      "https://..."
-        }
-
-    En caso de error devuelve:
-        {
-            "error": "descripción del problema"
-        }
-    """
     try:
         resp = requests.get(VERSION_JSON_URL, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
@@ -81,44 +119,22 @@ def get_remote_version_info() -> dict:
 
 
 def check_for_updates() -> dict:
-    """
-    Compara la versión local con la remota y devuelve un resumen completo.
-
-    Resultado posible:
-        {
-            "local_version":    "1.0.0",
-            "remote_version":   "1.1.0",
-            "update_available": True,
-            "changelog":        "...",
-            "zip_url":          "https://...",
-            "release_date":     "2026-04-10",
-            "error":            None          # o mensaje de error
-        }
-    """
     local = get_local_version()
-
-    # Si la versión local es un error, lo propagamos
     if local.startswith("error:"):
         return {
-            "local_version":    local,
-            "remote_version":   None,
+            "local_version": local, "remote_version": None,
             "update_available": False,
-            "error":            f"No se pudo leer la versión local: {local}"
+            "error": f"No se pudo leer la versión local: {local}"
         }
 
     remote_info = get_remote_version_info()
-
-    # Si hay error al obtener el remoto, lo propagamos
     if "error" in remote_info:
         return {
-            "local_version":    local,
-            "remote_version":   None,
-            "update_available": False,
-            "error":            remote_info["error"]
+            "local_version": local, "remote_version": None,
+            "update_available": False, "error": remote_info["error"]
         }
 
     remote = remote_info.get("version", "0.0.0")
-
     try:
         update_available = Version(remote) > Version(local)
     except Exception:
@@ -131,5 +147,272 @@ def check_for_updates() -> dict:
         "changelog":        remote_info.get("changelog", ""),
         "zip_url":          remote_info.get("zip_url", ""),
         "release_date":     remote_info.get("release_date", ""),
-        "error":            None
+        "error":            None,
     }
+
+
+# ── Descarga ───────────────────────────────────────────────────────────────────
+
+def _download_zip(zip_url: str, dest_path: str) -> bool:
+    _log(f"Descargando ZIP desde: {zip_url}")
+    try:
+        resp = requests.get(zip_url, timeout=60, stream=True)
+        resp.raise_for_status()
+        downloaded = 0
+        with open(dest_path, "wb") as f:
+            for chunk in resp.iter_content(chunk_size=8192):
+                f.write(chunk)
+                downloaded += len(chunk)
+        _log(f"ZIP descargado correctamente ({downloaded // 1024} KB)")
+        return True
+    except requests.exceptions.RequestException as e:
+        _log(f"ERROR al descargar ZIP: {e}")
+        return False
+
+
+# ── Validación ─────────────────────────────────────────────────────────────────
+
+def _validate_zip(zip_path: str):
+    """
+    Valida el contenido del ZIP.
+    - Comprueba que es un ZIP válido
+    - Detecta path traversal (../)
+    - Filtra por lista blanca de rutas permitidas
+    Devuelve (ok: bool, files_to_apply: list of (zip_name, dest_relative))
+    """
+    _log("Validando contenido del ZIP...")
+    try:
+        if not zipfile.is_zipfile(zip_path):
+            _log("ERROR: El fichero descargado no es un ZIP válido.")
+            return False, []
+
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            names = zf.namelist()
+
+        files_to_apply = []
+        rejected       = []
+
+        for name in names:
+            # Ignorar entradas de directorio
+            if name.endswith("/"):
+                continue
+
+            # Detectar path traversal
+            if ".." in name or name.startswith("/"):
+                _log(f"  RECHAZADO (path traversal): {name}")
+                rejected.append(name)
+                continue
+
+            # Quitar prefijo del paquete si existe (ej: update_package/)
+            parts = name.split("/")
+            if len(parts) > 1 and parts[0] in ("update_package", "package", "dist"):
+                clean = "/".join(parts[1:])
+            else:
+                clean = name
+
+            if not clean:
+                continue
+
+            # Comprobar contra lista blanca
+            allowed = any(
+                clean == p or clean.startswith(p)
+                for p in ALLOWED_PATHS
+            )
+
+            if allowed:
+                files_to_apply.append((name, clean))
+                _log(f"  OK: {clean}")
+            else:
+                _log(f"  IGNORADO (fuera de lista blanca): {clean}")
+
+        if rejected:
+            _log(f"ERROR: {len(rejected)} fichero(s) con rutas peligrosas detectados. Abortando.")
+            return False, []
+
+        if not files_to_apply:
+            _log("ERROR: El ZIP no contiene ningún fichero aplicable.")
+            return False, []
+
+        _log(f"Validación OK — {len(files_to_apply)} fichero(s) a aplicar.")
+        return True, files_to_apply
+
+    except zipfile.BadZipFile:
+        _log("ERROR: ZIP corrupto o inválido.")
+        return False, []
+    except Exception as e:
+        _log(f"ERROR inesperado durante validación: {e}")
+        return False, []
+
+
+# ── Backup ─────────────────────────────────────────────────────────────────────
+
+def _backup_files(files_to_apply: list) -> str:
+    ts          = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_path = os.path.join(BACKUP_DIR, f"backup_{ts}")
+    os.makedirs(backup_path, exist_ok=True)
+    _log(f"Creando backup en: config/update_backups/backup_{ts}")
+
+    backed_up = 0
+    for _, dest_relative in files_to_apply:
+        src = os.path.join(_BASE_DIR, dest_relative)
+        if os.path.exists(src):
+            dest_backup = os.path.join(backup_path, dest_relative)
+            os.makedirs(os.path.dirname(dest_backup), exist_ok=True)
+            shutil.copy2(src, dest_backup)
+            backed_up += 1
+
+    _log(f"Backup completado: {backed_up} fichero(s) guardados.")
+    return backup_path
+
+
+# ── Apply ──────────────────────────────────────────────────────────────────────
+
+def _apply_files(zip_path: str, files_to_apply: list) -> bool:
+    _log("Aplicando ficheros...")
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            for zip_name, dest_relative in files_to_apply:
+                dest_abs = os.path.join(_BASE_DIR, dest_relative)
+                os.makedirs(os.path.dirname(dest_abs), exist_ok=True)
+                with zf.open(zip_name) as src_f, open(dest_abs, "wb") as dst_f:
+                    shutil.copyfileobj(src_f, dst_f)
+                _log(f"  Aplicado: {dest_relative}")
+        _log("Todos los ficheros aplicados correctamente.")
+        return True
+    except Exception as e:
+        _log(f"ERROR al aplicar ficheros: {e}")
+        return False
+
+
+# ── Rollback ───────────────────────────────────────────────────────────────────
+
+def _rollback(backup_path: str):
+    _log(f"⚠️  Iniciando rollback...")
+    try:
+        for root, _, files in os.walk(backup_path):
+            for fname in files:
+                src      = os.path.join(root, fname)
+                relative = os.path.relpath(src, backup_path)
+                dest     = os.path.join(_BASE_DIR, relative)
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                shutil.copy2(src, dest)
+                _log(f"  Restaurado: {relative}")
+        _log("Rollback completado.")
+    except Exception as e:
+        _log(f"ERROR durante rollback: {e}")
+
+
+# ── Servicio ───────────────────────────────────────────────────────────────────
+
+def _restart_service() -> bool:
+    _log(f"Reiniciando servicio '{SERVICE_NAME}'...")
+    try:
+        result = subprocess.run(
+            ["systemctl", "restart", SERVICE_NAME],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode != 0:
+            _log(f"ERROR al reiniciar: {result.stderr.strip()}")
+            return False
+
+        import time; time.sleep(3)
+
+        check = subprocess.run(
+            ["systemctl", "is-active", SERVICE_NAME],
+            capture_output=True, text=True, timeout=10
+        )
+        if check.stdout.strip() == "active":
+            _log("Servicio activo y funcionando correctamente.")
+            return True
+        else:
+            _log(f"ERROR: Servicio no activo tras reinicio ({check.stdout.strip()}).")
+            return False
+    except subprocess.TimeoutExpired:
+        _log("ERROR: Timeout al reiniciar el servicio.")
+        return False
+    except FileNotFoundError:
+        _log("AVISO: systemctl no disponible — reinicia el servicio manualmente.")
+        return True
+    except Exception as e:
+        _log(f"ERROR inesperado al reiniciar: {e}")
+        return False
+
+
+# ── Proceso principal ──────────────────────────────────────────────────────────
+
+def _run_update(zip_url: str):
+    """Proceso completo de actualización. Se ejecuta en un thread separado."""
+    _set_state(
+        running=True, success=None, log=[],
+        started_at=datetime.now().isoformat(),
+        ended_at=None, backup_path=None
+    )
+
+    tmp_zip     = None
+    backup_path = None
+
+    try:
+        # 1. Descargar
+        tmp_fd, tmp_zip = tempfile.mkstemp(suffix=".zip", prefix="emd_update_")
+        os.close(tmp_fd)
+
+        if not _download_zip(zip_url, tmp_zip):
+            _set_state(running=False, success=False, ended_at=datetime.now().isoformat())
+            return
+
+        # 2. Validar
+        ok, files_to_apply = _validate_zip(tmp_zip)
+        if not ok:
+            _set_state(running=False, success=False, ended_at=datetime.now().isoformat())
+            return
+
+        # 3. Backup
+        backup_path = _backup_files(files_to_apply)
+        _set_state(backup_path=backup_path)
+
+        # 4. Aplicar
+        if not _apply_files(tmp_zip, files_to_apply):
+            _log("Aplicación fallida — iniciando rollback...")
+            _rollback(backup_path)
+            _set_state(running=False, success=False, ended_at=datetime.now().isoformat())
+            return
+
+        # 5. Reiniciar servicio
+        if not _restart_service():
+            _log("El servicio no levantó — iniciando rollback...")
+            _rollback(backup_path)
+            _restart_service()
+            _set_state(running=False, success=False, ended_at=datetime.now().isoformat())
+            return
+
+        _log("✅ Actualización completada correctamente.")
+        _set_state(running=False, success=True, ended_at=datetime.now().isoformat())
+
+    except Exception as e:
+        _log(f"ERROR crítico inesperado: {e}")
+        if backup_path:
+            _rollback(backup_path)
+            _restart_service()
+        _set_state(running=False, success=False, ended_at=datetime.now().isoformat())
+    finally:
+        if tmp_zip and os.path.exists(tmp_zip):
+            try:
+                os.unlink(tmp_zip)
+            except Exception:
+                pass
+
+
+def start_update(zip_url: str) -> tuple:
+    """
+    Lanza el proceso de actualización en background.
+    Devuelve (ok: bool, error_msg: str)
+    """
+    state = get_update_state()
+    if state["running"]:
+        return False, "Ya hay una actualización en curso."
+    if not zip_url:
+        return False, "No hay URL de descarga en version.json. Publica una Release primero."
+
+    t = threading.Thread(target=_run_update, args=(zip_url,), daemon=True)
+    t.start()
+    return True, ""
