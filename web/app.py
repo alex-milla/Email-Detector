@@ -35,6 +35,7 @@ from settings_manager import (
     read_global_env, write_global_env,
     test_imap, test_virustotal, test_m365
 )
+from updater import check_for_updates, get_update_state, start_update
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "config", ".env"))
 
