@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actualizaciones — Email Malware Detector</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',system-ui,sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; }
+        .container { max-width:860px; margin:0 auto; padding:20px; }
+
+        /* ── Navbar (igual que el resto de la app) ── */
+        nav { background:#1e293b; border-bottom:2px solid #3b82f6; }
+        nav .nav-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; }
+        nav .nav-brand { padding:16px 24px; font-size:1.1em; font-weight:700; border-right:1px solid #334155; }
+        nav .nav-brand span { color:#3b82f6; }
+        nav a.nav-link { padding:18px 22px; color:#94a3b8; text-decoration:none; font-weight:500; border-bottom:3px solid transparent; transition:all 0.2s; }
+        nav a.nav-link:hover { color:#e2e8f0; background:rgba(59,130,246,0.08); }
+        nav a.nav-link.active { color:#3b82f6; border-bottom-color:#3b82f6; }
+        .nav-right { margin-left:auto; padding:0 20px; display:flex; align-items:center; gap:12px; }
+        .nav-user  { color:#64748b; font-size:0.9em; }
+        nav a.nav-logout { color:#ef4444; text-decoration:none; font-size:0.9em; }
+
+        /* ── Cabecera de página ── */
+        .page-header { margin:30px 0 24px; }
+        .page-header h1 { font-size:1.5em; }
+        .page-header p  { color:#64748b; margin-top:5px; font-size:0.9em; }
+
+        /* ── Tarjeta genérica ── */
+        .card { background:#1e293b; border-radius:12px; padding:24px; margin-bottom:20px; border:1px solid #334155; }
+        .card-header { margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid #334155; display:flex; align-items:center; justify-content:space-between; }
+        .card-header h2 { font-size:1.1em; }
+        .card-header p  { color:#64748b; font-size:0.85em; margin-top:4px; }
+
+        /* ── Versiones ── */
+        .version-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+        .version-box { background:#0f172a; border-radius:10px; padding:20px; border-left:4px solid #334155; }
+        .version-box.local  { border-left-color:#3b82f6; }
+        .version-box.remote { border-left-color:#22c55e; }
+        .version-box.remote.outdated { border-left-color:#f59e0b; }
+        .version-box .label { color:#64748b; font-size:0.8em; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; }
+        .version-box .number { font-size:2em; font-weight:700; font-family:monospace; }
+        .version-box .date   { color:#64748b; font-size:0.82em; margin-top:6px; }
+
+        /* ── Badges de estado ── */
+        .badge { display:inline-flex; align-items:center; gap:6px; padding:5px 14px; border-radius:20px; font-size:0.85em; font-weight:600; }
+        .badge-ok      { background:rgba(34,197,94,0.15);  color:#22c55e; }
+        .badge-update  { background:rgba(245,158,11,0.15); color:#f59e0b; }
+        .badge-error   { background:rgba(239,68,68,0.15);  color:#ef4444; }
+        .badge-loading { background:rgba(100,116,139,0.2); color:#94a3b8; }
+
+        /* ── Changelog ── */
+        .changelog { background:#0f172a; border-radius:8px; padding:16px; font-size:0.9em; line-height:1.6; color:#cbd5e1; border-left:3px solid #3b82f6; }
+
+        /* ── Botones ── */
+        .btn { padding:10px 22px; border:none; border-radius:8px; font-size:0.95em; font-weight:600; cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:8px; }
+        .btn:disabled { opacity:0.5; cursor:not-allowed; }
+        .btn-primary { background:#3b82f6; color:white; }
+        .btn-primary:hover:not(:disabled) { background:#2563eb; }
+        .btn-ghost   { background:transparent; color:#94a3b8; border:1px solid #334155; }
+        .btn-ghost:hover:not(:disabled) { color:#e2e8f0; border-color:#64748b; }
+
+        /* ── Spinner ── */
+        .spinner { width:16px; height:16px; border:2px solid rgba(255,255,255,0.3); border-top-color:white; border-radius:50%; animation:spin 0.7s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* ── Estado de carga inicial ── */
+        #status-area { min-height:60px; display:flex; align-items:center; }
+
+        /* ── Toast ── */
+        .toast { position:fixed; bottom:24px; right:24px; padding:14px 20px; border-radius:10px; font-weight:600; font-size:0.95em; opacity:0; transition:opacity 0.3s; z-index:999; }
+        .toast.show { opacity:1; }
+        .toast.error { background:#ef4444; color:white; }
+    </style>
+</head>
+<body>
+
+<!-- ── Navbar ── -->
+<nav>
+    <div class="nav-inner">
+        <div class="nav-brand">🛡️ Email <span>Malware</span> Detector</div>
+        <a href="/" class="nav-link">📊 Dashboard</a>
+        <a href="/training" class="nav-link">🧠 Entrenamiento</a>
+        {% if user.role == 'admin' %}
+        <a href="/users" class="nav-link">👥 Usuarios</a>
+        {% endif %}
+        <a href="/settings" class="nav-link">⚙️ Mi configuración</a>
+        <a href="/update" class="nav-link active">🔄 Actualizaciones</a>
+        <div class="nav-right">
+            <span class="nav-user">{{ user.username }}</span>
+            <a href="/logout" class="nav-logout">Cerrar sesión</a>
+        </div>
+    </div>
+</nav>
+
+<!-- ── Contenido ── -->
+<div class="container">
+    <div class="page-header">
+        <h1>🔄 Actualizaciones del sistema</h1>
+        <p>Comprueba si hay una nueva versión disponible en el repositorio oficial.</p>
+    </div>
+
+    <!-- Tarjeta principal -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h2>Estado de la versión</h2>
+                <p>Compara tu instalación con la última versión publicada en GitHub.</p>
+            </div>
+            <!-- Badge de estado dinámico -->
+            <span class="badge badge-loading" id="status-badge">
+                <div class="spinner"></div> Comprobando...
+            </span>
+        </div>
+
+        <!-- Grid de versiones — se rellena por JS -->
+        <div class="version-grid" id="version-grid" style="display:none;">
+            <div class="version-box local">
+                <div class="label">📦 Versión instalada</div>
+                <div class="number" id="local-ver">—</div>
+                <div class="date" id="local-date"></div>
+            </div>
+            <div class="version-box remote" id="remote-box">
+                <div class="label">☁️ Última versión disponible</div>
+                <div class="number" id="remote-ver">—</div>
+                <div class="date" id="remote-date"></div>
+            </div>
+        </div>
+
+        <!-- Zona de estado / error -->
+        <div id="status-area"></div>
+
+        <!-- Changelog — se muestra solo si hay actualización -->
+        <div id="changelog-section" style="display:none; margin-bottom:20px;">
+            <p style="color:#94a3b8; font-size:0.85em; margin-bottom:8px; font-weight:600;">📋 CAMBIOS EN ESTA VERSIÓN</p>
+            <div class="changelog" id="changelog-text"></div>
+        </div>
+
+        <!-- Botones -->
+        <div style="display:flex; gap:12px; flex-wrap:wrap;" id="action-buttons" style="display:none;">
+            <button class="btn btn-ghost" onclick="checkUpdates()">
+                🔍 Comprobar de nuevo
+            </button>
+            <!-- El botón de actualizar aparecerá aquí si hay versión nueva -->
+        </div>
+    </div>
+
+    <!-- Nota informativa -->
+    <div class="card" style="border-color:#1e3a5f;">
+        <p style="color:#64748b; font-size:0.88em; line-height:1.7;">
+            ℹ️ <strong style="color:#94a3b8;">¿Cómo funciona?</strong>
+            El sistema consulta el repositorio oficial en GitHub para obtener la versión más reciente.
+            Si hay una actualización disponible, aparecerá aquí con un resumen de los cambios.
+            La aplicación de actualizaciones se implementará en una próxima fase.
+        </p>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Utilidades ─────────────────────────────────────────────────────────────
+
+function showToast(msg, type = "error") {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.classList.remove("show"), 4000);
+}
+
+// ── Consulta al backend ─────────────────────────────────────────────────────
+
+async function checkUpdates() {
+    // Reset visual
+    document.getElementById("status-badge").innerHTML =
+        '<div class="spinner"></div> Comprobando...';
+    document.getElementById("status-badge").className = "badge badge-loading";
+    document.getElementById("version-grid").style.display = "none";
+    document.getElementById("status-area").innerHTML = "";
+    document.getElementById("changelog-section").style.display = "none";
+    document.getElementById("action-buttons").style.display = "none";
+
+    try {
+        const resp = await fetch("/api/update/check");
+        const data = await resp.json();
+        renderResult(data);
+    } catch (err) {
+        renderError("No se pudo contactar con el servidor. Inténtalo de nuevo.");
+    }
+}
+
+// ── Renderizado de resultado ────────────────────────────────────────────────
+
+function renderResult(data) {
+    if (data.error) {
+        renderError(data.error);
+        return;
+    }
+
+    // Versión local
+    document.getElementById("local-ver").textContent  = data.local_version  || "—";
+
+    // Versión remota
+    document.getElementById("remote-ver").textContent  = data.remote_version || "—";
+    document.getElementById("remote-date").textContent =
+        data.release_date ? `Publicada: ${data.release_date}` : "";
+
+    // Marcar caja remota si hay update
+    const remoteBox = document.getElementById("remote-box");
+    if (data.update_available) {
+        remoteBox.classList.add("outdated");
+    } else {
+        remoteBox.classList.remove("outdated");
+    }
+
+    document.getElementById("version-grid").style.display = "grid";
+
+    // Badge de estado
+    const badge = document.getElementById("status-badge");
+    if (data.update_available) {
+        badge.innerHTML = "⚠️ Actualización disponible";
+        badge.className = "badge badge-update";
+    } else {
+        badge.innerHTML = "✅ Sistema al día";
+        badge.className = "badge badge-ok";
+    }
+
+    // Changelog
+    if (data.update_available && data.changelog) {
+        document.getElementById("changelog-text").textContent = data.changelog;
+        document.getElementById("changelog-section").style.display = "block";
+    }
+
+    // Botones
+    const actionDiv = document.getElementById("action-buttons");
+    actionDiv.style.display = "flex";
+    actionDiv.innerHTML = `
+        <button class="btn btn-ghost" onclick="checkUpdates()">
+            🔍 Comprobar de nuevo
+        </button>
+        ${data.update_available
+            ? `<button class="btn btn-primary" disabled title="Próximamente">
+                   ⬇️ Aplicar actualización <span style="font-size:0.75em; opacity:0.7">(próximamente)</span>
+               </button>`
+            : ""}
+    `;
+}
+
+function renderError(msg) {
+    const badge = document.getElementById("status-badge");
+    badge.innerHTML = "❌ Error";
+    badge.className = "badge badge-error";
+
+    document.getElementById("status-area").innerHTML = `
+        <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3);
+                    border-radius:8px; padding:14px 18px; color:#fca5a5; font-size:0.9em; width:100%;">
+            ⚠️ ${msg}
+        </div>`;
+
+    document.getElementById("action-buttons").innerHTML = `
+        <button class="btn btn-ghost" onclick="checkUpdates()">
+            🔍 Reintentar
+        </button>`;
+    document.getElementById("action-buttons").style.display = "flex";
+}
+
+// ── Auto-comprobación al cargar la página ──────────────────────────────────
+document.addEventListener("DOMContentLoaded", checkUpdates);
+</script>
+</body>
+</html>
