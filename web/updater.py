@@ -203,9 +203,12 @@ def _validate_zip(zip_path: str):
                 rejected.append(name)
                 continue
 
-            # Quitar prefijo del paquete si existe (ej: update_package/)
+            # Quitar prefijo del paquete si existe
+            # Soporta cualquier prefijo de un nivel: v1.0.1/, update_package/, etc.
+            # Solo se elimina si el primer componente NO es carpeta conocida del proyecto.
             parts = name.split("/")
-            if len(parts) > 1 and parts[0] in ("update_package", "package", "dist"):
+            known_roots = {"web", "scripts", "config"}
+            if len(parts) > 1 and parts[0] not in known_roots:
                 clean = "/".join(parts[1:])
             else:
                 clean = name
