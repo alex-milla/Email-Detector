@@ -351,7 +351,7 @@ def _restart_service() -> bool:
         _log("Estado guardado en disco. Reiniciando servicio...")
 
         result = subprocess.run(
-            ["systemctl", "restart", SERVICE_NAME],
+            ["sudo", "systemctl", "restart", SERVICE_NAME],
             capture_output=True, text=True, timeout=30
         )
         if result.returncode != 0:
