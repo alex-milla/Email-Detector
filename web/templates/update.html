@@ -9,7 +9,6 @@
         body { font-family:'Segoe UI',system-ui,sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; }
         .container { max-width:860px; margin:0 auto; padding:20px; }
 
-        /* ── Navbar (igual que el resto de la app) ── */
         nav { background:#1e293b; border-bottom:2px solid #3b82f6; }
         nav .nav-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; }
         nav .nav-brand { padding:16px 24px; font-size:1.1em; font-weight:700; border-right:1px solid #334155; }
@@ -21,61 +20,67 @@
         .nav-user  { color:#64748b; font-size:0.9em; }
         nav a.nav-logout { color:#ef4444; text-decoration:none; font-size:0.9em; }
 
-        /* ── Cabecera de página ── */
         .page-header { margin:30px 0 24px; }
         .page-header h1 { font-size:1.5em; }
         .page-header p  { color:#64748b; margin-top:5px; font-size:0.9em; }
 
-        /* ── Tarjeta genérica ── */
         .card { background:#1e293b; border-radius:12px; padding:24px; margin-bottom:20px; border:1px solid #334155; }
-        .card-header { margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid #334155; display:flex; align-items:center; justify-content:space-between; }
+        .card-header { margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid #334155; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
         .card-header h2 { font-size:1.1em; }
         .card-header p  { color:#64748b; font-size:0.85em; margin-top:4px; }
 
-        /* ── Versiones ── */
         .version-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
         .version-box { background:#0f172a; border-radius:10px; padding:20px; border-left:4px solid #334155; }
         .version-box.local  { border-left-color:#3b82f6; }
         .version-box.remote { border-left-color:#22c55e; }
-        .version-box.remote.outdated { border-left-color:#f59e0b; }
-        .version-box .label { color:#64748b; font-size:0.8em; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; }
+        .version-box.has-update { border-left-color:#f59e0b; }
+        .version-box .label  { color:#64748b; font-size:0.8em; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; }
         .version-box .number { font-size:2em; font-weight:700; font-family:monospace; }
         .version-box .date   { color:#64748b; font-size:0.82em; margin-top:6px; }
 
-        /* ── Badges de estado ── */
         .badge { display:inline-flex; align-items:center; gap:6px; padding:5px 14px; border-radius:20px; font-size:0.85em; font-weight:600; }
         .badge-ok      { background:rgba(34,197,94,0.15);  color:#22c55e; }
         .badge-update  { background:rgba(245,158,11,0.15); color:#f59e0b; }
         .badge-error   { background:rgba(239,68,68,0.15);  color:#ef4444; }
         .badge-loading { background:rgba(100,116,139,0.2); color:#94a3b8; }
+        .badge-applying{ background:rgba(59,130,246,0.15); color:#3b82f6; }
 
-        /* ── Changelog ── */
-        .changelog { background:#0f172a; border-radius:8px; padding:16px; font-size:0.9em; line-height:1.6; color:#cbd5e1; border-left:3px solid #3b82f6; }
+        .changelog { background:#0f172a; border-radius:8px; padding:16px; font-size:0.9em; line-height:1.6; color:#cbd5e1; border-left:3px solid #3b82f6; margin-bottom:20px; }
 
-        /* ── Botones ── */
         .btn { padding:10px 22px; border:none; border-radius:8px; font-size:0.95em; font-weight:600; cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:8px; }
         .btn:disabled { opacity:0.5; cursor:not-allowed; }
         .btn-primary { background:#3b82f6; color:white; }
         .btn-primary:hover:not(:disabled) { background:#2563eb; }
+        .btn-success { background:#22c55e; color:white; }
+        .btn-success:hover:not(:disabled) { background:#16a34a; }
         .btn-ghost   { background:transparent; color:#94a3b8; border:1px solid #334155; }
         .btn-ghost:hover:not(:disabled) { color:#e2e8f0; border-color:#64748b; }
 
-        /* ── Spinner ── */
         .spinner { width:16px; height:16px; border:2px solid rgba(255,255,255,0.3); border-top-color:white; border-radius:50%; animation:spin 0.7s linear infinite; }
         @keyframes spin { to { transform:rotate(360deg); } }
 
-        /* ── Estado de carga inicial ── */
-        #status-area { min-height:60px; display:flex; align-items:center; }
+        /* Log en tiempo real — igual que el entrenamiento */
+        .log-box { background:#0a0f1a; border:1px solid #1e293b; border-radius:8px; padding:16px; font-family:monospace; font-size:0.82em; line-height:1.7; color:#94a3b8; max-height:320px; overflow-y:auto; display:none; margin-top:16px; white-space:pre-wrap; word-break:break-all; }
+        .log-box.visible  { display:block; }
+        .log-box.running  { border-color:#3b82f6; }
+        .log-box.success  { border-color:#22c55e; }
+        .log-box.error    { border-color:#ef4444; }
 
-        /* ── Toast ── */
+        .result-banner { border-radius:10px; padding:16px 20px; margin-top:16px; font-weight:600; display:none; }
+        .result-banner.success { background:rgba(34,197,94,0.1);  border:1px solid #22c55e; color:#86efac; }
+        .result-banner.error   { background:rgba(239,68,68,0.1);  border:1px solid #ef4444; color:#fca5a5; }
+        .result-banner.visible { display:block; }
+
         .toast { position:fixed; bottom:24px; right:24px; padding:14px 20px; border-radius:10px; font-weight:600; font-size:0.95em; opacity:0; transition:opacity 0.3s; z-index:999; }
-        .toast.show { opacity:1; }
-        .toast.error { background:#ef4444; color:white; }
+        .toast.show   { opacity:1; }
+        .toast.error  { background:#ef4444; color:white; }
+        .toast.success{ background:#22c55e; color:white; }
+
+        @media(max-width:600px) { .version-grid { grid-template-columns:1fr; } }
     </style>
 </head>
 <body>
 
-<!-- ── Navbar ── -->
 <nav>
     <div class="nav-inner">
         <div class="nav-brand">🛡️ Email <span>Malware</span> Detector</div>
@@ -85,7 +90,9 @@
         <a href="/users" class="nav-link">👥 Usuarios</a>
         {% endif %}
         <a href="/settings" class="nav-link">⚙️ Mi configuración</a>
+        {% if user.role == 'admin' %}
         <a href="/update" class="nav-link active">🔄 Actualizaciones</a>
+        {% endif %}
         <div class="nav-right">
             <span class="nav-user">{{ user.username }}</span>
             <a href="/logout" class="nav-logout">Cerrar sesión</a>
@@ -93,65 +100,65 @@
     </div>
 </nav>
 
-<!-- ── Contenido ── -->
 <div class="container">
     <div class="page-header">
         <h1>🔄 Actualizaciones del sistema</h1>
-        <p>Comprueba si hay una nueva versión disponible en el repositorio oficial.</p>
+        <p>Comprueba y aplica nuevas versiones desde el repositorio oficial.</p>
     </div>
 
-    <!-- Tarjeta principal -->
+    <!-- Tarjeta de estado -->
     <div class="card">
         <div class="card-header">
             <div>
                 <h2>Estado de la versión</h2>
                 <p>Compara tu instalación con la última versión publicada en GitHub.</p>
             </div>
-            <!-- Badge de estado dinámico -->
             <span class="badge badge-loading" id="status-badge">
                 <div class="spinner"></div> Comprobando...
             </span>
         </div>
 
-        <!-- Grid de versiones — se rellena por JS -->
         <div class="version-grid" id="version-grid" style="display:none;">
             <div class="version-box local">
                 <div class="label">📦 Versión instalada</div>
                 <div class="number" id="local-ver">—</div>
-                <div class="date" id="local-date"></div>
             </div>
             <div class="version-box remote" id="remote-box">
                 <div class="label">☁️ Última versión disponible</div>
                 <div class="number" id="remote-ver">—</div>
-                <div class="date" id="remote-date"></div>
+                <div class="date"   id="remote-date"></div>
             </div>
         </div>
 
-        <!-- Zona de estado / error -->
-        <div id="status-area"></div>
+        <!-- Error de comprobación -->
+        <div id="check-error" style="display:none; margin-bottom:16px;">
+            <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:14px 18px; color:#fca5a5; font-size:0.9em;"></div>
+        </div>
 
-        <!-- Changelog — se muestra solo si hay actualización -->
-        <div id="changelog-section" style="display:none; margin-bottom:20px;">
+        <!-- Changelog -->
+        <div id="changelog-section" style="display:none;">
             <p style="color:#94a3b8; font-size:0.85em; margin-bottom:8px; font-weight:600;">📋 CAMBIOS EN ESTA VERSIÓN</p>
             <div class="changelog" id="changelog-text"></div>
         </div>
 
-        <!-- Botones -->
-        <div style="display:flex; gap:12px; flex-wrap:wrap;" id="action-buttons" style="display:none;">
-            <button class="btn btn-ghost" onclick="checkUpdates()">
-                🔍 Comprobar de nuevo
-            </button>
-            <!-- El botón de actualizar aparecerá aquí si hay versión nueva -->
-        </div>
+        <!-- Botones de acción -->
+        <div style="display:flex; gap:12px; flex-wrap:wrap;" id="action-buttons"></div>
+
+        <!-- Log del proceso de actualización -->
+        <div class="log-box" id="update-log"></div>
+
+        <!-- Banner de resultado -->
+        <div class="result-banner" id="result-banner"></div>
     </div>
 
     <!-- Nota informativa -->
     <div class="card" style="border-color:#1e3a5f;">
         <p style="color:#64748b; font-size:0.88em; line-height:1.7;">
             ℹ️ <strong style="color:#94a3b8;">¿Cómo funciona?</strong>
-            El sistema consulta el repositorio oficial en GitHub para obtener la versión más reciente.
-            Si hay una actualización disponible, aparecerá aquí con un resumen de los cambios.
-            La aplicación de actualizaciones se implementará en una próxima fase.
+            Al aplicar una actualización, el sistema descarga el paquete de GitHub,
+            valida su contenido, hace un backup automático de los ficheros afectados
+            y los sustituye. Si el servicio no levanta correctamente, se restaura
+            el backup de forma automática.
         </p>
     </div>
 </div>
@@ -159,63 +166,68 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ── Utilidades ─────────────────────────────────────────────────────────────
+// ── Estado ─────────────────────────────────────────────────────────────────
+let _updateInfo  = null;   // resultado de check_for_updates
+let _pollTimer   = null;   // intervalo de polling durante apply
+let _isApplying  = false;
 
+// ── Utilidades ──────────────────────────────────────────────────────────────
 function showToast(msg, type = "error") {
     const t = document.getElementById("toast");
-    t.textContent = msg;
-    t.className = `toast ${type} show`;
+    t.textContent  = msg;
+    t.className    = `toast ${type} show`;
     setTimeout(() => t.classList.remove("show"), 4000);
 }
 
-// ── Consulta al backend ─────────────────────────────────────────────────────
+function setLogVisible(cls) {
+    const log = document.getElementById("update-log");
+    log.className = `log-box visible ${cls}`;
+}
 
+function appendLog(lines) {
+    const log = document.getElementById("update-log");
+    log.textContent = lines.join("\n");
+    log.scrollTop   = log.scrollHeight;
+}
+
+// ── Comprobación de versión ─────────────────────────────────────────────────
 async function checkUpdates() {
-    // Reset visual
+    // Reset UI
     document.getElementById("status-badge").innerHTML =
         '<div class="spinner"></div> Comprobando...';
     document.getElementById("status-badge").className = "badge badge-loading";
-    document.getElementById("version-grid").style.display = "none";
-    document.getElementById("status-area").innerHTML = "";
+    document.getElementById("version-grid").style.display  = "none";
+    document.getElementById("check-error").style.display   = "none";
     document.getElementById("changelog-section").style.display = "none";
-    document.getElementById("action-buttons").style.display = "none";
+    document.getElementById("action-buttons").innerHTML    = "";
+    document.getElementById("update-log").className        = "log-box";
+    document.getElementById("result-banner").className     = "result-banner";
+    _updateInfo = null;
 
     try {
         const resp = await fetch("/api/update/check");
         const data = await resp.json();
-        renderResult(data);
+        _updateInfo = data;
+        renderCheckResult(data);
     } catch (err) {
-        renderError("No se pudo contactar con el servidor. Inténtalo de nuevo.");
+        renderCheckError("No se pudo contactar con el servidor.");
     }
 }
 
-// ── Renderizado de resultado ────────────────────────────────────────────────
+function renderCheckResult(data) {
+    if (data.error) { renderCheckError(data.error); return; }
 
-function renderResult(data) {
-    if (data.error) {
-        renderError(data.error);
-        return;
-    }
-
-    // Versión local
+    // Versiones
     document.getElementById("local-ver").textContent  = data.local_version  || "—";
-
-    // Versión remota
-    document.getElementById("remote-ver").textContent  = data.remote_version || "—";
+    document.getElementById("remote-ver").textContent = data.remote_version || "—";
     document.getElementById("remote-date").textContent =
         data.release_date ? `Publicada: ${data.release_date}` : "";
 
-    // Marcar caja remota si hay update
     const remoteBox = document.getElementById("remote-box");
-    if (data.update_available) {
-        remoteBox.classList.add("outdated");
-    } else {
-        remoteBox.classList.remove("outdated");
-    }
-
+    remoteBox.className = "version-box remote" + (data.update_available ? " has-update" : "");
     document.getElementById("version-grid").style.display = "grid";
 
-    // Badge de estado
+    // Badge
     const badge = document.getElementById("status-badge");
     if (data.update_available) {
         badge.innerHTML = "⚠️ Actualización disponible";
@@ -232,40 +244,146 @@ function renderResult(data) {
     }
 
     // Botones
-    const actionDiv = document.getElementById("action-buttons");
-    actionDiv.style.display = "flex";
-    actionDiv.innerHTML = `
-        <button class="btn btn-ghost" onclick="checkUpdates()">
-            🔍 Comprobar de nuevo
-        </button>
-        ${data.update_available
-            ? `<button class="btn btn-primary" disabled title="Próximamente">
-                   ⬇️ Aplicar actualización <span style="font-size:0.75em; opacity:0.7">(próximamente)</span>
-               </button>`
-            : ""}
-    `;
+    renderActionButtons(data.update_available);
 }
 
-function renderError(msg) {
+function renderCheckError(msg) {
     const badge = document.getElementById("status-badge");
     badge.innerHTML = "❌ Error";
     badge.className = "badge badge-error";
 
-    document.getElementById("status-area").innerHTML = `
-        <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3);
-                    border-radius:8px; padding:14px 18px; color:#fca5a5; font-size:0.9em; width:100%;">
-            ⚠️ ${msg}
-        </div>`;
+    const errDiv = document.getElementById("check-error");
+    errDiv.querySelector("div").textContent = `⚠️ ${msg}`;
+    errDiv.style.display = "block";
 
-    document.getElementById("action-buttons").innerHTML = `
-        <button class="btn btn-ghost" onclick="checkUpdates()">
-            🔍 Reintentar
-        </button>`;
-    document.getElementById("action-buttons").style.display = "flex";
+    renderActionButtons(false);
 }
 
-// ── Auto-comprobación al cargar la página ──────────────────────────────────
-document.addEventListener("DOMContentLoaded", checkUpdates);
+function renderActionButtons(hasUpdate, applying = false) {
+    const div = document.getElementById("action-buttons");
+    div.innerHTML = `
+        <button class="btn btn-ghost" onclick="checkUpdates()" ${applying ? "disabled" : ""}>
+            🔍 Comprobar de nuevo
+        </button>
+        ${hasUpdate ? `
+        <button class="btn btn-success" id="apply-btn"
+                onclick="applyUpdate()" ${applying ? "disabled" : ""}>
+            ${applying
+                ? '<div class="spinner"></div> Aplicando...'
+                : '⬇️ Aplicar actualización'}
+        </button>` : ""}
+    `;
+}
+
+// ── Aplicar actualización ───────────────────────────────────────────────────
+async function applyUpdate() {
+    if (_isApplying) return;
+
+    if (!confirm(
+        "¿Confirmas que quieres aplicar la actualización?\n\n" +
+        "Se hará un backup automático. Si algo falla, se restaurará el estado anterior."
+    )) return;
+
+    _isApplying = true;
+    renderActionButtons(true, true);
+
+    const badge = document.getElementById("status-badge");
+    badge.innerHTML = '<div class="spinner"></div> Aplicando...';
+    badge.className = "badge badge-applying";
+
+    setLogVisible("running");
+    document.getElementById("update-log").textContent = "Iniciando proceso de actualización...\n";
+    document.getElementById("result-banner").className = "result-banner";
+
+    try {
+        const resp = await fetch("/api/update/apply", { method: "POST" });
+        const data = await resp.json();
+
+        if (!data.started) {
+            showToast(data.error || "No se pudo iniciar la actualización.", "error");
+            _isApplying = false;
+            renderActionButtons(true, false);
+            badge.innerHTML = "⚠️ Actualización disponible";
+            badge.className = "badge badge-update";
+            return;
+        }
+
+        // Iniciar polling del estado
+        startPolling();
+
+    } catch (err) {
+        showToast("Error de conexión al iniciar la actualización.", "error");
+        _isApplying = false;
+        renderActionButtons(true, false);
+    }
+}
+
+// ── Polling del estado ──────────────────────────────────────────────────────
+function startPolling() {
+    if (_pollTimer) clearInterval(_pollTimer);
+    _pollTimer = setInterval(pollStatus, 2000);
+}
+
+async function pollStatus() {
+    try {
+        const resp = await fetch("/api/update/status");
+        const st   = await resp.json();
+
+        // Actualizar log
+        if (st.log && st.log.length > 0) {
+            appendLog(st.log);
+        }
+
+        if (!st.running) {
+            clearInterval(_pollTimer);
+            _pollTimer  = null;
+            _isApplying = false;
+            onUpdateFinished(st);
+        }
+    } catch (err) {
+        // Si el servidor no responde puede ser que se esté reiniciando
+        // Esperamos un poco más antes de cancelar
+        appendLog(["[...] Servidor reiniciándose, esperando..."]);
+    }
+}
+
+function onUpdateFinished(st) {
+    const badge  = document.getElementById("status-badge");
+    const banner = document.getElementById("result-banner");
+
+    if (st.success) {
+        setLogVisible("success");
+        badge.innerHTML = "✅ Actualización aplicada";
+        badge.className = "badge badge-ok";
+        banner.textContent = "✅ Actualización completada correctamente. La página se recargará en 5 segundos.";
+        banner.className   = "result-banner success visible";
+        showToast("Actualización aplicada correctamente.", "success");
+        setTimeout(() => location.reload(), 5000);
+    } else {
+        setLogVisible("error");
+        badge.innerHTML = "❌ Error en la actualización";
+        badge.className = "badge badge-error";
+        banner.textContent = "❌ La actualización falló. Se ha restaurado el estado anterior automáticamente.";
+        banner.className   = "result-banner error visible";
+        showToast("La actualización falló. Se restauró el backup.", "error");
+        renderActionButtons(true, false);
+    }
+}
+
+// ── Arranque ────────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+    checkUpdates();
+
+    // Si hay una actualización en curso al cargar (reinicio de página), reconectar
+    fetch("/api/update/status").then(r => r.json()).then(st => {
+        if (st.running) {
+            _isApplying = true;
+            renderActionButtons(true, true);
+            setLogVisible("running");
+            startPolling();
+        }
+    }).catch(() => {});
+});
 </script>
 </body>
 </html>
