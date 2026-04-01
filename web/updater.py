@@ -36,6 +36,7 @@ _BASE_DIR    = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 VERSION_FILE = os.path.join(_BASE_DIR, "VERSION")
 BACKUP_DIR   = os.path.join(_BASE_DIR, "config", "update_backups")
 SERVICE_NAME = "email-detector"
+UPDATE_STATE_FILE = os.path.join(_BASE_DIR, "results", "update_state.json")
 REQUEST_TIMEOUT = 15
 
 # Rutas permitidas dentro del ZIP (lista blanca)
@@ -87,6 +88,40 @@ def _log(msg: str):
 def _set_state(**kwargs):
     with _update_lock:
         _update_state.update(kwargs)
+
+
+def _save_state_to_disk():
+    """Guarda el estado actual en disco para sobrevivir reinicios del servicio."""
+    try:
+        os.makedirs(os.path.dirname(UPDATE_STATE_FILE), exist_ok=True)
+        with _update_lock:
+            state = dict(_update_state)
+        with open(UPDATE_STATE_FILE, "w") as f:
+            json.dump(state, f)
+    except Exception as e:
+        print(f"[updater] No se pudo guardar estado en disco: {e}")
+
+
+def _load_state_from_disk():
+    """Carga el estado desde disco al arrancar (recuperación tras reinicio)."""
+    try:
+        if os.path.exists(UPDATE_STATE_FILE):
+            with open(UPDATE_STATE_FILE) as f:
+                saved = json.load(f)
+            # Si el proceso anterior marcó running=True pero ya no hay proceso,
+            # significa que el servicio se reinició — marcamos como completado.
+            if saved.get("running"):
+                saved["running"] = False
+                if saved.get("success") is None:
+                    saved["success"] = True  # El reinicio fue exitoso
+            with _update_lock:
+                _update_state.update(saved)
+    except Exception as e:
+        print(f"[updater] No se pudo cargar estado desde disco: {e}")
+
+
+# Cargar estado persistido al importar el módulo
+_load_state_from_disk()
 
 
 # ── Versiones ──────────────────────────────────────────────────────────────────
@@ -310,6 +345,11 @@ def _rollback(backup_path: str):
 def _restart_service() -> bool:
     _log(f"Reiniciando servicio '{SERVICE_NAME}'...")
     try:
+        # Guardar estado en disco ANTES de reiniciar — el worker morirá con el SIGTERM
+        _set_state(success=True, ended_at=datetime.now().isoformat())
+        _save_state_to_disk()
+        _log("Estado guardado en disco. Reiniciando servicio...")
+
         result = subprocess.run(
             ["systemctl", "restart", SERVICE_NAME],
             capture_output=True, text=True, timeout=30
