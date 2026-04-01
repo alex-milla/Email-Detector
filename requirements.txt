@@ -34,3 +34,5 @@ pyyaml
 
 # --- Escaneo de adjuntos ---
 pyclamd                     # ClamAV (requiere clamd corriendo)
+
+packaging
