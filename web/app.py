@@ -1131,6 +1131,30 @@ def clanker_upload_rules():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+# ══════════════════════════════════════════════════
+#  ACTUALIZACIONES DEL SISTEMA
+# ══════════════════════════════════════════════════
+
+# Importar el módulo de actualizaciones (web/updater.py)
+from updater import check_for_updates
+
+
+@app.route("/update")
+@admin_required
+def update_page():
+    """Página de gestión de actualizaciones. Solo accesible para admins."""
+    return render_template("update.html", user=current_user())
+
+
+@app.route("/api/update/check")
+@admin_required
+def api_update_check():
+    """
+    Consulta GitHub y devuelve el estado de actualización.
+    Llamado por la GUI vía fetch() para no bloquear la carga de página.
+    """
+    result = check_for_updates()
+    return jsonify(result)
 
 if __name__ == "__main__":
     host = os.getenv("WEB_HOST", "0.0.0.0")
