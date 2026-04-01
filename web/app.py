@@ -1135,26 +1135,38 @@ def clanker_upload_rules():
 #  ACTUALIZACIONES DEL SISTEMA
 # ══════════════════════════════════════════════════
 
-# Importar el módulo de actualizaciones (web/updater.py)
-from updater import check_for_updates
-
-
 @app.route("/update")
 @admin_required
 def update_page():
-    """Página de gestión de actualizaciones. Solo accesible para admins."""
     return render_template("update.html", user=current_user())
 
 
 @app.route("/api/update/check")
 @admin_required
 def api_update_check():
-    """
-    Consulta GitHub y devuelve el estado de actualización.
-    Llamado por la GUI vía fetch() para no bloquear la carga de página.
-    """
     result = check_for_updates()
     return jsonify(result)
+
+
+@app.route("/api/update/apply", methods=["POST"])
+@admin_required
+def api_update_apply():
+    update_info = check_for_updates()
+    if update_info.get("error"):
+        return jsonify({"started": False, "error": update_info["error"]}), 400
+    if not update_info.get("update_available"):
+        return jsonify({"started": False, "error": "No hay actualización disponible."}), 400
+    zip_url = update_info.get("zip_url", "")
+    ok, err = start_update(zip_url)
+    if not ok:
+        return jsonify({"started": False, "error": err}), 409
+    return jsonify({"started": True, "message": "Actualización iniciada en background."})
+
+
+@app.route("/api/update/status")
+@admin_required
+def api_update_status():
+    return jsonify(get_update_state())
 
 if __name__ == "__main__":
     host = os.getenv("WEB_HOST", "0.0.0.0")
