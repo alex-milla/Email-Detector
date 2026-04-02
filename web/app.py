@@ -18,6 +18,8 @@ from flask import (
     redirect, url_for, session
 )
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 
@@ -42,6 +44,17 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", "config", ".env"))
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "clave-temporal-cambiar-ahora")
 CORS(app)
+
+# MED-10: rate limiting para prevenir fuerza bruta en el login.
+# Almacenamiento en memoria — suficiente para instancia única con gunicorn.
+# Con --preload cada worker comparte el mismo proceso padre, pero los contadores
+# son por worker. Límite conservador: 10 intentos/minuto por IP.
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],          # Sin límite global — solo aplicamos al login
+    storage_uri="memory://",
+)
 
 # ── Límites de seguridad para uploads (HIGH-05) ───────────────────────────────
 # Límite global de Flask: rechaza la petición antes de leer el body completo.
@@ -386,7 +399,17 @@ except ImportError:
     CLANKER_ENABLED = False
 # ─────────────────────────────────────────────────────────────────────────────
 
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    # Devuelve JSON si es una petición AJAX, HTML si es navegador
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"error": "Demasiados intentos. Espera un minuto antes de volver a intentarlo."}), 429
+    return render_template("login.html",
+        error="Demasiados intentos fallidos. Espera un minuto antes de intentarlo de nuevo."), 429
+
+
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute", methods=["POST"])
 def login():
     if "user_id" in session:
         return redirect(url_for("index"))
