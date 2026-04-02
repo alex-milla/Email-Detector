@@ -1,7 +1,7 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.6",
   "release_date": "2026-04-02",
-  "changelog": "HIGH-05",
+  "changelog": "HIGH-06",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.0.5/email-detector-v1.0.5.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.0.6/email-detector-v1.0.6.zip"
 }
