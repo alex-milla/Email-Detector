@@ -40,9 +40,9 @@ printf "${N}\n"
 # ─────────────────────────────────────────────────────────────
 #  PREGUNTAS INICIALES
 # ─────────────────────────────────────────────────────────────
-printf "  ${B}Directorio de instalación [/root/email-detector]:${N} "
+printf "  ${B}Directorio de instalación [/opt/email-detector]:${N} "
 read INSTALL_DIR
-INSTALL_DIR="${INSTALL_DIR:-/root/email-detector}"
+INSTALL_DIR="${INSTALL_DIR:-/opt/email-detector}"
 
 IS_FRESH=false
 if [ ! -d "$INSTALL_DIR" ] || [ ! -f "$INSTALL_DIR/web/app.py" ]; then
@@ -142,6 +142,7 @@ step "4/6" "Copiando archivos del proyecto"
 cp "$REPO_DIR/web/app.py"              "$INSTALL_DIR/web/"
 cp "$REPO_DIR/web/auth.py"             "$INSTALL_DIR/web/"
 cp "$REPO_DIR/web/settings_manager.py" "$INSTALL_DIR/web/"
+cp "$REPO_DIR/web/updater.py"          "$INSTALL_DIR/web/"
 
 # Templates
 cp "$REPO_DIR/web/templates/"*.html    "$INSTALL_DIR/web/templates/"
@@ -149,15 +150,16 @@ cp "$REPO_DIR/web/templates/"*.html    "$INSTALL_DIR/web/templates/"
 # Scripts Python
 cp "$REPO_DIR/scripts/"*.py            "$INSTALL_DIR/scripts/"
 
-# Scripts bash
-cp "$REPO_DIR/scripts/backup.sh"       "$INSTALL_DIR/scripts/"
-cp "$REPO_DIR/scripts/retrain.sh"      "$INSTALL_DIR/scripts/"
-chmod +x "$INSTALL_DIR/scripts/"*.sh
-chmod +x "$INSTALL_DIR/scripts/"*.py
+# Scripts bash — deben pertenecer a root y no ser escribibles por otros (CRIT-03)
+cp "$REPO_DIR/scripts/backup.sh"  "$INSTALL_DIR/scripts/"
+cp "$REPO_DIR/scripts/retrain.sh" "$INSTALL_DIR/scripts/"
+chown root:root "$INSTALL_DIR/scripts/backup.sh" "$INSTALL_DIR/scripts/retrain.sh"
+chmod 750 "$INSTALL_DIR/scripts/backup.sh" "$INSTALL_DIR/scripts/retrain.sh"
 
-# Script descarga dataset (en raíz del proyecto)
+# Script descarga dataset — mismo tratamiento (CRIT-03)
 cp "$REPO_DIR/download_dataset.sh" "$INSTALL_DIR/"
-chmod +x "$INSTALL_DIR/download_dataset.sh"
+chown root:root "$INSTALL_DIR/download_dataset.sh"
+chmod 750 "$INSTALL_DIR/download_dataset.sh"
 
 # Config
 cp "$REPO_DIR/config/clanker_rules.yaml" "$INSTALL_DIR/config/"
@@ -174,10 +176,17 @@ SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))" 2>/dev/nu
 # .env (solo si no existe)
 ENV_FILE="$INSTALL_DIR/config/.env"
 if [ ! -f "$ENV_FILE" ]; then
-    cp "$REPO_DIR/config/.env.example" "$ENV_FILE"
+    # Soporte para ambos nombres: .env.example (correcto) y env.example (legacy)
+    if [ -f "$REPO_DIR/config/.env.example" ]; then
+        cp "$REPO_DIR/config/.env.example" "$ENV_FILE"
+    elif [ -f "$REPO_DIR/config/env.example" ]; then
+        cp "$REPO_DIR/config/env.example" "$ENV_FILE"
+    else
+        err "No se encuentra config/.env.example en el repositorio"
+    fi
     sed -i "s|cambia_esto_por_un_valor_aleatorio|$SECRET_KEY|" "$ENV_FILE"
     sed -i "s|^WEB_PORT=.*|WEB_PORT=$WEB_PORT|" "$ENV_FILE"
-    ok ".env generado desde .env.example"
+    ok ".env generado"
 else
     info ".env existente — no se sobreescribe"
 fi
@@ -266,6 +275,15 @@ ok "configuración completada"
 #  BLOQUE 6 — SERVICIOS
 # ─────────────────────────────────────────────────────────────
 step "6/6" "Configurando servicios"
+
+# El usuario de servicio necesita acceso de escritura al directorio de instalación
+# (logs, results, data, models). Los scripts bash quedan en root:root por CRIT-03.
+chown -R "$SVC_USER":"$SVC_USER" "$INSTALL_DIR"
+# Restaurar propiedad root en scripts bash (CRIT-03)
+chown root:root "$INSTALL_DIR/scripts/retrain.sh" \
+                "$INSTALL_DIR/scripts/backup.sh" \
+                "$INSTALL_DIR/download_dataset.sh" 2>/dev/null || true
+ok "permisos de directorio configurados ($SVC_USER)"
 
 PYTHON_BIN="$INSTALL_DIR/venv/bin/python"
 GUNICORN="$INSTALL_DIR/venv/bin/gunicorn"
