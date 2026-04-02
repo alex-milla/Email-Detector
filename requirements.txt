@@ -16,6 +16,7 @@ catboost
 # --- Web ---
 flask
 flask-cors
+flask-limiter             # MED-10: rate limiting en login
 gunicorn
 werkzeug
 bcrypt
@@ -31,8 +32,7 @@ google-api-python-client    # Gmail OAuth
 requests
 python-dotenv
 pyyaml
+packaging
 
 # --- Escaneo de adjuntos ---
 pyclamd                     # ClamAV (requiere clamd corriendo)
-
-packaging
