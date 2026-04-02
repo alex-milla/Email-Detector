@@ -649,5 +649,109 @@ async function clankerUpdateNow() {
 clankerLoadStatus();
 </script>
 
+
+<!-- ═══════════════════════════════════ Certificado TLS (MED-07) ════════════ -->
+{% if user.role == 'admin' %}
+<div class="card mb-4" id="ssl-panel" style="display:none">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span>🔒 <strong>Certificado TLS</strong> <span class="admin-badge" style="margin-left:6px">Solo admin</span></span>
+    <span id="ssl-badge" class="badge bg-secondary">Comprobando...</span>
+  </div>
+  <div class="card-body">
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <small class="text-muted">Expira el</small>
+        <div id="ssl-expiry" class="fw-semibold">—</div>
+      </div>
+      <div class="col-md-4">
+        <small class="text-muted">Días restantes</small>
+        <div id="ssl-days" class="fw-semibold">—</div>
+      </div>
+      <div class="col-md-4">
+        <small class="text-muted">Estado</small>
+        <div id="ssl-state" class="fw-semibold">—</div>
+      </div>
+    </div>
+    <hr>
+    <h6 class="mb-2">🔄 Renovar certificado</h6>
+    <p style="color:#64748b;font-size:0.83em;margin-bottom:12px">
+      Genera un nuevo certificado ECDSA P-256 autofirmado. Se hace backup del actual.
+      Requiere reiniciar el servicio para aplicarlo.
+    </p>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <label style="color:#94a3b8;font-size:0.78em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap">
+        Días de validez
+      </label>
+      <input type="number" id="ssl-days-input" value="365" min="1" max="365"
+        style="width:90px;background:#0a1020;color:#e2e8f0;border:1px solid #2d3f55;border-radius:7px;padding:8px 10px;font-size:0.9em">
+      <button class="btn btn-primary" onclick="sslRenew()">🔄 Renovar ahora</button>
+    </div>
+    <div id="ssl-renew-result" class="mt-3" style="display:none"></div>
+  </div>
+</div>
+<script>
+async function sslLoadStatus() {
+  try {
+    const r = await fetch('/api/ssl/status');
+    const d = await r.json();
+    const panel = document.getElementById('ssl-panel');
+    if (!d.enabled) { panel.style.display = 'none'; return; }
+    panel.style.display = '';
+
+    const badge = document.getElementById('ssl-badge');
+    const days  = d.days_left ?? '?';
+
+    if (d.expired) {
+      badge.textContent = 'Expirado'; badge.className = 'badge bg-danger';
+    } else if (d.warning) {
+      badge.textContent = `⚠ ${days} días`; badge.className = 'badge bg-warning text-dark';
+    } else {
+      badge.textContent = 'Válido'; badge.className = 'badge bg-success';
+    }
+
+    document.getElementById('ssl-expiry').textContent = d.expiry || '—';
+    document.getElementById('ssl-days').textContent   = days + ' días';
+    document.getElementById('ssl-state').textContent  =
+      d.expired ? '❌ Expirado' : d.warning ? '⚠ Próximo a expirar' : '✅ OK';
+
+    if (d.error) {
+      document.getElementById('ssl-state').textContent = '⚠ ' + d.error;
+    }
+  } catch(e) {
+    document.getElementById('ssl-panel').style.display = 'none';
+  }
+}
+
+async function sslRenew() {
+  const days   = parseInt(document.getElementById('ssl-days-input').value) || 365;
+  const result = document.getElementById('ssl-renew-result');
+  result.style.display = '';
+  result.innerHTML = '<div class="alert alert-info py-2"><span class="spinner-border spinner-border-sm me-2"></span>Generando certificado...</div>';
+  try {
+    const r = await fetch('/api/ssl/renew', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({days})
+    });
+    const d = await r.json();
+    if (d.success) {
+      result.innerHTML = `<div class="alert alert-success py-2">
+        ✅ ${d.message}
+        ${d.restart_required ? '<br><strong>⚠ Reinicia el servicio para aplicar el nuevo certificado:</strong><br><code>systemctl restart email-detector</code>' : ''}
+      </div>`;
+      sslLoadStatus();
+    } else {
+      result.innerHTML = `<div class="alert alert-danger py-2">❌ ${d.error}</div>`;
+    }
+  } catch(e) {
+    result.innerHTML = `<div class="alert alert-danger py-2">Error: ${e}</div>`;
+  }
+}
+
+sslLoadStatus();
+</script>
+{% endif %}
+
+
 </body>
 </html>
