@@ -431,6 +431,26 @@ def _run_update(zip_url: str):
             _set_state(running=False, success=False, ended_at=datetime.now().isoformat())
             return
 
+        # 4b. Instalar dependencias si el ZIP incluía requirements.txt
+        # Necesario para que nuevas librerías (ej: flask-limiter) estén disponibles
+        # antes de que gunicorn arranque con el código nuevo.
+        req_file = os.path.join(_BASE_DIR, "requirements.txt")
+        req_included = any(dest == "requirements.txt" for _, dest in files_to_apply)
+        if req_included and os.path.isfile(req_file):
+            _log("Instalando dependencias desde requirements.txt...")
+            pip_bin = os.path.join(_BASE_DIR, "venv", "bin", "pip")
+            if not os.path.isfile(pip_bin):
+                pip_bin = "pip3"
+            pip_result = subprocess.run(
+                [pip_bin, "install", "-r", req_file, "--quiet"],
+                capture_output=True, text=True, timeout=300
+            )
+            if pip_result.returncode == 0:
+                _log("Dependencias instaladas correctamente.")
+            else:
+                _log(f"AVISO: pip install completó con errores: {pip_result.stderr[-500:]}")
+                # No abortamos — puede que las dependencias críticas ya estuvieran instaladas
+
         # 5. Reiniciar servicio
         if not _restart_service():
             _log("El servicio no levantó — iniciando rollback...")
