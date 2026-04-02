@@ -285,6 +285,17 @@ chown root:root "$INSTALL_DIR/scripts/retrain.sh" \
                 "$INSTALL_DIR/download_dataset.sh" 2>/dev/null || true
 ok "permisos de directorio configurados ($SVC_USER)"
 
+# Sudoers: el usuario de servicio necesita reiniciar el servicio y ejecutar
+# los scripts bash de root sin contraseña (updater y CRIT-03)
+SUDOERS_FILE="/etc/sudoers.d/email-detector"
+cat > "$SUDOERS_FILE" << SUDOERS_EOF
+# Email Malware Detector — permisos sin contraseña para el usuario de servicio
+$SVC_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart email-detector, /bin/systemctl start email-detector, /bin/systemctl stop email-detector, /bin/systemctl reload email-detector
+$SVC_USER ALL=(root) NOPASSWD: $INSTALL_DIR/download_dataset.sh, $INSTALL_DIR/scripts/retrain.sh
+SUDOERS_EOF
+chmod 440 "$SUDOERS_FILE"
+ok "sudoers configurado ($SUDOERS_FILE)"
+
 PYTHON_BIN="$INSTALL_DIR/venv/bin/python"
 GUNICORN="$INSTALL_DIR/venv/bin/gunicorn"
 
@@ -367,7 +378,7 @@ printf "${N}"
 echo ""
 echo "  Acceso      : $PROTO://$IP:$WEB_PORT"
 echo "  Usuario     : admin"
-echo "  Contraseña  : admin"
+echo "  Contraseña  : admin1234"
 echo ""
 printf "  ${Y}Cambia la contraseña en: $PROTO://$IP:$WEB_PORT/users${N}\n"
 echo ""
