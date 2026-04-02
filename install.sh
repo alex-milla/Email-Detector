@@ -71,6 +71,19 @@ read DO_CLAMAV; DO_CLAMAV="${DO_CLAMAV:-S}"
 printf "  ${B}Habilitar HTTPS (cert autofirmado)? [s/N]:${N} "
 read DO_HTTPS; DO_HTTPS="${DO_HTTPS:-N}"
 
+# MED-07: días de validez del certificado (máximo 365)
+CERT_DAYS=365
+case "$DO_HTTPS" in [Ss]*)
+    printf "  ${B}Días de validez del certificado [365, máx 365]:${N} "
+    read CERT_DAYS_INPUT
+    if [[ "$CERT_DAYS_INPUT" =~ ^[0-9]+$ ]] && [ "$CERT_DAYS_INPUT" -gt 0 ] && [ "$CERT_DAYS_INPUT" -le 365 ]; then
+        CERT_DAYS="$CERT_DAYS_INPUT"
+    else
+        CERT_DAYS=365
+        info "Valor no válido — se usarán 365 días"
+    fi
+;; esac
+
 echo ""
 echo "  ─────────────────────────────────────────────────────"
 echo "  Directorio : $INSTALL_DIR"
@@ -175,7 +188,9 @@ case "$DO_HTTPS" in [Ss]*)
     mkdir -p "$SSL_DIR"
     if [ ! -f "$SSL_DIR/cert.pem" ]; then
         SERVER_HN=$(hostname -f 2>/dev/null || echo "localhost")
-        openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
+        # MED-07: ECDSA P-256 (más seguro y rápido que RSA-2048) + días configurables
+        openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 \
+            -nodes -days "$CERT_DAYS" \
             -keyout "$SSL_DIR/key.pem" -out "$SSL_DIR/cert.pem" \
             -subj "/C=ES/ST=Spain/L=Local/O=Email Malware Detector/OU=Security/CN=$SERVER_HN" \
             2>/dev/null
@@ -183,10 +198,34 @@ case "$DO_HTTPS" in [Ss]*)
             || echo "SSL_CERT=$SSL_DIR/cert.pem" >> "$ENV_FILE"
         grep -q "^SSL_KEY="  "$ENV_FILE" 2>/dev/null \
             || echo "SSL_KEY=$SSL_DIR/key.pem"   >> "$ENV_FILE"
-        ok "certificado autofirmado generado en $SSL_DIR"
+        ok "certificado ECDSA P-256 generado en $SSL_DIR (válido $CERT_DAYS días)"
     else
         info "certificado ya existe — no se regenera"
     fi
+
+    # MED-07: cron de aviso de expiración — avisa 30 días antes por log
+    # La GUI lee /api/ssl/status para mostrar el estado y botón de renovación
+    CERT_CHECK_SCRIPT="$INSTALL_DIR/scripts/check_cert_expiry.sh"
+    cat > "$CERT_CHECK_SCRIPT" << 'CERT_EOF'
+#!/bin/bash
+# Comprueba la expiración del certificado TLS y avisa si faltan <=30 días.
+# Ejecutado diariamente por cron. La GUI lee /api/ssl/status para el mismo dato.
+CERT="INSTALL_DIR_PLACEHOLDER/config/ssl/cert.pem"
+LOG="INSTALL_DIR_PLACEHOLDER/logs/cert_expiry.log"
+[ ! -f "$CERT" ] && exit 0
+EXPIRY=$(openssl x509 -enddate -noout -in "$CERT" 2>/dev/null | cut -d= -f2)
+EXPIRY_EPOCH=$(date -d "$EXPIRY" +%s 2>/dev/null || date -j -f "%b %d %T %Y %Z" "$EXPIRY" +%s 2>/dev/null)
+NOW_EPOCH=$(date +%s)
+DAYS_LEFT=$(( (EXPIRY_EPOCH - NOW_EPOCH) / 86400 ))
+echo "$(date '+%Y-%m-%d %H:%M') — Certificado expira en $DAYS_LEFT días ($EXPIRY)" >> "$LOG"
+if [ "$DAYS_LEFT" -le 30 ]; then
+    echo "$(date '+%Y-%m-%d %H:%M') — AVISO: el certificado expira en $DAYS_LEFT días. Renuévalo desde la GUI." >> "$LOG"
+fi
+CERT_EOF
+    # Sustituir placeholder por ruta real
+    sed -i "s|INSTALL_DIR_PLACEHOLDER|$INSTALL_DIR|g" "$CERT_CHECK_SCRIPT"
+    chmod +x "$CERT_CHECK_SCRIPT"
+    ok "script de aviso de expiración creado en scripts/check_cert_expiry.sh"
 ;; esac
 
 # Base de datos inicial — delegamos en auth.py que tiene el esquema completo
@@ -260,10 +299,12 @@ case "$INSTALL_CRON" in [Ss]*)
      echo "0 2  * * * $INSTALL_DIR/scripts/backup.sh >> $INSTALL_DIR/logs/backup.log 2>&1"
      echo "*/5 * * * * $PYTHON_BIN $INSTALL_DIR/scripts/auto_scan.py >> $INSTALL_DIR/logs/auto_scan.log 2>&1"
      echo "0 9  * * * $PYTHON_BIN $INSTALL_DIR/scripts/update_clanker_rules.py >> $INSTALL_DIR/logs/clanker_update.log 2>&1"
+     echo "0 8  * * * $INSTALL_DIR/scripts/check_cert_expiry.sh >> $INSTALL_DIR/logs/cert_expiry.log 2>&1"
     ) | crontab -
     touch "$INSTALL_DIR/logs/backup.log" \
           "$INSTALL_DIR/logs/auto_scan.log" \
-          "$INSTALL_DIR/logs/clanker_update.log" 2>/dev/null || true
+          "$INSTALL_DIR/logs/clanker_update.log" \
+          "$INSTALL_DIR/logs/cert_expiry.log" 2>/dev/null || true
     ok "cron jobs configurados"
 
     # HIGH-06: logrotate — evita que los logs de cron llenen el disco.
