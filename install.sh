@@ -183,10 +183,16 @@ else
 fi
 
 # MED-08: el .env contiene credenciales sensibles — restringir acceso.
+# El propietario debe ser el mismo usuario que ejecuta el servicio.
 # Se aplica siempre, tanto en instalación nueva como en actualización.
-chown root:root "$ENV_FILE"
+SVC_USER="emaildetector"
+if ! id "$SVC_USER" &>/dev/null; then
+    useradd --system --no-create-home --shell /usr/sbin/nologin "$SVC_USER"
+    ok "usuario de servicio '$SVC_USER' creado"
+fi
+chown "$SVC_USER":"$SVC_USER" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
-ok ".env protegido (chmod 600, root:root)"
+ok ".env protegido (chmod 600, $SVC_USER:$SVC_USER)"
 
 # HTTPS: certificado autofirmado
 case "$DO_HTTPS" in [Ss]*)
@@ -282,7 +288,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=root
+User=$SVC_USER
 WorkingDirectory=$INSTALL_DIR
 EnvironmentFile=$INSTALL_DIR/config/.env
 ExecStart=$GUNICORN --bind 0.0.0.0:$WEB_PORT --workers 2 --timeout 300 --preload $SSL_ARGS web.app:app
