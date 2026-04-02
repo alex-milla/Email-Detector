@@ -1345,6 +1345,102 @@ def api_update_apply():
 def api_update_status():
     return jsonify(get_update_state())
 
+
+# ══════════════════════════════════════════════════
+#  API — CERTIFICADO TLS (MED-07)
+# ══════════════════════════════════════════════════
+
+@app.route("/api/ssl/status")
+@admin_required
+def api_ssl_status():
+    """
+    Devuelve el estado del certificado TLS autofirmado:
+    días restantes, fecha de expiración y si está en zona de aviso (<= 30 días).
+    La GUI usa este endpoint para mostrar el badge de expiración y el botón de renovación.
+    """
+    cert_path = os.path.join(PROJECT_DIR, "config", "ssl", "cert.pem")
+    if not os.path.exists(cert_path):
+        return jsonify({"enabled": False, "message": "No hay certificado TLS configurado."})
+
+    try:
+        result = subprocess.run(
+            ["openssl", "x509", "-enddate", "-noout", "-in", cert_path],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode != 0:
+            return jsonify({"enabled": True, "error": "No se pudo leer el certificado."}), 500
+
+        # Formato: "notAfter=Apr  2 20:00:00 2027 GMT"
+        expiry_str = result.stdout.strip().split("=", 1)[1]
+        from datetime import timezone
+        expiry_dt  = datetime.strptime(expiry_str, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc)
+        now_dt     = datetime.now(timezone.utc)
+        days_left  = (expiry_dt - now_dt).days
+
+        return jsonify({
+            "enabled":    True,
+            "expiry":     expiry_dt.strftime("%Y-%m-%d"),
+            "days_left":  days_left,
+            "warning":    days_left <= 30,
+            "expired":    days_left <= 0,
+        })
+    except Exception as e:
+        return jsonify({"enabled": True, "error": str(e)}), 500
+
+
+@app.route("/api/ssl/renew", methods=["POST"])
+@admin_required
+def api_ssl_renew():
+    """
+    Regenera el certificado TLS autofirmado ECDSA P-256.
+    Acepta parámetro opcional 'days' (1-365, default 365).
+    Hace backup del certificado anterior antes de reemplazarlo.
+    Requiere reinicio del servicio para que gunicorn cargue el nuevo cert.
+    """
+    data      = request.get_json(silent=True) or {}
+    days      = int(data.get("days", 365))
+    days      = max(1, min(365, days))  # clamp 1-365
+
+    ssl_dir   = os.path.join(PROJECT_DIR, "config", "ssl")
+    cert_path = os.path.join(ssl_dir, "cert.pem")
+    key_path  = os.path.join(ssl_dir, "key.pem")
+
+    if not os.path.isdir(ssl_dir):
+        return jsonify({"success": False, "error": "Directorio SSL no existe. ¿HTTPS está habilitado?"}), 400
+
+    # Backup del certificado anterior
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    if os.path.exists(cert_path):
+        import shutil
+        shutil.copy2(cert_path, f"{cert_path}.bak_{ts}")
+        shutil.copy2(key_path,  f"{key_path}.bak_{ts}")
+
+    try:
+        import socket
+        hostname = socket.getfqdn()
+        result = subprocess.run([
+            "openssl", "req", "-x509",
+            "-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:P-256",
+            "-nodes", "-days", str(days),
+            "-keyout", key_path, "-out", cert_path,
+            "-subj", f"/C=ES/ST=Spain/L=Local/O=Email Malware Detector/OU=Security/CN={hostname}"
+        ], capture_output=True, text=True, timeout=30)
+
+        if result.returncode != 0:
+            app.logger.error("[MED-07] Error renovando certificado: %s", result.stderr)
+            return jsonify({"success": False, "error": "openssl falló al generar el certificado."}), 500
+
+        app.logger.info("[MED-07] Certificado renovado por %s (%d días)", session.get("username"), days)
+        return jsonify({
+            "success": True,
+            "message": f"Certificado renovado ({days} días). Reinicia el servicio para aplicarlo.",
+            "restart_required": True,
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({"success": False, "error": "Timeout generando el certificado."}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 if __name__ == "__main__":
     host = os.getenv("WEB_HOST", "0.0.0.0")
     port = int(os.getenv("WEB_PORT", "5000"))
