@@ -769,8 +769,13 @@ def model_info():
 @admin_required
 def dataset_download():
     script = os.path.join(PROJECT_DIR, "download_dataset.sh")
-    if not os.path.exists(script):
-        return jsonify({"error": "No se encuentra download_dataset.sh"}), 404
+
+    # Validación de seguridad: path traversal, propietario y permisos
+    ok, reason = _validate_script_path(script, PROJECT_DIR)
+    if not ok:
+        app.logger.error("[CRIT-03b] Ejecución bloqueada para %s: %s", script, reason)
+        return jsonify({"error": "El script no pasó la validación de seguridad."}), 403
+
     try:
         result = subprocess.run(["bash", script], capture_output=True,
                                 text=True, timeout=600, cwd=PROJECT_DIR)
@@ -873,6 +878,7 @@ def full_retrain():
 
 
 @app.route("/model/retrain", methods=["POST"])
+@admin_required
 def retrain():
     global _training_state
     if _training_state["running"]:
