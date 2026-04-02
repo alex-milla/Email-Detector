@@ -1,7 +1,7 @@
 {
-  "version": "1.0.7.1",
+  "version": "1.0.8",
   "release_date": "2026-04-02",
-  "changelog": "MED-07",
+  "changelog": "MED-10",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.0.7.1/email-detector-v1.0.7.1.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.0.8/email-detector-v1.0.8.zip"
 }
