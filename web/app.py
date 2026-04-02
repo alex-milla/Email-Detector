@@ -1064,6 +1064,15 @@ def clanker_status():
 def clanker_set_url():
     data = request.get_json(silent=True) or {}
     url = data.get("url", "").strip()
+
+    # HIGH-04: rechazar URLs sin TLS para prevenir ataques MITM en tránsito.
+    # Se permite cadena vacía (el usuario quiere desactivar la actualización automática).
+    if url and not url.startswith("https://"):
+        return jsonify({
+            "success": False,
+            "error": "La URL debe usar HTTPS. Las URLs HTTP no están permitidas por seguridad."
+        }), 400
+
     env_path = os.path.join(os.path.dirname(__file__), "..", "config", ".env")
     try:
         with open(env_path, "r") as f:
