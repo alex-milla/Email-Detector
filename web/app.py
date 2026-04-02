@@ -43,6 +43,20 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "clave-temporal-cambiar-ahora")
 CORS(app)
 
+# ── Límites de seguridad para uploads (HIGH-05) ───────────────────────────────
+# Límite global de Flask: rechaza la petición antes de leer el body completo.
+# Protege contra uploads masivos que agoten memoria o disco.
+EML_MAX_SIZE_BYTES = 10 * 1024 * 1024   # 10 MB por archivo
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB total por petición
+
+# MIME types que Flask/werkzeug debe ver en un .eml legítimo.
+# Se acepta application/octet-stream porque algunos clientes lo usan para .eml.
+EML_ALLOWED_MIMETYPES = {
+    "message/rfc822",
+    "text/plain",
+    "application/octet-stream",
+}
+
 PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..")
 UPLOAD_DIR  = os.path.join(PROJECT_DIR, "data", "samples")
 RESULTS_DIR = os.path.join(PROJECT_DIR, "results")
@@ -72,6 +86,14 @@ _training_state["running"] = False  # Al arrancar nunca está corriendo
 _save_training_state(_training_state)
 
 init_db()
+
+
+# ── Handler para uploads que superan MAX_CONTENT_LENGTH (HIGH-05) ─────────────
+@app.errorhandler(413)
+def upload_too_large(e):
+    return jsonify({
+        "error": f"La petición supera el límite de tamaño permitido ({app.config['MAX_CONTENT_LENGTH'] // 1024 // 1024} MB total)."
+    }), 413
 
 
 # ══════════════════════════════════════════════════
@@ -216,6 +238,79 @@ def get_model_meta():
         with open(p) as f:
             return json.load(f)
     return {}
+
+
+# ── Validación de archivos .eml subidos (HIGH-05) ────────────────────────────
+def _validate_eml_upload(file) -> tuple:
+    """
+    Valida un archivo subido antes de guardarlo o parsearlo.
+
+    Comprueba:
+      1. Tamaño máximo (EML_MAX_SIZE_BYTES).
+      2. Extensión: debe terminar en .eml y no tener doble extensión peligrosa
+         (ej: malware.eml.exe — werkzeug lo trunca pero lo verificamos igual).
+      3. MIME type declarado por el cliente dentro de la lista permitida.
+      4. Magic bytes: un .eml legítimo debe comenzar con cabeceras RFC 822
+         (líneas "Clave: Valor" o línea en blanco al inicio).
+
+    Nota sobre sandboxing: el parsing completo se realiza en el proceso
+    principal (sin proceso hijo aislado). Queda como mejora futura si se
+    requiere aislamiento completo frente a exploits de parser (CVEs en
+    email.parser, lxml, etc.).
+
+    Devuelve (True, "") si es válido, o (False, "motivo") si no lo es.
+    """
+    filename = file.filename or ""
+
+    # 1. Doble extensión — ej: "factura.pdf.eml" o "malware.eml.exe"
+    parts = filename.lower().split(".")
+    if len(parts) > 2:
+        # Permitimos prefijos con puntos en el nombre, pero la penúltima
+        # extensión no puede ser ejecutable
+        dangerous_exts = {
+            "exe", "bat", "cmd", "sh", "ps1", "vbs", "js", "jar",
+            "py", "rb", "php", "asp", "dll", "msi", "com", "scr"
+        }
+        if parts[-2] in dangerous_exts:
+            return False, f"Nombre de archivo sospechoso (doble extensión): {filename}"
+
+    # 2. MIME type declarado por el cliente
+    mime = (file.content_type or "").split(";")[0].strip().lower()
+    if mime and mime not in EML_ALLOWED_MIMETYPES:
+        return False, f"Tipo MIME no permitido: {mime}"
+
+    # 3. Tamaño y magic bytes — leemos solo el encabezado (primeros 4 KB)
+    header_bytes = file.read(4096)
+    file.seek(0)  # rebobinar para que file.save() funcione
+
+    file_size = file.seek(0, 2)  # mover al final para obtener tamaño real
+    file.seek(0)                 # rebobinar de nuevo
+
+    if file_size > EML_MAX_SIZE_BYTES:
+        return False, (
+            f"Archivo demasiado grande: {file_size // 1024} KB "
+            f"(máximo {EML_MAX_SIZE_BYTES // 1024 // 1024} MB)"
+        )
+
+    # 4. Magic bytes: un .eml debe empezar con cabeceras RFC 822.
+    # Verificamos que las primeras líneas contengan al menos una cabecera
+    # con formato "Nombre: valor" o que el archivo empiece con línea en blanco
+    # (mensaje sin cabeceras, raro pero válido).
+    try:
+        header_text = header_bytes.decode("utf-8", errors="replace")
+        first_lines = header_text.splitlines()[:10]
+        has_rfc822_header = any(
+            re.match(r'^[A-Za-z0-9\-]+\s*:', line)
+            for line in first_lines
+            if line.strip()
+        )
+        if not has_rfc822_header and header_bytes[:3] not in (b'\xef\xbb\xbf',):
+            # Permitir BOM UTF-8 al inicio
+            return False, "El archivo no parece un correo RFC 822 válido"
+    except Exception:
+        return False, "No se pudo leer el contenido del archivo"
+
+    return True, ""
 
 
 # ══════════════════════════════════════════════════
@@ -516,17 +611,29 @@ def analyze():
     uid    = session["user_id"]
     results = []
     for file in files:
-        if file.filename and file.filename.endswith(".eml"):
-            safe_name = secure_filename(file.filename)
-            filepath  = os.path.join(UPLOAD_DIR, safe_name)
-            file.save(filepath)
-            try:
-                result = predict_email(filepath, use_virustotal=use_vt)
-                result["analyzed_by"] = session.get("username")
-                save_result(uid, result)
-                results.append(result)
-            except Exception as e:
-                results.append({"error": str(e), "file": safe_name})
+        if not file.filename:
+            continue
+        safe_name = secure_filename(file.filename)
+        if not safe_name.lower().endswith(".eml"):
+            results.append({"error": "Solo se aceptan archivos .eml", "file": safe_name})
+            continue
+
+        # HIGH-05: validar tamaño, MIME type, doble extensión y magic bytes
+        ok, reason = _validate_eml_upload(file)
+        if not ok:
+            app.logger.warning("[HIGH-05] Upload rechazado (%s): %s", safe_name, reason)
+            results.append({"error": f"Archivo rechazado: {reason}", "file": safe_name})
+            continue
+
+        filepath = os.path.join(UPLOAD_DIR, safe_name)
+        file.save(filepath)
+        try:
+            result = predict_email(filepath, use_virustotal=use_vt)
+            result["analyzed_by"] = session.get("username")
+            save_result(uid, result)
+            results.append(result)
+        except Exception as e:
+            results.append({"error": str(e), "file": safe_name})
     return jsonify({"results": results, "total_analyzed": len(results)})
 
 
