@@ -182,6 +182,12 @@ else
     info ".env existente — no se sobreescribe"
 fi
 
+# MED-08: el .env contiene credenciales sensibles — restringir acceso.
+# Se aplica siempre, tanto en instalación nueva como en actualización.
+chown root:root "$ENV_FILE"
+chmod 600 "$ENV_FILE"
+ok ".env protegido (chmod 600, root:root)"
+
 # HTTPS: certificado autofirmado
 case "$DO_HTTPS" in [Ss]*)
     SSL_DIR="$INSTALL_DIR/config/ssl"
