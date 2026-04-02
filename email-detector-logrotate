@@ -1,0 +1,25 @@
+# logrotate — Email Malware Detector (HIGH-06)
+#
+# Rotación diaria, 14 días de historial comprimido.
+# Cubre los tres logs generados por cron:
+#   - auto_scan.log   (cada 5 min — el de mayor crecimiento)
+#   - backup.log      (diario)
+#   - clanker_update.log (diario)
+#
+# Instalado por install.sh en /etc/logrotate.d/email-detector
+
+INSTALL_DIR/logs/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 root root
+    postrotate
+        # Recargar el servicio para que Flask reabra sus propios file handles
+        # si en el futuro se añaden logs gestionados por el proceso principal.
+        # Los logs de cron son independientes y no necesitan señal.
+        systemctl reload email-detector 2>/dev/null || true
+    endscript
+}

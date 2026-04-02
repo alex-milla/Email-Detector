@@ -265,6 +265,19 @@ case "$INSTALL_CRON" in [Ss]*)
           "$INSTALL_DIR/logs/auto_scan.log" \
           "$INSTALL_DIR/logs/clanker_update.log" 2>/dev/null || true
     ok "cron jobs configurados"
+
+    # HIGH-06: logrotate — evita que los logs de cron llenen el disco.
+    # Rotación diaria, 14 días de historial comprimido.
+    LOGROTATE_CONF="$REPO_DIR/email-detector-logrotate"
+    if [ -f "$LOGROTATE_CONF" ]; then
+        # Sustituir la ruta de instalación en la plantilla y copiar al sistema
+        sed "s|INSTALL_DIR|$INSTALL_DIR|g" "$LOGROTATE_CONF" \
+            > /etc/logrotate.d/email-detector
+        chmod 644 /etc/logrotate.d/email-detector
+        ok "logrotate configurado (/etc/logrotate.d/email-detector)"
+    else
+        warn "No se encontró email-detector-logrotate — configura logrotate manualmente"
+    fi
 ;; esac
 
 # ─────────────────────────────────────────────────────────────
