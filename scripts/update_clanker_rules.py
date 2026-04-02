@@ -110,6 +110,19 @@ def update(force: bool = False) -> bool:
         logger.info("CLANKER_RULES_URL no configurada — actualización omitida")
         return False
 
+    # HIGH-04: forzar HTTPS como segunda línea de defensa.
+    # La primera línea es la validación en clanker_set_url (app.py).
+    # Esta comprobación protege también cuando la URL se edita manualmente en .env.
+    # Nota: no se implementa firma criptográfica porque el modelo de distribución
+    # libre permite URLs arbitrarias de terceros — la autenticidad del origen
+    # es responsabilidad del administrador que configura la URL.
+    if not url.startswith("https://"):
+        logger.error(
+            "CLANKER_RULES_URL usa HTTP o esquema no permitido — "
+            "solo se aceptan URLs HTTPS para prevenir ataques MITM. URL rechazada: %s", url
+        )
+        return False
+
     logger.info("Comprobando actualizaciones de reglas en: %s", url)
     current_ver = _current_version()
     logger.info("Versión actual: %s", current_ver)
@@ -123,10 +136,10 @@ def update(force: bool = False) -> bool:
         logger.error("Error descargando reglas: %s", e)
         return False
 
-    # Validar
+    # Validar esquema antes de tocar ningún archivo
     valid, msg = _validate_yaml(raw)
     if not valid:
-        logger.error("Fichero descargado inválido: %s", msg)
+        logger.error("Fichero descargado inválido: %s — no se aplica ningún cambio", msg)
         return False
 
     # Comparar versión
@@ -144,10 +157,31 @@ def update(force: bool = False) -> bool:
                     remote_ver, current_ver)
         return False
 
-    # Reemplazar
-    _backup_current()
-    with open(RULES_FILE, "w", encoding="utf-8") as f:
-        f.write(raw)
+    # Backup antes de escribir
+    backup_path = _backup_current()
+
+    # Escribir nuevo archivo con rollback automático si algo falla
+    try:
+        with open(RULES_FILE, "w", encoding="utf-8") as f:
+            f.write(raw)
+
+        # Verificación post-escritura: releer y revalidar para detectar
+        # corrupción de disco o truncado parcial durante la escritura
+        with open(RULES_FILE, "r", encoding="utf-8") as f:
+            written = f.read()
+        recheck, rechk_msg = _validate_yaml(written)
+        if not recheck:
+            raise ValueError(f"Verificación post-escritura fallida: {rechk_msg}")
+
+    except Exception as e:
+        logger.error("ERROR al aplicar reglas: %s — iniciando rollback", e)
+        if backup_path and os.path.isfile(backup_path):
+            shutil.copy2(backup_path, RULES_FILE)
+            logger.info("Rollback completado: restaurado desde %s", backup_path)
+        else:
+            logger.error("No hay backup disponible para restaurar — revisa %s manualmente", RULES_FILE)
+        return False
+
     logger.info("Reglas actualizadas de %s → %s (%d reglas)",
                 current_ver, remote_ver, len(data.get("rules", [])))
     return True
