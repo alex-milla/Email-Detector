@@ -314,7 +314,18 @@ def _apply_files(zip_path: str, files_to_apply: list) -> bool:
                 os.makedirs(os.path.dirname(dest_abs), exist_ok=True)
                 with zf.open(zip_name) as src_f, open(dest_abs, "wb") as dst_f:
                     shutil.copyfileobj(src_f, dst_f)
-                _log(f"  Aplicado: {dest_relative}")
+
+                # Los scripts .sh deben ser ejecutables por root y legibles
+                # por el grupo, pero nunca escribibles por nadie más.
+                # open() crea archivos con 0o644 por defecto — sin ejecución.
+                # Sin este chmod, retrain.sh quedaría bloqueado por la
+                # validación de seguridad (CRIT-03) en cada actualización.
+                if dest_relative.endswith(".sh"):
+                    os.chmod(dest_abs, 0o750)  # rwxr-x--- (root:root)
+                    _log(f"  Aplicado: {dest_relative} [chmod 750]")
+                else:
+                    _log(f"  Aplicado: {dest_relative}")
+
         _log("Todos los ficheros aplicados correctamente.")
         return True
     except Exception as e:

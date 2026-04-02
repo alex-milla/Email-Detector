@@ -801,14 +801,68 @@ def _run_training(cmd, cwd):
         _save_training_state(state)
 
 
+def _validate_script_path(script_path: str, allowed_dir: str) -> tuple:
+    """
+    Valida que un script sea seguro para ejecutar antes de lanzarlo con subprocess.
+
+    Comprueba tres condiciones:
+      1. La ruta resuelta (resolviendo symlinks y '../') cae dentro de allowed_dir.
+         Previene path traversal y ejecución de scripts sustitutos vía symlink.
+      2. El archivo pertenece a root (uid 0).
+         Garantiza que solo el propietario del sistema puede haber creado el script.
+      3. El archivo NO es escribible por grupo ni por otros (bits g+w / o+w).
+         Evita que un atacante con acceso de escritura al sistema de ficheros
+         inyecte código en el script antes de que se ejecute.
+
+    Devuelve (True, "") si es seguro, o (False, "motivo legible") si no lo es.
+    """
+    try:
+        real_script  = os.path.realpath(script_path)
+        real_allowed = os.path.realpath(allowed_dir)
+
+        # 1. El script debe quedar dentro del directorio permitido
+        if not real_script.startswith(real_allowed + os.sep):
+            return False, f"Ruta fuera del directorio permitido: {real_script}"
+
+        st = os.stat(real_script)
+
+        # 2. Debe pertenecer a root
+        if st.st_uid != 0:
+            return False, f"El script no pertenece a root (uid={st.st_uid})"
+
+        # 3. No puede ser escribible por grupo (0o020) ni por otros (0o002)
+        if st.st_mode & 0o022:
+            return False, "El script es escribible por grupo u otros (permisos inseguros)"
+
+        return True, ""
+
+    except FileNotFoundError:
+        return False, "El script no existe"
+    except PermissionError:
+        return False, "Sin permisos para inspeccionar el script"
+    except Exception as e:
+        return False, f"Error inesperado al validar el script: {e}"
+
+
 @app.route("/model/full-retrain", methods=["POST"])
+@admin_required
 def full_retrain():
     global _training_state
+
     if _training_state["running"]:
         return jsonify({"error": "Ya hay un entrenamiento en curso"}), 409
-    script = os.path.join(PROJECT_DIR, "scripts", "retrain.sh")
-    if not os.path.exists(script):
-        return jsonify({"error": "No se encuentra scripts/retrain.sh"}), 404
+
+    script      = os.path.join(PROJECT_DIR, "scripts", "retrain.sh")
+    scripts_dir = os.path.join(PROJECT_DIR, "scripts")
+
+    # Validación de seguridad: path traversal, propietario y permisos
+    ok, reason = _validate_script_path(script, scripts_dir)
+    if not ok:
+        # Log interno con detalle completo; el cliente no recibe rutas del sistema
+        app.logger.error("[CRIT-03] Ejecución bloqueada para %s: %s", script, reason)
+        return jsonify({"error": "El script de entrenamiento no pasó la validación de seguridad."}), 403
+
+    # shell=False garantizado: se pasa lista explícita, nunca una cadena interpolada
     t = threading.Thread(
         target=_run_training,
         args=(["bash", script], PROJECT_DIR),
