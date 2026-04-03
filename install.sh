@@ -18,13 +18,27 @@ info()  { printf "  %s\n" "$1"; }
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 svc_restart() {
+    # Arrancar o reiniciar el servicio
     if systemctl is-active --quiet email-detector 2>/dev/null || \
        systemctl is-failed --quiet email-detector 2>/dev/null; then
-        systemctl restart email-detector && sleep 2
-        systemctl is-active --quiet email-detector \
-            && ok "servicio reiniciado" \
-            || warn "revisar con: journalctl -u email-detector -n 30"
+        systemctl restart email-detector
+    else
+        systemctl start email-detector
     fi
+
+    # Esperar hasta 30 segundos a que quede activo
+    local i=0
+    while [ $i -lt 30 ]; do
+        if systemctl is-active --quiet email-detector; then
+            ok "servicio activo (${i}s)"
+            return 0
+        fi
+        sleep 1
+        i=$((i + 1))
+    done
+
+    warn "el servicio no levantó en 30s — revisa con: journalctl -u email-detector -n 40 --no-pager"
+    return 1
 }
 
 # ─────────────────────────────────────────────────────────────
