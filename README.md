@@ -17,15 +17,15 @@ Herramienta de detección de correos maliciosos mediante modelos de aprendizaje 
 ## Instalación
 
 ```bash
-git clone https://github.com/tu-usuario/email-detector.git
-cd email-detector
+git clone https://github.com/alex-milla/Email-Detector.git
+cd Email-Detector
 chmod +x install.sh
 ./install.sh
 ```
 
-El instalador pregunta el directorio destino (por defecto `/root/email-detector`), el puerto web, y si instalar ClamAV y HTTPS.
+El instalador pregunta el directorio destino (por defecto `/opt/email-detector`), el puerto web, y si instalar ClamAV y HTTPS.
 
-Al finalizar, accede a `http://TU_IP:5000` con las credenciales iniciales `admin / admin`.
+Al finalizar, accede a `http://TU_IP:5000` con las credenciales iniciales **`admin` / `admin1234`** (cámbialas en `/users`).
 
 > **Cambia la contraseña** en `/users` antes de usar en producción.
 

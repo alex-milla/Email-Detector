@@ -497,7 +497,7 @@ def submit_feedback(db_id):
     label: 0 = benigno, 1 = malicioso
     """
     import shutil
-    data  = request.json or {}
+    data  = request.get_json(silent=True) or {}
     label = data.get("label")  # 0 o 1
 
     if label not in (0, 1):
@@ -808,14 +808,14 @@ def history_clear():
 @app.route("/api/settings/mail", methods=["POST"])
 @login_required
 def api_save_mail():
-    save_mail_config(session["user_id"], request.json or {})
+    save_mail_config(session["user_id"], request.get_json(silent=True) or {})
     return jsonify({"success": True})
 
 
 @app.route("/api/settings/global", methods=["POST"])
 @admin_required
 def api_save_global():
-    write_global_env(request.json or {})
+    write_global_env(request.get_json(silent=True) or {})
     load_dotenv(os.path.join(PROJECT_DIR, "config", ".env"), override=True)
     return jsonify({"success": True})
 
@@ -823,7 +823,7 @@ def api_save_global():
 @app.route("/api/settings/test", methods=["POST"])
 @login_required
 def api_test_connection():
-    data     = request.json or {}
+    data     = request.get_json(silent=True) or {}
     provider = data.get("provider")
     cfg = get_mail_config(session["user_id"])
     if provider == "imap":
@@ -964,13 +964,17 @@ def _validate_script_path(script_path: str, allowed_dir: str) -> tuple:
 
         st = os.stat(real_script)
 
-        # 2. Debe pertenecer a root
-        if st.st_uid != 0:
-            return False, f"El script no pertenece a root (uid={st.st_uid})"
-
-        # 3. No puede ser escribible por grupo (0o020) ni por otros (0o002)
-        if st.st_mode & 0o022:
-            return False, "El script es escribible por grupo u otros (permisos inseguros)"
+        # 2–3. En servidores Linux típicos (install.sh como root): dueño root y sin g+w/o+w.
+        # En contenedores/despliegues sin root: EMAIL_DETECTOR_RELAX_SCRIPT_CHECK=1
+        # conserva solo la comprobación de ruta (punto 1).
+        relax = os.environ.get("EMAIL_DETECTOR_RELAX_SCRIPT_CHECK", "").lower() in (
+            "1", "true", "yes",
+        )
+        if not relax:
+            if st.st_uid != 0:
+                return False, f"El script no pertenece a root (uid={st.st_uid})"
+            if st.st_mode & 0o022:
+                return False, "El script es escribible por grupo u otros (permisos inseguros)"
 
         return True, ""
 
@@ -1232,9 +1236,8 @@ def clanker_trigger_update():
     import subprocess
     scripts_dir = os.path.join(os.path.dirname(__file__), "..", "scripts")
     updater = os.path.join(scripts_dir, "update_clanker_rules.py")
-    python_bin = os.path.join(os.path.dirname(__file__), "..", "venv", "bin", "python")
-    if not os.path.isfile(python_bin):
-        python_bin = "python3"
+    # Mismo intérprete que ejecuta la app (venv en Linux/Windows/contenedor)
+    python_bin = sys.executable
     try:
         proc = subprocess.run(
             [python_bin, updater],

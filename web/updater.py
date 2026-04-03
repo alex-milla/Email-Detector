@@ -39,6 +39,16 @@ SERVICE_NAME = "email-detector"
 UPDATE_STATE_FILE = os.path.join(_BASE_DIR, "results", "update_state.json")
 REQUEST_TIMEOUT = 15
 
+
+def _venv_pip_path() -> str:
+    """pip del venv del proyecto (Linux o Windows); fallback pip3."""
+    for rel in ("venv/bin/pip", os.path.join("venv", "Scripts", "pip.exe")):
+        p = os.path.join(_BASE_DIR, rel)
+        if os.path.isfile(p):
+            return p
+    return "pip3"
+
+
 # Rutas permitidas dentro del ZIP (lista blanca)
 # Ningún fichero fuera de estas rutas se aplicará nunca
 ALLOWED_PATHS = {
@@ -438,9 +448,7 @@ def _run_update(zip_url: str):
         req_included = any(dest == "requirements.txt" for _, dest in files_to_apply)
         if req_included and os.path.isfile(req_file):
             _log("Instalando dependencias desde requirements.txt...")
-            pip_bin = os.path.join(_BASE_DIR, "venv", "bin", "pip")
-            if not os.path.isfile(pip_bin):
-                pip_bin = "pip3"
+            pip_bin = _venv_pip_path()
             pip_result = subprocess.run(
                 [pip_bin, "install", "-r", req_file, "--quiet"],
                 capture_output=True, text=True, timeout=300

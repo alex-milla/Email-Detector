@@ -22,7 +22,7 @@ werkzeug
 bcrypt
 
 # --- Conectores de correo ---
-imaplib2
+# IMAP: se usa imaplib de la biblioteca estándar (mailbox_connector.py)
 msal                        # Microsoft 365 / Azure AD
 google-auth
 google-auth-oauthlib
