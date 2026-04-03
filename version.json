@@ -1,7 +1,7 @@
 {
-  "version": "1.2.0",
-  "release_date": "2026-04-04",
-  "changelog": "1.2.0 — Esquema SQLite alineado con la app y migración automática; fixes validación EML (import re), JSON/sesión y pestaña Actualizaciones en toda la navegación admin; contenedores (RELAX_SCRIPT_CHECK, sys.executable Anti-Clanker, pip venv Linux/Windows); scripts .sh ejecutables en Git; README y dependencias (sin imaplib2); version.json alineado con VERSION.",
+  "version": "1.2.1",
+  "release_date": "2026-04-03",
+  "changelog": "1.2.1 — Fix ejecución de download_dataset.sh con sudo (CRIT-03b); homogeneización de estilos en settings.html (GPU, ClamAV, Anti-Clanker, TLS usan ahora el mismo sistema CSS nativo que el resto de tarjetas).",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.0/email-detector-v1.2.0.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.1/email-detector-v1.2.1.zip"
 }
