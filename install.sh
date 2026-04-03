@@ -110,7 +110,7 @@ ok "$(python3 --version)"
 #  BLOQUE 2 — ESTRUCTURA DE DIRECTORIOS
 # ─────────────────────────────────────────────────────────────
 step "2/6" "Creando estructura de directorios"
-mkdir -p "$INSTALL_DIR"/{config,logs,models/all_models,results,scripts}
+mkdir -p "$INSTALL_DIR"/{config,logs,models/all_models,results,scripts,tmp/matplotlib}
 mkdir -p "$INSTALL_DIR"/data/{raw,processed,samples,labeled/benign,labeled/malicious}
 mkdir -p "$INSTALL_DIR"/web/templates
 mkdir -p "$INSTALL_DIR"/web/static/{css,js}
@@ -324,6 +324,7 @@ Type=simple
 User=$SVC_USER
 WorkingDirectory=$INSTALL_DIR
 EnvironmentFile=$INSTALL_DIR/config/.env
+Environment=MPLCONFIGDIR=$INSTALL_DIR/tmp/matplotlib
 ExecStart=$GUNICORN --bind 0.0.0.0:$WEB_PORT --workers 2 --timeout 300 --preload $SSL_ARGS web.app:app
 Restart=always
 RestartSec=5
