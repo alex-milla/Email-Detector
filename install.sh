@@ -71,7 +71,7 @@ read DO_CLAMAV; DO_CLAMAV="${DO_CLAMAV:-S}"
 printf "  ${B}Habilitar HTTPS (cert autofirmado)? [s/N]:${N} "
 read DO_HTTPS; DO_HTTPS="${DO_HTTPS:-N}"
 
-# MED-07: días de validez del certificado (máximo 365)
+# días de validez del certificado (máximo 365)
 CERT_DAYS=365
 case "$DO_HTTPS" in [Ss]*)
     printf "  ${B}Días de validez del certificado [365, máx 365]:${N} "
@@ -129,9 +129,9 @@ pip install -r "$REPO_DIR/requirements.txt" --quiet
 ok "librerías instaladas"
 
 # Modelos opcionales con GPU
-pip install xgboost --quiet  && ok "xgboost"   || warn "xgboost falló (opcional)"
-pip install lightgbm --quiet && ok "lightgbm"  || warn "lightgbm falló (opcional)"
-pip install catboost --quiet && ok "catboost"  || warn "catboost falló (opcional)"
+pip install xgboost  --quiet && ok "xgboost"  || warn "xgboost falló (opcional)"
+pip install lightgbm --quiet && ok "lightgbm" || warn "lightgbm falló (opcional)"
+pip install catboost --quiet && ok "catboost" || warn "catboost falló (opcional)"
 
 # ─────────────────────────────────────────────────────────────
 #  BLOQUE 4 — COPIAR CÓDIGO FUENTE
@@ -139,35 +139,46 @@ pip install catboost --quiet && ok "catboost"  || warn "catboost falló (opciona
 step "4/6" "Copiando archivos del proyecto"
 
 # Web
-cp "$REPO_DIR/web/app.py"              "$INSTALL_DIR/web/"
-cp "$REPO_DIR/web/auth.py"             "$INSTALL_DIR/web/"
-cp "$REPO_DIR/web/settings_manager.py" "$INSTALL_DIR/web/"
+cp "$REPO_DIR/web/app.py"               "$INSTALL_DIR/web/"
+cp "$REPO_DIR/web/auth.py"              "$INSTALL_DIR/web/"
+cp "$REPO_DIR/web/settings_manager.py"  "$INSTALL_DIR/web/"
+
+# Módulo updater (opcional — no falla si no existe)
+[ -f "$REPO_DIR/web/updater.py" ] && cp "$REPO_DIR/web/updater.py" "$INSTALL_DIR/web/" || true
 
 # Templates
-cp "$REPO_DIR/web/templates/"*.html    "$INSTALL_DIR/web/templates/"
+cp "$REPO_DIR/web/templates/"*.html     "$INSTALL_DIR/web/templates/"
 
 # Scripts Python
-cp "$REPO_DIR/scripts/"*.py            "$INSTALL_DIR/scripts/"
+cp "$REPO_DIR/scripts/"*.py             "$INSTALL_DIR/scripts/"
 
 # Scripts bash
-cp "$REPO_DIR/scripts/backup.sh"       "$INSTALL_DIR/scripts/"
-cp "$REPO_DIR/scripts/retrain.sh"      "$INSTALL_DIR/scripts/"
+cp "$REPO_DIR/scripts/backup.sh"        "$INSTALL_DIR/scripts/"
+cp "$REPO_DIR/scripts/retrain.sh"       "$INSTALL_DIR/scripts/"
 chmod +x "$INSTALL_DIR/scripts/"*.sh
 chmod +x "$INSTALL_DIR/scripts/"*.py
 
-# Permisos requeridos por _validate_script_path (app.py):
-# los scripts lanzados con subprocess deben pertenecer a root
-# y no ser escribibles por grupo u otros (st_uid==0, mode & 0o022 == 0).
+# Script descarga dataset (en raíz del proyecto) — opcional
+if [ -f "$REPO_DIR/download_dataset.sh" ]; then
+    cp "$REPO_DIR/download_dataset.sh" "$INSTALL_DIR/"
+    chmod 755 "$INSTALL_DIR/download_dataset.sh"
+    chown root:root "$INSTALL_DIR/download_dataset.sh"
+    ok "download_dataset.sh copiado"
+fi
+
+# ── FIX CRIT-03: permisos requeridos por _validate_script_path ───────────────
+# Los scripts ejecutados vía subprocess deben pertenecer a root (uid=0)
+# y no ser escribibles por grupo u otros (st_mode & 0o022 == 0).
+# Sin esto el instalador deja uid=emaildetector y la validación bloquea
+# el botón "Entrenar" con "no pasó la validación de seguridad".
 chown root:root \
     "$INSTALL_DIR/scripts/retrain.sh"    \
     "$INSTALL_DIR/scripts/train_model.py"
 chmod 755 \
     "$INSTALL_DIR/scripts/retrain.sh"    \
     "$INSTALL_DIR/scripts/train_model.py"
-
-# download_dataset.sh también pasa por _validate_script_path
-chown root:root "$INSTALL_DIR/download_dataset.sh"
-chmod 755       "$INSTALL_DIR/download_dataset.sh"
+ok "permisos root:root 755 aplicados a scripts ejecutables"
+# ─────────────────────────────────────────────────────────────────────────────
 
 # Config
 cp "$REPO_DIR/config/clanker_rules.yaml" "$INSTALL_DIR/config/"
@@ -184,7 +195,6 @@ SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))" 2>/dev/nu
 # .env (solo si no existe)
 ENV_FILE="$INSTALL_DIR/config/.env"
 if [ ! -f "$ENV_FILE" ]; then
-    # Soporte para ambos nombres: .env.example (correcto) y env.example (legacy)
     if [ -f "$REPO_DIR/config/.env.example" ]; then
         cp "$REPO_DIR/config/.env.example" "$ENV_FILE"
     elif [ -f "$REPO_DIR/config/env.example" ]; then
@@ -194,22 +204,22 @@ if [ ! -f "$ENV_FILE" ]; then
     fi
     sed -i "s|cambia_esto_por_un_valor_aleatorio|$SECRET_KEY|" "$ENV_FILE"
     sed -i "s|^WEB_PORT=.*|WEB_PORT=$WEB_PORT|" "$ENV_FILE"
-    ok ".env generado"
+    ok ".env generado desde .env.example"
 else
     info ".env existente — no se sobreescribe"
 fi
 
-# MED-08: el .env contiene credenciales sensibles — restringir acceso.
-# El propietario debe ser el mismo usuario que ejecuta el servicio.
-# Se aplica siempre, tanto en instalación nueva como en actualización.
+# Crear usuario de servicio si no existe
 SVC_USER="emaildetector"
 if ! id "$SVC_USER" &>/dev/null; then
     useradd --system --no-create-home --shell /usr/sbin/nologin "$SVC_USER"
     ok "usuario de servicio '$SVC_USER' creado"
 fi
+
+# Proteger .env
 chown "$SVC_USER":"$SVC_USER" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
-ok ".env protegido (chmod 600, $SVC_USER:$SVC_USER)"
+ok ".env protegido (chmod 600, $SVC_USER)"
 
 # HTTPS: certificado autofirmado
 case "$DO_HTTPS" in [Ss]*)
@@ -217,7 +227,6 @@ case "$DO_HTTPS" in [Ss]*)
     mkdir -p "$SSL_DIR"
     if [ ! -f "$SSL_DIR/cert.pem" ]; then
         SERVER_HN=$(hostname -f 2>/dev/null || echo "localhost")
-        # MED-07: ECDSA P-256 (más seguro y rápido que RSA-2048) + días configurables
         openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 \
             -nodes -days "$CERT_DAYS" \
             -keyout "$SSL_DIR/key.pem" -out "$SSL_DIR/cert.pem" \
@@ -227,18 +236,15 @@ case "$DO_HTTPS" in [Ss]*)
             || echo "SSL_CERT=$SSL_DIR/cert.pem" >> "$ENV_FILE"
         grep -q "^SSL_KEY="  "$ENV_FILE" 2>/dev/null \
             || echo "SSL_KEY=$SSL_DIR/key.pem"   >> "$ENV_FILE"
-        ok "certificado ECDSA P-256 generado en $SSL_DIR (válido $CERT_DAYS días)"
+        ok "certificado autofirmado generado en $SSL_DIR"
     else
         info "certificado ya existe — no se regenera"
     fi
 
-    # MED-07: cron de aviso de expiración — avisa 30 días antes por log
-    # La GUI lee /api/ssl/status para mostrar el estado y botón de renovación
+    # Script de aviso de expiración
     CERT_CHECK_SCRIPT="$INSTALL_DIR/scripts/check_cert_expiry.sh"
     cat > "$CERT_CHECK_SCRIPT" << 'CERT_EOF'
 #!/bin/bash
-# Comprueba la expiración del certificado TLS y avisa si faltan <=30 días.
-# Ejecutado diariamente por cron. La GUI lee /api/ssl/status para el mismo dato.
 CERT="INSTALL_DIR_PLACEHOLDER/config/ssl/cert.pem"
 LOG="INSTALL_DIR_PLACEHOLDER/logs/cert_expiry.log"
 [ ! -f "$CERT" ] && exit 0
@@ -248,16 +254,15 @@ NOW_EPOCH=$(date +%s)
 DAYS_LEFT=$(( (EXPIRY_EPOCH - NOW_EPOCH) / 86400 ))
 echo "$(date '+%Y-%m-%d %H:%M') — Certificado expira en $DAYS_LEFT días ($EXPIRY)" >> "$LOG"
 if [ "$DAYS_LEFT" -le 30 ]; then
-    echo "$(date '+%Y-%m-%d %H:%M') — AVISO: el certificado expira en $DAYS_LEFT días. Renuévalo desde la GUI." >> "$LOG"
+    echo "$(date '+%Y-%m-%d %H:%M') — AVISO: el certificado expira en $DAYS_LEFT días." >> "$LOG"
 fi
 CERT_EOF
-    # Sustituir placeholder por ruta real
     sed -i "s|INSTALL_DIR_PLACEHOLDER|$INSTALL_DIR|g" "$CERT_CHECK_SCRIPT"
     chmod +x "$CERT_CHECK_SCRIPT"
-    ok "script de aviso de expiración creado en scripts/check_cert_expiry.sh"
+    ok "script de expiración de certificado creado"
 ;; esac
 
-# Base de datos inicial — delegamos en auth.py que tiene el esquema completo
+# Base de datos inicial
 VENV_DIR="$INSTALL_DIR/venv"
 "$VENV_DIR/bin/python3" - <<PYEOF_DB
 import sys, os
@@ -284,25 +289,17 @@ ok "configuración completada"
 # ─────────────────────────────────────────────────────────────
 step "6/6" "Configurando servicios"
 
-# El usuario de servicio necesita acceso de escritura al directorio de instalación
-# (logs, results, data, models). Los scripts bash quedan en root:root por CRIT-03.
+# Dar propiedad del directorio al usuario de servicio
 chown -R "$SVC_USER":"$SVC_USER" "$INSTALL_DIR"
-# Restaurar propiedad root en scripts bash (CRIT-03)
-chown root:root "$INSTALL_DIR/scripts/retrain.sh" \
-                "$INSTALL_DIR/scripts/backup.sh" \
-                "$INSTALL_DIR/download_dataset.sh" 2>/dev/null || true
-ok "permisos de directorio configurados ($SVC_USER)"
 
-# Sudoers: el usuario de servicio necesita reiniciar el servicio y ejecutar
-# los scripts bash de root sin contraseña (updater y CRIT-03)
-SUDOERS_FILE="/etc/sudoers.d/email-detector"
-cat > "$SUDOERS_FILE" << SUDOERS_EOF
-# Email Malware Detector — permisos sin contraseña para el usuario de servicio
-$SVC_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart email-detector, /bin/systemctl start email-detector, /bin/systemctl stop email-detector, /bin/systemctl reload email-detector
-$SVC_USER ALL=(root) NOPASSWD: $INSTALL_DIR/download_dataset.sh, $INSTALL_DIR/scripts/retrain.sh
-SUDOERS_EOF
-chmod 440 "$SUDOERS_FILE"
-ok "sudoers configurado ($SUDOERS_FILE)"
+# Restaurar root:root en scripts que pasan por _validate_script_path
+# (chown -R los habría pisado)
+chown root:root \
+    "$INSTALL_DIR/scripts/retrain.sh"    \
+    "$INSTALL_DIR/scripts/train_model.py"
+[ -f "$INSTALL_DIR/download_dataset.sh" ] && \
+    chown root:root "$INSTALL_DIR/download_dataset.sh" || true
+ok "permisos de directorio configurados"
 
 PYTHON_BIN="$INSTALL_DIR/venv/bin/python"
 GUNICORN="$INSTALL_DIR/venv/bin/gunicorn"
@@ -312,7 +309,6 @@ case "$INSTALL_SVC" in [Ss]*)
     PROTO="http"
     case "$DO_HTTPS" in [Ss]*) PROTO="https";; esac
 
-    # Construir ExecStart con o sin SSL
     SSL_ARGS=""
     case "$DO_HTTPS" in [Ss]*)
         SSL_ARGS="--certfile=$INSTALL_DIR/config/ssl/cert.pem --keyfile=$INSTALL_DIR/config/ssl/key.pem"
@@ -348,26 +344,13 @@ case "$INSTALL_CRON" in [Ss]*)
      echo "0 2  * * * $INSTALL_DIR/scripts/backup.sh >> $INSTALL_DIR/logs/backup.log 2>&1"
      echo "*/5 * * * * $PYTHON_BIN $INSTALL_DIR/scripts/auto_scan.py >> $INSTALL_DIR/logs/auto_scan.log 2>&1"
      echo "0 9  * * * $PYTHON_BIN $INSTALL_DIR/scripts/update_clanker_rules.py >> $INSTALL_DIR/logs/clanker_update.log 2>&1"
-     echo "0 8  * * * $INSTALL_DIR/scripts/check_cert_expiry.sh >> $INSTALL_DIR/logs/cert_expiry.log 2>&1"
+     [ -f "$INSTALL_DIR/scripts/check_cert_expiry.sh" ] && \
+         echo "0 8  * * * $INSTALL_DIR/scripts/check_cert_expiry.sh >> $INSTALL_DIR/logs/cert_expiry.log 2>&1" || true
     ) | crontab -
     touch "$INSTALL_DIR/logs/backup.log" \
           "$INSTALL_DIR/logs/auto_scan.log" \
-          "$INSTALL_DIR/logs/clanker_update.log" \
-          "$INSTALL_DIR/logs/cert_expiry.log" 2>/dev/null || true
+          "$INSTALL_DIR/logs/clanker_update.log" 2>/dev/null || true
     ok "cron jobs configurados"
-
-    # HIGH-06: logrotate — evita que los logs de cron llenen el disco.
-    # Rotación diaria, 14 días de historial comprimido.
-    LOGROTATE_CONF="$REPO_DIR/email-detector-logrotate"
-    if [ -f "$LOGROTATE_CONF" ]; then
-        # Sustituir la ruta de instalación en la plantilla y copiar al sistema
-        sed "s|INSTALL_DIR|$INSTALL_DIR|g" "$LOGROTATE_CONF" \
-            > /etc/logrotate.d/email-detector
-        chmod 644 /etc/logrotate.d/email-detector
-        ok "logrotate configurado (/etc/logrotate.d/email-detector)"
-    else
-        warn "No se encontró email-detector-logrotate — configura logrotate manualmente"
-    fi
 ;; esac
 
 # ─────────────────────────────────────────────────────────────
