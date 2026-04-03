@@ -33,7 +33,7 @@
         .form-grid.cols-1 { grid-template-columns:1fr; }
         .form-group { display:flex; flex-direction:column; gap:5px; }
         label { color:#94a3b8; font-size:0.78em; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
-        input[type=text], input[type=password], input[type=number], input[type=email], select {
+        input[type=text], input[type=password], input[type=number], input[type=email], input[type=url], select {
             background:#0a1020; color:#e2e8f0; border:1px solid #2d3f55;
             border-radius:7px; padding:10px 13px; font-size:0.93em; transition:border-color 0.2s;
         }
@@ -41,20 +41,26 @@
         input::placeholder { color:#3d5068; }
 
         .card-footer { display:flex; gap:10px; align-items:center; margin-top:18px; flex-wrap:wrap; }
-        .btn { padding:9px 18px; border:none; border-radius:7px; cursor:pointer; font-size:0.88em; font-weight:600; transition:all 0.2s; display:inline-flex; align-items:center; gap:6px; }
+        .btn { padding:9px 18px; border:none; border-radius:7px; cursor:pointer; font-size:0.88em; font-weight:600; transition:all 0.2s; display:inline-flex; align-items:center; gap:6px; text-decoration:none; }
         .btn-primary   { background:#3b82f6; color:white; }
         .btn-primary:hover { background:#2563eb; }
         .btn-secondary { background:#1a2535; color:#94a3b8; border:1px solid #2d3f55; }
         .btn-secondary:hover { background:#243044; color:#e2e8f0; }
+        .btn-warning   { background:#d97706; color:white; }
+        .btn-warning:hover { background:#b45309; }
+        .btn-sm { padding:6px 13px; font-size:0.82em; }
 
         .test-result { font-size:0.85em; padding:7px 13px; border-radius:6px; display:none; align-items:center; gap:6px; }
-        .test-result.ok    { background:rgba(34,197,94,0.1); color:#22c55e; border:1px solid rgba(34,197,94,0.25); display:flex; }
-        .test-result.error { background:rgba(239,68,68,0.1); color:#f87171; border:1px solid rgba(239,68,68,0.25); display:flex; }
+        .test-result.ok      { background:rgba(34,197,94,0.1);  color:#22c55e; border:1px solid rgba(34,197,94,0.25);  display:flex; }
+        .test-result.error   { background:rgba(239,68,68,0.1);  color:#f87171; border:1px solid rgba(239,68,68,0.25);  display:flex; }
         .test-result.loading { background:rgba(59,130,246,0.1); color:#60a5fa; border:1px solid rgba(59,130,246,0.25); display:flex; }
+        .test-result.warning { background:rgba(245,158,11,0.1); color:#fbbf24; border:1px solid rgba(245,158,11,0.25); display:flex; }
 
         .badge-status { display:inline-flex; align-items:center; gap:5px; font-size:0.78em; padding:3px 10px; border-radius:10px; white-space:nowrap; }
         .badge-status.ok      { background:rgba(34,197,94,0.1);  color:#22c55e; }
         .badge-status.missing { background:rgba(239,68,68,0.1);  color:#f87171; }
+        .badge-status.warn    { background:rgba(245,158,11,0.1); color:#fbbf24; }
+        .badge-status.info    { background:rgba(59,130,246,0.1); color:#60a5fa; }
 
         .default-select { display:flex; align-items:center; gap:10px; margin-bottom:20px; padding:14px; background:#0a1020; border-radius:8px; border:1px solid #2d3f55; }
         .default-select label { color:#94a3b8; font-size:0.85em; margin:0; text-transform:none; letter-spacing:0; }
@@ -62,6 +68,41 @@
         .section-admin { border:1px solid #4c3000; background:#1a1200; }
         .section-admin .card-header { border-bottom-color:#6b4500; }
         .admin-badge { background:#92400e; color:#fcd34d; padding:2px 8px; border-radius:6px; font-size:0.75em; }
+
+        .info-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:16px; margin-bottom:16px; }
+        .info-item small { color:#64748b; font-size:0.78em; display:block; margin-bottom:3px; }
+        .info-item strong { font-size:0.93em; }
+
+        .sub-card { background:#0a1020; border:1px solid #2d3f55; border-radius:8px; padding:16px; }
+        .sub-card h3 { font-size:0.9em; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+
+        .input-row { display:flex; gap:8px; align-items:stretch; }
+        .input-row input { flex:1; min-width:0; }
+
+        hr.divider { border:none; border-top:1px solid #334155; margin:16px 0; }
+
+        .table-wrapper { overflow-x:auto; }
+        table.rules-table { width:100%; border-collapse:collapse; font-size:0.83em; }
+        table.rules-table th { color:#64748b; font-weight:600; text-align:left; padding:6px 10px; border-bottom:1px solid #334155; }
+        table.rules-table td { padding:6px 10px; border-bottom:1px solid #1e293b; vertical-align:middle; }
+        table.rules-table tr:last-child td { border-bottom:none; }
+        .sev-badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:0.8em; font-weight:600; }
+        .sev-critical { background:rgba(239,68,68,0.15);  color:#f87171; }
+        .sev-high     { background:rgba(245,158,11,0.15); color:#fbbf24; }
+        .sev-medium   { background:rgba(59,130,246,0.15); color:#60a5fa; }
+        .sev-low      { background:rgba(100,116,139,0.15);color:#94a3b8; }
+        .cat-badge    { display:inline-block; padding:2px 7px; border-radius:5px; font-size:0.78em; background:#1e293b; color:#94a3b8; border:1px solid #334155; }
+        code.small-code { font-family:monospace; font-size:0.82em; color:#7dd3fc; }
+
+        .toggle-switch { position:relative; display:inline-block; width:48px; height:26px; flex-shrink:0; }
+        .toggle-switch input { opacity:0; width:0; height:0; }
+        .toggle-slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
+            background:#1a2535; border-radius:26px; transition:.3s; border:1px solid #2d3f55; }
+        .toggle-slider:before { position:absolute; content:""; height:18px; width:18px;
+            left:3px; bottom:3px; background:#64748b; border-radius:50%; transition:.3s; }
+        input:checked + .toggle-slider { background:#3b82f6; border-color:#3b82f6; }
+        input:checked + .toggle-slider:before { transform:translateX(22px); background:white; }
+        .form-check-switch { display:flex; align-items:center; gap:8px; }
 
         .toast { position:fixed; bottom:24px; right:24px; padding:13px 20px; border-radius:10px; font-weight:600; font-size:0.9em; opacity:0; transition:opacity 0.3s; z-index:999; }
         .toast.show { opacity:1; }
@@ -78,7 +119,7 @@
 <nav>
     <div class="nav-inner">
         <div class="nav-brand">🛡️ Email <span>Malware</span> Detector</div>
-                <a href="/" class="nav-link ">📊 Dashboard</a>
+        <a href="/" class="nav-link ">📊 Dashboard</a>
         <a href="/training" class="nav-link ">🧠 Entrenamiento</a>
         {% if user.role == 'admin' %}
         <a href="/users" class="nav-link ">👥 Usuarios</a>
@@ -243,6 +284,161 @@
     </div>
     {% endif %}
 
+    <!-- Aceleración GPU -->
+    <div class="card" id="card-gpu">
+        <div class="card-header">
+            <div class="card-header-left">
+                <h2>⚡ Aceleración GPU</h2>
+                <p>Activa GPU para XGBoost y LightGBM durante el entrenamiento (requiere CUDA)</p>
+            </div>
+        </div>
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:14px;">
+            <label for="use-gpu-toggle" style="text-transform:uppercase;">Usar GPU en entrenamiento</label>
+            <label class="toggle-switch">
+                <input type="checkbox" id="use-gpu-toggle">
+                <span class="toggle-slider"></span>
+            </label>
+            <span id="gpu-status-text" style="color:#64748b;font-size:0.85em;">Cargando...</span>
+        </div>
+        <p style="color:#475569;font-size:0.82em;margin-top:10px;">
+            Solo tiene efecto con GPU NVIDIA y CUDA instalado. Requiere re-entrenar para aplicar.
+        </p>
+        <div class="card-footer">
+            <button class="btn btn-primary" onclick="saveGpuSetting()">💾 Guardar</button>
+            <div class="test-result" id="gpu-save-result"></div>
+        </div>
+    </div>
+
+    <!-- ClamAV -->
+    <div class="card" id="clamav-card">
+        <div class="card-header">
+            <div class="card-header-left">
+                <h2>🛡️ ClamAV — Análisis de Adjuntos</h2>
+            </div>
+            <span class="badge-status info" id="clamav-badge">Comprobando...</span>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <small>Motor</small>
+                <strong id="clamav-version">—</strong>
+            </div>
+            <div class="info-item">
+                <small>Firmas actualizadas</small>
+                <strong id="clamav-updated">—</strong>
+            </div>
+        </div>
+        <hr class="divider">
+        <p style="color:#94a3b8;font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Escanear archivo manualmente</p>
+        <div class="input-row" style="margin-bottom:12px;">
+            <input type="file" id="clamav-file-input" style="flex:1;">
+            <button class="btn btn-secondary" onclick="clamavScanFile()">🔍 Analizar</button>
+        </div>
+        <div class="test-result" id="clamav-scan-result"></div>
+        <div id="clamav-admin-section">
+            <hr class="divider">
+            <p style="color:#94a3b8;font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Base de datos de firmas</p>
+            <p style="color:#64748b;font-size:0.83em;margin-bottom:12px;">Se actualiza automáticamente cada día a las 08:00.</p>
+            <div class="card-footer" style="margin-top:0;">
+                <button class="btn btn-warning btn-sm" onclick="clamavUpdateDB()">🔄 Actualizar ahora</button>
+                <div class="test-result" id="clamav-update-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anti-Clanker -->
+    <div class="card" id="clanker-panel">
+        <div class="card-header">
+            <div class="card-header-left">
+                <h2>🤖 Anti-Clanker — Detector LLM/IA (Modelo 10)</h2>
+            </div>
+            <span class="badge-status info" id="clanker-badge">Comprobando...</span>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <small>Versión de reglas</small>
+                <strong id="clanker-version">—</strong>
+            </div>
+            <div class="info-item">
+                <small>Última actualización</small>
+                <strong id="clanker-updated">—</strong>
+            </div>
+            <div class="info-item">
+                <small>Reglas activas / totales</small>
+                <strong id="clanker-rules-count">—</strong>
+            </div>
+        </div>
+        <hr class="divider">
+        <p style="color:#94a3b8;font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Reglas cargadas</p>
+        <div id="clanker-rules-table" style="margin-bottom:16px;">
+            <span style="color:#64748b;font-size:0.85em;">Cargando...</span>
+        </div>
+        {% if user.role == 'admin' %}
+        <hr class="divider">
+        <p style="color:#94a3b8;font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">
+            Gestión de reglas <span class="admin-badge">Admin</span>
+        </p>
+        <div class="form-grid">
+            <div class="sub-card">
+                <h3>⬆️ Subir fichero local</h3>
+                <p style="color:#64748b;font-size:0.82em;margin-bottom:10px;">Sube un .yaml con el nuevo conjunto de reglas. Se valida antes de aplicar y se hace backup del anterior.</p>
+                <div class="input-row">
+                    <input type="file" id="clanker-rules-file" accept=".yaml,.yml" style="flex:1;">
+                    <button class="btn btn-secondary btn-sm" onclick="clankerUploadRules()">⬆️ Subir</button>
+                </div>
+                <div class="test-result" id="clanker-upload-result" style="margin-top:8px;"></div>
+            </div>
+            <div class="sub-card">
+                <h3>🌐 URL remota de actualización</h3>
+                <p style="color:#64748b;font-size:0.82em;margin-bottom:10px;">URL pública del fichero YAML. El sistema comprueba diariamente si hay versión más reciente.</p>
+                <div class="input-row" style="margin-bottom:8px;">
+                    <input type="url" id="clanker-url-input" placeholder="https://ejemplo.com/clanker" style="flex:1;">
+                    <button class="btn btn-secondary btn-sm" onclick="clankerSaveUrl()">💾 Guardar</button>
+                </div>
+                <button class="btn btn-warning btn-sm" style="width:100%;" onclick="clankerUpdateNow()">🔄 Comprobar y actualizar ahora</button>
+                <div class="test-result" id="clanker-url-result" style="margin-top:8px;"></div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Certificado TLS -->
+    {% if user.role == 'admin' %}
+    <div class="card section-admin" id="ssl-panel" style="display:none;">
+        <div class="card-header">
+            <div class="card-header-left">
+                <h2>🔒 Certificado TLS <span class="admin-badge">Solo admin</span></h2>
+                <p>Certificado ECDSA P-256 autofirmado del servidor</p>
+            </div>
+            <span class="badge-status info" id="ssl-badge">Comprobando...</span>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <small>Expira el</small>
+                <strong id="ssl-expiry">—</strong>
+            </div>
+            <div class="info-item">
+                <small>Días restantes</small>
+                <strong id="ssl-days">—</strong>
+            </div>
+            <div class="info-item">
+                <small>Estado</small>
+                <strong id="ssl-state">—</strong>
+            </div>
+        </div>
+        <hr class="divider">
+        <p style="color:#94a3b8;font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Renovar certificado</p>
+        <p style="color:#64748b;font-size:0.83em;margin-bottom:12px;">
+            Genera un nuevo certificado ECDSA P-256 autofirmado. Se hace backup del actual. Requiere reiniciar el servicio para aplicarlo.
+        </p>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <label style="color:#94a3b8;font-size:0.78em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">Días de validez</label>
+            <input type="number" id="ssl-days-input" value="365" min="1" max="365" style="width:90px;">
+            <button class="btn btn-primary" onclick="sslRenew()">🔄 Renovar ahora</button>
+        </div>
+        <div class="test-result" id="ssl-renew-result" style="margin-top:14px;"></div>
+    </div>
+    {% endif %}
+
     <div class="save-bar">
         <button class="btn btn-primary" style="padding:11px 28px" onclick="saveAll()">💾 Guardar toda mi configuración</button>
     </div>
@@ -262,6 +458,14 @@
         const el = document.getElementById(`test-${id}`);
         el.className   = `test-result ${state}`;
         el.textContent = msg;
+    }
+
+    function showResult(id, state, msg) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.className   = `test-result ${state}`;
+        el.textContent = msg;
+        el.style.display = 'flex';
     }
 
     function collectAll() {
@@ -342,417 +546,225 @@
             inp.type = inp.type === 'password' ? 'text' : 'password';
         });
     });
-</script>
 
-    <div class="card" id="card-gpu">
-      <div class="card-header">
-        <div class="card-header-left">
-          <h2>&#9889; Aceleracion GPU</h2>
-          <p>Activa GPU para XGBoost y LightGBM durante el entrenamiento (requiere CUDA)</p>
-        </div>
-      </div>
-      <div class="form-grid cols-1">
-        <div class="form-group" style="flex-direction:row;align-items:center;gap:14px;">
-          <label for="use-gpu-toggle" style="margin:0;white-space:nowrap;">Usar GPU en entrenamiento</label>
-          <label class="toggle-switch">
-            <input type="checkbox" id="use-gpu-toggle">
-            <span class="toggle-slider"></span>
-          </label>
-          <span id="gpu-status-text" style="color:#64748b;font-size:0.85em;">Cargando...</span>
-        </div>
-        <p style="color:#475569;font-size:0.82em;margin-top:4px;">
-          Solo tiene efecto con GPU NVIDIA y CUDA instalado. Requiere re-entrenar para aplicar.
-        </p>
-      </div>
-      <div class="card-footer">
-        <button class="btn btn-primary" onclick="saveGpuSetting()">Guardar</button>
-        <span id="gpu-save-result" class="test-result"></span>
-      </div>
-    </div>
-    <style>
-      .toggle-switch{position:relative;display:inline-block;width:48px;height:26px;}
-      .toggle-switch input{opacity:0;width:0;height:0;}
-      .toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;
-        background:#1a2535;border-radius:26px;transition:.3s;border:1px solid #2d3f55;}
-      .toggle-slider:before{position:absolute;content:"";height:18px;width:18px;
-        left:3px;bottom:3px;background:#64748b;border-radius:50%;transition:.3s;}
-      input:checked + .toggle-slider{background:#3b82f6;border-color:#3b82f6;}
-      input:checked + .toggle-slider:before{transform:translateX(22px);background:white;}
-    </style>
-    <script>
+    // ── GPU ──────────────────────────────────────────────────────────────────
     (function(){
-      fetch("/api/settings/global").then(function(r){return r.json();}).then(function(data){
-        var val = (data.USE_GPU || "false").toLowerCase();
-        var tog = document.getElementById("use-gpu-toggle");
-        var txt = document.getElementById("gpu-status-text");
-        tog.checked = (val === "true" || val === "1");
-        txt.textContent = tog.checked ? "GPU activada" : "GPU desactivada (CPU)";
-        tog.addEventListener("change", function(){
-          txt.textContent = tog.checked ? "GPU activada" : "GPU desactivada (CPU)";
+        fetch('/api/settings/global').then(r => r.json()).then(data => {
+            const val = (data.USE_GPU || 'false').toLowerCase();
+            const tog = document.getElementById('use-gpu-toggle');
+            const txt = document.getElementById('gpu-status-text');
+            tog.checked = (val === 'true' || val === '1');
+            txt.textContent = tog.checked ? 'GPU activada' : 'No disponible';
+            tog.addEventListener('change', () => {
+                txt.textContent = tog.checked ? 'GPU activada' : 'GPU desactivada (CPU)';
+            });
+        }).catch(() => {
+            document.getElementById('gpu-status-text').textContent = 'No disponible';
         });
-      }).catch(function(){ document.getElementById("gpu-status-text").textContent = "No disponible"; });
 
-      window.saveGpuSetting = function(){
-        var tog = document.getElementById("use-gpu-toggle");
-        var res = document.getElementById("gpu-save-result");
-        res.className = "test-result loading"; res.textContent = "Guardando...";
-        fetch("/api/settings/global", {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({USE_GPU: tog.checked ? "true" : "false"})
-        }).then(function(r){return r.json();}).then(function(data){
-          if(data.ok){res.className="test-result ok"; res.textContent="Guardado. Re-entrena para aplicar.";}
-          else{res.className="test-result error"; res.textContent="Error al guardar";}
-        }).catch(function(){res.className="test-result error"; res.textContent="Error de conexion";});
-      };
+        window.saveGpuSetting = function() {
+            const tog = document.getElementById('use-gpu-toggle');
+            showResult('gpu-save-result', 'loading', '⏳ Guardando...');
+            fetch('/api/settings/global', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({USE_GPU: tog.checked ? 'true' : 'false'})
+            }).then(r => r.json()).then(data => {
+                if (data.success || data.ok) showResult('gpu-save-result', 'ok', '✓ Guardado. Re-entrena para aplicar.');
+                else showResult('gpu-save-result', 'error', 'Error al guardar');
+            }).catch(() => showResult('gpu-save-result', 'error', 'Error de conexión'));
+        };
     })();
-    </script>
 
-
-<!-- ═══════════════════════════════════════ ClamAV ══════════════════════════ -->
-<div class="card mb-4" id="clamav-card">
-  <div class="card-header d-flex align-items-center justify-content-between">
-    <span><i class="bi bi-shield-virus me-2"></i><strong>ClamAV &mdash; Análisis de Adjuntos</strong></span>
-    <span id="clamav-badge" class="badge bg-secondary">Comprobando...</span>
-  </div>
-  <div class="card-body">
-    <div class="row mb-3">
-      <div class="col-md-6">
-        <small class="text-muted">Motor</small>
-        <div id="clamav-version" class="fw-semibold">&#8212;</div>
-      </div>
-      <div class="col-md-6">
-        <small class="text-muted">Firmas actualizadas</small>
-        <div id="clamav-updated" class="fw-semibold">&#8212;</div>
-      </div>
-    </div>
-    <hr>
-    <h6 class="mb-2"><i class="bi bi-file-earmark-binary me-1"></i>Escanear archivo manualmente</h6>
-    <div class="input-group mb-3">
-      <input type="file" class="form-control" id="clamav-file-input" accept="*/*">
-      <button class="btn btn-outline-primary" onclick="clamavScanFile()">
-        <i class="bi bi-search me-1"></i>Analizar
-      </button>
-    </div>
-    <div id="clamav-scan-result" class="d-none"></div>
-    <hr>
-    <div id="clamav-admin-section">
-      <h6 class="mb-1"><i class="bi bi-cloud-download me-1"></i>Base de datos de firmas</h6>
-      <p class="text-muted small mb-2">Se actualiza automáticamente cada día a las 08:00.</p>
-      <button class="btn btn-outline-warning btn-sm" onclick="clamavUpdateDB()">
-        <i class="bi bi-arrow-clockwise me-1"></i>Actualizar ahora
-      </button>
-      <div id="clamav-update-result" class="mt-2 d-none"></div>
-    </div>
-  </div>
-</div>
-<script>
-async function clamavLoadStatus() {
-  try {
-    const r = await fetch('/api/clamav/status');
-    const d = await r.json();
-    const badge = document.getElementById('clamav-badge');
-    if (!d.enabled) { badge.textContent='No instalado'; badge.className='badge bg-danger'; return; }
-    badge.textContent = d.available ? 'Activo' : 'Daemon caído';
-    badge.className = d.available ? 'badge bg-success' : 'badge bg-warning text-dark';
-    document.getElementById('clamav-version').textContent = d.version || '—';
-    document.getElementById('clamav-updated').textContent = d.updated_at || 'Desconocido';
-  } catch(e) { document.getElementById('clamav-card').style.display='none'; }
-}
-async function clamavScanFile() {
-  const input = document.getElementById('clamav-file-input');
-  const box = document.getElementById('clamav-scan-result');
-  if (!input.files.length) { alert('Selecciona un archivo primero'); return; }
-  box.innerHTML='<div class="alert alert-info py-2"><span class="spinner-border spinner-border-sm me-2"></span>Analizando...</div>';
-  box.className='';
-  const fd = new FormData(); fd.append('file', input.files[0]);
-  try {
-    const r = await fetch('/api/clamav/scan', {method:'POST', body:fd});
-    const d = await r.json();
-    if (!d.success) { box.innerHTML=`<div class="alert alert-danger py-2"><strong>Error:</strong> ${d.error}</div>`; return; }
-    const res = d.results && d.results[0];
-    if (!res) { box.innerHTML='<div class="alert alert-info py-2">Sin resultado.</div>'; return; }
-    if (res.infected) box.innerHTML=`<div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle-fill me-1"></i><strong>AMENAZA:</strong> ${res.threat||'Malware'}</div>`;
-    else if (res.error) box.innerHTML=`<div class="alert alert-warning py-2"><strong>Error de análisis:</strong> ${res.error}</div>`;
-    else box.innerHTML='<div class="alert alert-success py-2"><i class="bi bi-check-circle-fill me-1"></i>Archivo limpio</div>';
-  } catch(e) { box.innerHTML=`<div class="alert alert-danger py-2">Error: ${e}</div>`; }
-}
-async function clamavUpdateDB() {
-  const box = document.getElementById('clamav-update-result');
-  box.innerHTML='<div class="alert alert-info py-2"><span class="spinner-border spinner-border-sm me-2"></span>Actualizando...</div>';
-  box.className='';
-  try {
-    const r = await fetch('/api/clamav/update', {method:'POST'});
-    const d = await r.json();
-    box.innerHTML = d.success
-      ? '<div class="alert alert-success py-2"><i class="bi bi-check-circle-fill me-1"></i>Actualizado correctamente</div>'
-      : `<div class="alert alert-warning py-2"><strong>Aviso:</strong> ${d.output||d.error}</div>`;
-    if (d.success) clamavLoadStatus();
-  } catch(e) { box.innerHTML=`<div class="alert alert-danger py-2">Error: ${e}</div>`; }
-}
-(async function() {
-  try {
-    const r = await fetch('/api/user/role');
-    const d = await r.json();
-    const s = document.getElementById('clamav-admin-section');
-    if (s) s.style.display = (d.role === 'admin') ? '' : 'none';
-  } catch(e) {}
-  clamavLoadStatus();
-})();
-</script>
-
-
-<!-- Anti-Clanker panel -->
-<div class="card mb-4" id="clanker-panel">
-  <div class="card-header d-flex align-items-center justify-content-between">
-    <span><i class="bi bi-robot me-2"></i><strong>Anti-Clanker &mdash; Detector LLM/IA (Modelo 10)</strong></span>
-    <span id="clanker-badge" class="badge bg-secondary">Comprobando...</span>
-  </div>
-  <div class="card-body">
-    <div class="row mb-3">
-      <div class="col-md-4">
-        <small class="text-muted">Version de reglas</small>
-        <div id="clanker-version" class="fw-semibold">&#8212;</div>
-      </div>
-      <div class="col-md-4">
-        <small class="text-muted">Ultima actualizacion</small>
-        <div id="clanker-updated" class="fw-semibold">&#8212;</div>
-      </div>
-      <div class="col-md-4">
-        <small class="text-muted">Reglas activas / totales</small>
-        <div id="clanker-rules-count" class="fw-semibold">&#8212;</div>
-      </div>
-    </div>
-    <hr>
-    <h6><i class="bi bi-list-check me-1"></i>Reglas cargadas</h6>
-    <div id="clanker-rules-table" class="mb-3">
-      <div class="text-muted small">Cargando...</div>
-    </div>
-    {% if user.role == 'admin' %}
-    <hr>
-    <h6 class="mb-3"><i class="bi bi-gear me-1"></i>Gestion de reglas <span class="badge bg-warning text-dark ms-1">Admin</span></h6>
-    <div class="row g-3">
-      <div class="col-md-6">
-        <div class="card h-100 border-secondary">
-          <div class="card-body">
-            <h6 class="card-title"><i class="bi bi-upload me-1"></i>Subir fichero local</h6>
-            <p class="text-muted small mb-2">Sube un .yaml con el nuevo conjunto de reglas. Se valida antes de aplicar y se hace backup del anterior.</p>
-            <div class="input-group input-group-sm">
-              <input type="file" class="form-control" id="clanker-rules-file" accept=".yaml,.yml">
-              <button class="btn btn-outline-primary" onclick="clankerUploadRules()">
-                <i class="bi bi-upload me-1"></i>Subir
-              </button>
-            </div>
-            <div id="clanker-upload-result" class="mt-2 d-none"></div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card h-100 border-secondary">
-          <div class="card-body">
-            <h6 class="card-title"><i class="bi bi-cloud-download me-1"></i>URL remota de actualizacion</h6>
-            <p class="text-muted small mb-2">URL publica del fichero YAML. El sistema comprueba diariamente si hay version mas reciente.</p>
-            <div class="input-group input-group-sm mb-2">
-              <input type="url" class="form-control" id="clanker-url-input"
-                placeholder="https://ejemplo.com/clanker_rules.yaml">
-              <button class="btn btn-outline-secondary" onclick="clankerSaveUrl()">
-                <i class="bi bi-save me-1"></i>Guardar
-              </button>
-            </div>
-            <button class="btn btn-outline-warning btn-sm w-100" onclick="clankerUpdateNow()">
-              <i class="bi bi-arrow-clockwise me-1"></i>Comprobar y actualizar ahora
-            </button>
-            <div id="clanker-url-result" class="mt-2 d-none"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-  </div>
-</div>
-<script>
-async function clankerLoadStatus() {
-  try {
-    const r = await fetch('/api/clanker/status');
-    const d = await r.json();
-    const badge = document.getElementById('clanker-badge');
-    if (!d.enabled) { badge.textContent='No disponible'; badge.className='badge bg-danger'; return; }
-    badge.textContent='Activo'; badge.className='badge bg-success';
-    document.getElementById('clanker-version').textContent = d.rules_version || '-';
-    document.getElementById('clanker-updated').textContent = d.rules_updated || '-';
-    document.getElementById('clanker-rules-count').textContent = d.active_rules + ' / ' + d.total_rules;
-    const ui = document.getElementById('clanker-url-input');
-    if (ui && d.rules_url) ui.value = d.rules_url;
-    clankerLoadRules();
-  } catch(e) { document.getElementById('clanker-panel').style.display='none'; }
-}
-async function clankerLoadRules() {
-  const box = document.getElementById('clanker-rules-table');
-  try {
-    const r = await fetch('/api/clanker/rules');
-    const d = await r.json();
-    if (!d.rules || !d.rules.length) { box.innerHTML='<div class="text-muted small">Sin reglas.</div>'; return; }
-    const sevClass = {critical:'danger',high:'warning',medium:'info',low:'secondary'};
-    let html = '<div class="table-responsive"><table class="table table-sm table-hover mb-0"><thead><tr><th>ID</th><th>Categoria</th><th>Severidad</th><th>Descripcion</th><th>Activa</th></tr></thead><tbody>';
-    for (const rule of d.rules) {
-      const enabled = rule.enabled !== false;
-      const sc = sevClass[rule.severity] || 'secondary';
-      html += '<tr><td><code class="small">' + rule.id + '</code></td><td><span class="badge bg-light text-dark small">' + rule.category + '</span></td><td><span class="badge bg-' + sc + '">' + rule.severity + '</span></td><td class="small text-muted">' + (rule.description||'') + '</td><td><div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" ' + (enabled?'checked':'') + ' onchange="clankerToggleRule('' + rule.id + '', this)"></div></td></tr>';
+    // ── ClamAV ───────────────────────────────────────────────────────────────
+    async function clamavLoadStatus() {
+        try {
+            const r = await fetch('/api/clamav/status');
+            const d = await r.json();
+            const badge = document.getElementById('clamav-badge');
+            if (!d.enabled) {
+                badge.textContent = 'No instalado';
+                badge.className = 'badge-status missing';
+                return;
+            }
+            badge.textContent = d.available ? 'Activo' : 'Daemon caído';
+            badge.className = d.available ? 'badge-status ok' : 'badge-status warn';
+            document.getElementById('clamav-version').textContent = d.version || '—';
+            document.getElementById('clamav-updated').textContent = d.updated_at || 'Desconocido';
+        } catch(e) {
+            document.getElementById('clamav-card').style.display = 'none';
+        }
     }
-    html += '</tbody></table></div>';
-    box.innerHTML = html;
-  } catch(e) { box.innerHTML = '<div class="text-muted small">Error cargando reglas.</div>'; }
-}
-async function clankerToggleRule(id, cb) {
-  try {
-    const r = await fetch('/api/clanker/rules/' + id + '/toggle', {method:'POST'});
-    const d = await r.json();
-    cb.checked = d.enabled;
+
+    async function clamavScanFile() {
+        const input = document.getElementById('clamav-file-input');
+        const box   = document.getElementById('clamav-scan-result');
+        if (!input.files.length) { alert('Selecciona un archivo primero'); return; }
+        showResult('clamav-scan-result', 'loading', '⏳ Analizando...');
+        const fd = new FormData();
+        fd.append('file', input.files[0]);
+        try {
+            const r = await fetch('/api/clamav/scan', {method:'POST', body:fd});
+            const d = await r.json();
+            if (!d.success) { showResult('clamav-scan-result', 'error', '✗ Error: ' + d.error); return; }
+            const res = d.results && d.results[0];
+            if (!res) { showResult('clamav-scan-result', 'info', 'Sin resultado.'); return; }
+            if (res.infected) showResult('clamav-scan-result', 'error', '⚠ AMENAZA: ' + (res.threat || 'Malware'));
+            else if (res.error) showResult('clamav-scan-result', 'warning', 'Error de análisis: ' + res.error);
+            else showResult('clamav-scan-result', 'ok', '✓ Archivo limpio');
+        } catch(e) { showResult('clamav-scan-result', 'error', 'Error: ' + e); }
+    }
+
+    async function clamavUpdateDB() {
+        showResult('clamav-update-result', 'loading', '⏳ Actualizando...');
+        try {
+            const r = await fetch('/api/clamav/update', {method:'POST'});
+            const d = await r.json();
+            if (d.success) { showResult('clamav-update-result', 'ok', '✓ Actualizado correctamente'); clamavLoadStatus(); }
+            else showResult('clamav-update-result', 'warning', d.output || d.error || 'Error');
+        } catch(e) { showResult('clamav-update-result', 'error', 'Error: ' + e); }
+    }
+
+    (async function() {
+        try {
+            const r = await fetch('/api/user/role');
+            const d = await r.json();
+            const s = document.getElementById('clamav-admin-section');
+            if (s) s.style.display = (d.role === 'admin') ? '' : 'none';
+        } catch(e) {}
+        clamavLoadStatus();
+    })();
+
+    // ── Anti-Clanker ─────────────────────────────────────────────────────────
+    async function clankerLoadStatus() {
+        try {
+            const r = await fetch('/api/clanker/status');
+            const d = await r.json();
+            const badge = document.getElementById('clanker-badge');
+            if (!d.enabled) { badge.textContent = 'No disponible'; badge.className = 'badge-status missing'; return; }
+            badge.textContent = 'Activo'; badge.className = 'badge-status ok';
+            document.getElementById('clanker-version').textContent = d.rules_version || '-';
+            document.getElementById('clanker-updated').textContent = d.rules_updated || '-';
+            document.getElementById('clanker-rules-count').textContent = d.active_rules + ' / ' + d.total_rules;
+            const ui = document.getElementById('clanker-url-input');
+            if (ui && d.rules_url) ui.value = d.rules_url;
+            clankerLoadRules();
+        } catch(e) { document.getElementById('clanker-panel').style.display = 'none'; }
+    }
+
+    async function clankerLoadRules() {
+        const box = document.getElementById('clanker-rules-table');
+        try {
+            const r = await fetch('/api/clanker/rules');
+            const d = await r.json();
+            if (!d.rules || !d.rules.length) { box.innerHTML = '<span style="color:#64748b;font-size:0.85em;">Sin reglas.</span>'; return; }
+            const sevClass = { critical:'sev-critical', high:'sev-high', medium:'sev-medium', low:'sev-low' };
+            let html = '<div class="table-wrapper"><table class="rules-table"><thead><tr><th>ID</th><th>Categoría</th><th>Severidad</th><th>Descripción</th><th>Activa</th></tr></thead><tbody>';
+            for (const rule of d.rules) {
+                const enabled = rule.enabled !== false;
+                const sc = sevClass[rule.severity] || 'sev-low';
+                html += `<tr>
+                    <td><code class="small-code">${rule.id}</code></td>
+                    <td><span class="cat-badge">${rule.category}</span></td>
+                    <td><span class="sev-badge ${sc}">${rule.severity}</span></td>
+                    <td style="color:#94a3b8;">${rule.description || ''}</td>
+                    <td><div class="form-check-switch"><label class="toggle-switch" style="width:36px;height:20px;"><input type="checkbox" ${enabled ? 'checked' : ''} onchange="clankerToggleRule('${rule.id}', this)"><span class="toggle-slider"></span></label></div></td>
+                </tr>`;
+            }
+            html += '</tbody></table></div>';
+            box.innerHTML = html;
+        } catch(e) { box.innerHTML = '<span style="color:#64748b;font-size:0.85em;">Error cargando reglas.</span>'; }
+    }
+
+    async function clankerToggleRule(id, cb) {
+        try {
+            const r = await fetch('/api/clanker/rules/' + id + '/toggle', {method:'POST'});
+            const d = await r.json();
+            cb.checked = d.enabled;
+            clankerLoadStatus();
+        } catch(e) { alert('Error'); cb.checked = !cb.checked; }
+    }
+
+    async function clankerUploadRules() {
+        const input = document.getElementById('clanker-rules-file');
+        if (!input.files.length) { alert('Selecciona un fichero YAML'); return; }
+        showResult('clanker-upload-result', 'loading', '⏳ Validando...');
+        const fd = new FormData();
+        fd.append('file', input.files[0]);
+        try {
+            const r = await fetch('/api/clanker/upload_rules', {method:'POST', body:fd});
+            const d = await r.json();
+            if (d.success) { showResult('clanker-upload-result', 'ok', '✓ Subido: ' + d.rules_count + ' reglas.'); input.value = ''; clankerLoadStatus(); }
+            else showResult('clanker-upload-result', 'error', '✗ ' + d.error);
+        } catch(e) { showResult('clanker-upload-result', 'error', 'Error: ' + e); }
+    }
+
+    async function clankerSaveUrl() {
+        const url = document.getElementById('clanker-url-input').value.trim();
+        try {
+            const r = await fetch('/api/clanker/set_url', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url})});
+            const d = await r.json();
+            if (d.success) showResult('clanker-url-result', 'ok', '✓ ' + (url ? 'URL guardada.' : 'URL eliminada.'));
+            else showResult('clanker-url-result', 'error', '✗ ' + d.error);
+        } catch(e) { showResult('clanker-url-result', 'error', 'Error: ' + e); }
+    }
+
+    async function clankerUpdateNow() {
+        showResult('clanker-url-result', 'loading', '⏳ Comprobando...');
+        try {
+            const r = await fetch('/api/clanker/update_rules', {method:'POST'});
+            const d = await r.json();
+            if (d.success) { showResult('clanker-url-result', 'ok', '✓ ' + (d.message || 'Actualizado.')); clankerLoadStatus(); }
+            else showResult('clanker-url-result', 'warning', d.message || 'Sin actualizaciones.');
+        } catch(e) { showResult('clanker-url-result', 'error', 'Error: ' + e); }
+    }
+
     clankerLoadStatus();
-  } catch(e) { alert('Error'); cb.checked = !cb.checked; }
-}
-async function clankerUploadRules() {
-  const input = document.getElementById('clanker-rules-file');
-  const box = document.getElementById('clanker-upload-result');
-  if (!input.files.length) { alert('Selecciona un fichero YAML'); return; }
-  box.innerHTML='<div class="alert alert-info py-2 small"><span class="spinner-border spinner-border-sm me-2"></span>Validando...</div>';
-  box.className='';
-  const fd = new FormData();
-  fd.append('file', input.files[0]);
-  try {
-    const r = await fetch('/api/clanker/upload_rules', {method:'POST', body:fd});
-    const d = await r.json();
-    box.innerHTML = d.success ? '<div class="alert alert-success py-2 small"><i class="bi bi-check-circle-fill me-1"></i>Subido: ' + d.rules_count + ' reglas.</div>' : '<div class="alert alert-danger py-2 small"><strong>Error:</strong> ' + d.error + '</div>';
-    if (d.success) { input.value=''; clankerLoadStatus(); }
-  } catch(e) { box.innerHTML='<div class="alert alert-danger py-2 small">Error: '+e+'</div>'; }
-}
-async function clankerSaveUrl() {
-  const url = document.getElementById('clanker-url-input').value.trim();
-  const box = document.getElementById('clanker-url-result');
-  try {
-    const r = await fetch('/api/clanker/set_url', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url:url})});
-    const d = await r.json();
-    box.innerHTML = d.success ? '<div class="alert alert-success py-2 small"><i class="bi bi-check-circle-fill me-1"></i>' + (url?'URL guardada.':'URL eliminada.') + '</div>' : '<div class="alert alert-danger py-2 small">' + d.error + '</div>';
-    box.className='';
-  } catch(e) { box.innerHTML='<div class="alert alert-danger py-2 small">Error: '+e+'</div>'; box.className=''; }
-}
-async function clankerUpdateNow() {
-  const box = document.getElementById('clanker-url-result');
-  box.innerHTML='<div class="alert alert-info py-2 small"><span class="spinner-border spinner-border-sm me-2"></span>Comprobando...</div>';
-  box.className='';
-  try {
-    const r = await fetch('/api/clanker/update_rules', {method:'POST'});
-    const d = await r.json();
-    box.innerHTML = d.success ? '<div class="alert alert-success py-2 small"><i class="bi bi-check-circle-fill me-1"></i>' + (d.message||'Actualizado.') + '</div>' : '<div class="alert alert-warning py-2 small">' + (d.message||'Sin actualizaciones.') + '</div>';
-    if (d.success) clankerLoadStatus();
-  } catch(e) { box.innerHTML='<div class="alert alert-danger py-2 small">Error: '+e+'</div>'; }
-}
-clankerLoadStatus();
+
+    // ── TLS ──────────────────────────────────────────────────────────────────
+    async function sslLoadStatus() {
+        try {
+            const r = await fetch('/api/ssl/status');
+            const d = await r.json();
+            const panel = document.getElementById('ssl-panel');
+            if (!d.enabled) { if (panel) panel.style.display = 'none'; return; }
+            if (panel) panel.style.display = '';
+            const badge = document.getElementById('ssl-badge');
+            const days  = d.days_left ?? '?';
+            if (d.expired) { badge.textContent = 'Expirado'; badge.className = 'badge-status missing'; }
+            else if (d.warning) { badge.textContent = '⚠ ' + days + ' días'; badge.className = 'badge-status warn'; }
+            else { badge.textContent = 'Válido'; badge.className = 'badge-status ok'; }
+            document.getElementById('ssl-expiry').textContent = d.expiry || '—';
+            document.getElementById('ssl-days').textContent   = days + ' días';
+            document.getElementById('ssl-state').textContent  = d.expired ? '❌ Expirado' : d.warning ? '⚠ Próximo a expirar' : '✅ OK';
+            if (d.error) document.getElementById('ssl-state').textContent = '⚠ ' + d.error;
+        } catch(e) {
+            const p = document.getElementById('ssl-panel');
+            if (p) p.style.display = 'none';
+        }
+    }
+
+    async function sslRenew() {
+        const days = parseInt(document.getElementById('ssl-days-input').value) || 365;
+        showResult('ssl-renew-result', 'loading', '⏳ Generando certificado...');
+        try {
+            const r = await fetch('/api/ssl/renew', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({days})
+            });
+            const d = await r.json();
+            if (d.success) {
+                showResult('ssl-renew-result', 'ok',
+                    '✅ ' + d.message + (d.restart_required ? ' — Reinicia: systemctl restart email-detector' : ''));
+                sslLoadStatus();
+            } else {
+                showResult('ssl-renew-result', 'error', '❌ ' + d.error);
+            }
+        } catch(e) { showResult('ssl-renew-result', 'error', 'Error: ' + e); }
+    }
+
+    sslLoadStatus();
 </script>
-
-
-<!-- ═══════════════════════════════════ Certificado TLS (MED-07) ════════════ -->
-{% if user.role == 'admin' %}
-<div class="card mb-4" id="ssl-panel" style="display:none">
-  <div class="card-header d-flex align-items-center justify-content-between">
-    <span>🔒 <strong>Certificado TLS</strong> <span class="admin-badge" style="margin-left:6px">Solo admin</span></span>
-    <span id="ssl-badge" class="badge bg-secondary">Comprobando...</span>
-  </div>
-  <div class="card-body">
-    <div class="row mb-3">
-      <div class="col-md-4">
-        <small class="text-muted">Expira el</small>
-        <div id="ssl-expiry" class="fw-semibold">—</div>
-      </div>
-      <div class="col-md-4">
-        <small class="text-muted">Días restantes</small>
-        <div id="ssl-days" class="fw-semibold">—</div>
-      </div>
-      <div class="col-md-4">
-        <small class="text-muted">Estado</small>
-        <div id="ssl-state" class="fw-semibold">—</div>
-      </div>
-    </div>
-    <hr>
-    <h6 class="mb-2">🔄 Renovar certificado</h6>
-    <p style="color:#64748b;font-size:0.83em;margin-bottom:12px">
-      Genera un nuevo certificado ECDSA P-256 autofirmado. Se hace backup del actual.
-      Requiere reiniciar el servicio para aplicarlo.
-    </p>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <label style="color:#94a3b8;font-size:0.78em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap">
-        Días de validez
-      </label>
-      <input type="number" id="ssl-days-input" value="365" min="1" max="365"
-        style="width:90px;background:#0a1020;color:#e2e8f0;border:1px solid #2d3f55;border-radius:7px;padding:8px 10px;font-size:0.9em">
-      <button class="btn btn-primary" onclick="sslRenew()">🔄 Renovar ahora</button>
-    </div>
-    <div id="ssl-renew-result" class="mt-3" style="display:none"></div>
-  </div>
-</div>
-<script>
-async function sslLoadStatus() {
-  try {
-    const r = await fetch('/api/ssl/status');
-    const d = await r.json();
-    const panel = document.getElementById('ssl-panel');
-    if (!d.enabled) { panel.style.display = 'none'; return; }
-    panel.style.display = '';
-
-    const badge = document.getElementById('ssl-badge');
-    const days  = d.days_left ?? '?';
-
-    if (d.expired) {
-      badge.textContent = 'Expirado'; badge.className = 'badge bg-danger';
-    } else if (d.warning) {
-      badge.textContent = `⚠ ${days} días`; badge.className = 'badge bg-warning text-dark';
-    } else {
-      badge.textContent = 'Válido'; badge.className = 'badge bg-success';
-    }
-
-    document.getElementById('ssl-expiry').textContent = d.expiry || '—';
-    document.getElementById('ssl-days').textContent   = days + ' días';
-    document.getElementById('ssl-state').textContent  =
-      d.expired ? '❌ Expirado' : d.warning ? '⚠ Próximo a expirar' : '✅ OK';
-
-    if (d.error) {
-      document.getElementById('ssl-state').textContent = '⚠ ' + d.error;
-    }
-  } catch(e) {
-    document.getElementById('ssl-panel').style.display = 'none';
-  }
-}
-
-async function sslRenew() {
-  const days   = parseInt(document.getElementById('ssl-days-input').value) || 365;
-  const result = document.getElementById('ssl-renew-result');
-  result.style.display = '';
-  result.innerHTML = '<div class="alert alert-info py-2"><span class="spinner-border spinner-border-sm me-2"></span>Generando certificado...</div>';
-  try {
-    const r = await fetch('/api/ssl/renew', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({days})
-    });
-    const d = await r.json();
-    if (d.success) {
-      result.innerHTML = `<div class="alert alert-success py-2">
-        ✅ ${d.message}
-        ${d.restart_required ? '<br><strong>⚠ Reinicia el servicio para aplicar el nuevo certificado:</strong><br><code>systemctl restart email-detector</code>' : ''}
-      </div>`;
-      sslLoadStatus();
-    } else {
-      result.innerHTML = `<div class="alert alert-danger py-2">❌ ${d.error}</div>`;
-    }
-  } catch(e) {
-    result.innerHTML = `<div class="alert alert-danger py-2">Error: ${e}</div>`;
-  }
-}
-
-sslLoadStatus();
-</script>
-{% endif %}
-
 
 </body>
 </html>
