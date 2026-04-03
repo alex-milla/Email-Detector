@@ -142,7 +142,6 @@ step "4/6" "Copiando archivos del proyecto"
 cp "$REPO_DIR/web/app.py"              "$INSTALL_DIR/web/"
 cp "$REPO_DIR/web/auth.py"             "$INSTALL_DIR/web/"
 cp "$REPO_DIR/web/settings_manager.py" "$INSTALL_DIR/web/"
-cp "$REPO_DIR/web/updater.py"          "$INSTALL_DIR/web/"
 
 # Templates
 cp "$REPO_DIR/web/templates/"*.html    "$INSTALL_DIR/web/templates/"
@@ -150,16 +149,25 @@ cp "$REPO_DIR/web/templates/"*.html    "$INSTALL_DIR/web/templates/"
 # Scripts Python
 cp "$REPO_DIR/scripts/"*.py            "$INSTALL_DIR/scripts/"
 
-# Scripts bash — deben pertenecer a root y no ser escribibles por otros (CRIT-03)
-cp "$REPO_DIR/scripts/backup.sh"  "$INSTALL_DIR/scripts/"
-cp "$REPO_DIR/scripts/retrain.sh" "$INSTALL_DIR/scripts/"
-chown root:root "$INSTALL_DIR/scripts/backup.sh" "$INSTALL_DIR/scripts/retrain.sh"
-chmod 750 "$INSTALL_DIR/scripts/backup.sh" "$INSTALL_DIR/scripts/retrain.sh"
+# Scripts bash
+cp "$REPO_DIR/scripts/backup.sh"       "$INSTALL_DIR/scripts/"
+cp "$REPO_DIR/scripts/retrain.sh"      "$INSTALL_DIR/scripts/"
+chmod +x "$INSTALL_DIR/scripts/"*.sh
+chmod +x "$INSTALL_DIR/scripts/"*.py
 
-# Script descarga dataset — mismo tratamiento (CRIT-03)
-cp "$REPO_DIR/download_dataset.sh" "$INSTALL_DIR/"
+# Permisos requeridos por _validate_script_path (app.py):
+# los scripts lanzados con subprocess deben pertenecer a root
+# y no ser escribibles por grupo u otros (st_uid==0, mode & 0o022 == 0).
+chown root:root \
+    "$INSTALL_DIR/scripts/retrain.sh"    \
+    "$INSTALL_DIR/scripts/train_model.py"
+chmod 755 \
+    "$INSTALL_DIR/scripts/retrain.sh"    \
+    "$INSTALL_DIR/scripts/train_model.py"
+
+# download_dataset.sh también pasa por _validate_script_path
 chown root:root "$INSTALL_DIR/download_dataset.sh"
-chmod 750 "$INSTALL_DIR/download_dataset.sh"
+chmod 755       "$INSTALL_DIR/download_dataset.sh"
 
 # Config
 cp "$REPO_DIR/config/clanker_rules.yaml" "$INSTALL_DIR/config/"
