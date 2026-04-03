@@ -1,7 +1,7 @@
 {
-  "version": "1.2.1",
+  "version": "1.2.2",
   "release_date": "2026-04-03",
-  "changelog": "1.2.1 — Fix ejecución de download_dataset.sh con sudo (CRIT-03b); homogeneización de estilos en settings.html (GPU, ClamAV, Anti-Clanker, TLS usan ahora el mismo sistema CSS nativo que el resto de tarjetas).",
+  "changelog": "1.2.2 — Fix validación de seguridad en /model/full-retrain (allowed_dir=PROJECT_DIR en lugar de scripts_dir, coherente con dataset_download); selector de tema claro/oscuro/sistema en todos los templates.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.1/email-detector-v1.2.1.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.2/email-detector-v1.2.2.zip"
 }

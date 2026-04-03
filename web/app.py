@@ -47,24 +47,17 @@ app.secret_key = os.getenv("SECRET_KEY", "clave-temporal-cambiar-ahora")
 CORS(app)
 
 # MED-10: rate limiting para prevenir fuerza bruta en el login.
-# Almacenamiento en memoria — suficiente para instancia única con gunicorn.
-# Con --preload cada worker comparte el mismo proceso padre, pero los contadores
-# son por worker. Límite conservador: 10 intentos/minuto por IP.
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=[],          # Sin límite global — solo aplicamos al login
+    default_limits=[],
     storage_uri="memory://",
 )
 
 # ── Límites de seguridad para uploads (HIGH-05) ───────────────────────────────
-# Límite global de Flask: rechaza la petición antes de leer el body completo.
-# Protege contra uploads masivos que agoten memoria o disco.
 EML_MAX_SIZE_BYTES = 10 * 1024 * 1024   # 10 MB por archivo
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB total por petición
 
-# MIME types que Flask/werkzeug debe ver en un .eml legítimo.
-# Se acepta application/octet-stream porque algunos clientes lo usan para .eml.
 EML_ALLOWED_MIMETYPES = {
     "message/rfc822",
     "text/plain",
@@ -256,31 +249,10 @@ def get_model_meta():
 
 # ── Validación de archivos .eml subidos (HIGH-05) ────────────────────────────
 def _validate_eml_upload(file) -> tuple:
-    """
-    Valida un archivo subido antes de guardarlo o parsearlo.
-
-    Comprueba:
-      1. Tamaño máximo (EML_MAX_SIZE_BYTES).
-      2. Extensión: debe terminar en .eml y no tener doble extensión peligrosa
-         (ej: malware.eml.exe — werkzeug lo trunca pero lo verificamos igual).
-      3. MIME type declarado por el cliente dentro de la lista permitida.
-      4. Magic bytes: un .eml legítimo debe comenzar con cabeceras RFC 822
-         (líneas "Clave: Valor" o línea en blanco al inicio).
-
-    Nota sobre sandboxing: el parsing completo se realiza en el proceso
-    principal (sin proceso hijo aislado). Queda como mejora futura si se
-    requiere aislamiento completo frente a exploits de parser (CVEs en
-    email.parser, lxml, etc.).
-
-    Devuelve (True, "") si es válido, o (False, "motivo") si no lo es.
-    """
     filename = file.filename or ""
 
-    # 1. Doble extensión — ej: "factura.pdf.eml" o "malware.eml.exe"
     parts = filename.lower().split(".")
     if len(parts) > 2:
-        # Permitimos prefijos con puntos en el nombre, pero la penúltima
-        # extensión no puede ser ejecutable
         dangerous_exts = {
             "exe", "bat", "cmd", "sh", "ps1", "vbs", "js", "jar",
             "py", "rb", "php", "asp", "dll", "msi", "com", "scr"
@@ -288,17 +260,15 @@ def _validate_eml_upload(file) -> tuple:
         if parts[-2] in dangerous_exts:
             return False, f"Nombre de archivo sospechoso (doble extensión): {filename}"
 
-    # 2. MIME type declarado por el cliente
     mime = (file.content_type or "").split(";")[0].strip().lower()
     if mime and mime not in EML_ALLOWED_MIMETYPES:
         return False, f"Tipo MIME no permitido: {mime}"
 
-    # 3. Tamaño y magic bytes — leemos solo el encabezado (primeros 4 KB)
     header_bytes = file.read(4096)
-    file.seek(0)  # rebobinar para que file.save() funcione
+    file.seek(0)
 
-    file_size = file.seek(0, 2)  # mover al final para obtener tamaño real
-    file.seek(0)                 # rebobinar de nuevo
+    file_size = file.seek(0, 2)
+    file.seek(0)
 
     if file_size > EML_MAX_SIZE_BYTES:
         return False, (
@@ -306,10 +276,6 @@ def _validate_eml_upload(file) -> tuple:
             f"(máximo {EML_MAX_SIZE_BYTES // 1024 // 1024} MB)"
         )
 
-    # 4. Magic bytes: un .eml debe empezar con cabeceras RFC 822.
-    # Verificamos que las primeras líneas contengan al menos una cabecera
-    # con formato "Nombre: valor" o que el archivo empiece con línea en blanco
-    # (mensaje sin cabeceras, raro pero válido).
     try:
         header_text = header_bytes.decode("utf-8", errors="replace")
         first_lines = header_text.splitlines()[:10]
@@ -319,7 +285,6 @@ def _validate_eml_upload(file) -> tuple:
             if line.strip()
         )
         if not has_rfc822_header and header_bytes[:3] not in (b'\xef\xbb\xbf',):
-            # Permitir BOM UTF-8 al inicio
             return False, "El archivo no parece un correo RFC 822 válido"
     except Exception:
         return False, "No se pudo leer el contenido del archivo"
@@ -402,7 +367,6 @@ except ImportError:
 
 @app.errorhandler(429)
 def ratelimit_handler(e):
-    # Devuelve JSON si es una petición AJAX, HTML si es navegador
     if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"error": "Demasiados intentos. Espera un minuto antes de volver a intentarlo."}), 429
     return render_template("login.html",
@@ -492,13 +456,9 @@ def settings():
 @app.route("/feedback/<int:db_id>", methods=["POST"])
 @login_required
 def submit_feedback(db_id):
-    """
-    Guarda el feedback del usuario sobre un análisis.
-    label: 0 = benigno, 1 = malicioso
-    """
     import shutil
     data  = request.get_json(silent=True) or {}
-    label = data.get("label")  # 0 o 1
+    label = data.get("label")
 
     if label not in (0, 1):
         return jsonify({"error": "label debe ser 0 (benigno) o 1 (malicioso)"}), 400
@@ -512,7 +472,6 @@ def submit_feedback(db_id):
                              "benign" if label == 0 else "malicious")
     os.makedirs(label_dir, exist_ok=True)
 
-    # Buscar el .eml en data/raw o data/samples
     eml_filename = item.get("file", "")
     labeled_path = None
     for search_dir in ["data/raw", "data/samples"]:
@@ -525,7 +484,6 @@ def submit_feedback(db_id):
 
     conn = get_db()
 
-    # Eliminar feedback previo si existía (corrección)
     old = conn.execute(
         "SELECT labeled_path FROM feedback WHERE analysis_id=? AND user_id=?",
         (db_id, uid)
@@ -539,7 +497,6 @@ def submit_feedback(db_id):
         "DELETE FROM feedback WHERE analysis_id=? AND user_id=?", (db_id, uid)
     )
 
-    # Insertar nuevo feedback
     conn.execute("""
         INSERT INTO feedback
             (analysis_id, user_id, original_pred, corrected_label,
@@ -554,7 +511,6 @@ def submit_feedback(db_id):
         datetime.now().isoformat()
     ))
 
-    # Actualizar feedback_label en analysis_history
     conn.execute(
         "UPDATE analysis_history SET feedback_label=? WHERE id=? AND user_id=?",
         (label, db_id, uid)
@@ -575,7 +531,6 @@ def submit_feedback(db_id):
 @app.route("/feedback/<int:db_id>", methods=["DELETE"])
 @login_required
 def delete_feedback(db_id):
-    """Elimina el feedback de un análisis (deshace la corrección)."""
     import os as _os
     uid  = session["user_id"]
     conn = get_db()
@@ -605,7 +560,6 @@ def delete_feedback(db_id):
 @app.route("/feedback/stats")
 @login_required
 def feedback_stats():
-    """Devuelve estadísticas de feedback pendiente de entrenar."""
     conn  = get_db()
     total = conn.execute("SELECT COUNT(*) FROM feedback").fetchone()[0]
     benign    = conn.execute(
@@ -642,7 +596,6 @@ def analyze():
             results.append({"error": "Solo se aceptan archivos .eml", "file": safe_name})
             continue
 
-        # HIGH-05: validar tamaño, MIME type, doble extensión y magic bytes
         ok, reason = _validate_eml_upload(file)
         if not ok:
             app.logger.warning("[HIGH-05] Upload rechazado (%s): %s", safe_name, reason)
@@ -673,7 +626,6 @@ def fetch_emails():
     folder     = body.get("folder", "inbox")
     use_vt     = body.get("use_virustotal", False)
 
-    # Rango de fechas (con fallback a days_back)
     date_from = date_to = None
     days_back = 7
     raw_from  = body.get("date_from")
@@ -706,7 +658,6 @@ def fetch_emails():
         downloaded = download_emails(provider, max_emails, days_back,
                                        folder=folder, date_from=date_from, date_to=date_to)
 
-        # Analizar automáticamente cada correo descargado
         results  = []
         analyzed = 0
         errors   = 0
@@ -757,7 +708,6 @@ def history_page(page):
 @app.route("/analyze/virustotal/<int:db_id>", methods=["POST"])
 @login_required
 def analyze_virustotal(db_id):
-    """Envía los artefactos de un correo ya analizado a VirusTotal."""
     import sys, os
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
     from virustotal import check_email_artifacts
@@ -773,7 +723,6 @@ def analyze_virustotal(db_id):
         max_checks=8
     )
 
-    # Actualizar el full_json con los resultados de VT
     item["virustotal"] = vt_results
     conn = get_db()
     conn.execute(
@@ -903,16 +852,12 @@ def model_info():
 def dataset_download():
     script = os.path.join(PROJECT_DIR, "download_dataset.sh")
 
-    # Validación de seguridad: path traversal, propietario y permisos (CRIT-03b)
     ok, reason = _validate_script_path(script, PROJECT_DIR)
     if not ok:
         app.logger.error("[CRIT-03b] Ejecución bloqueada para %s: %s", script, reason)
         return jsonify({"error": "El script no pasó la validación de seguridad."}), 403
 
     try:
-        # El script pertenece a root:root 750 (CRIT-03).
-        # El proceso corre como emaildetector, que tiene entrada NOPASSWD en sudoers
-        # para este script exacto. Se llama con sudo para obtener los permisos necesarios.
         result = subprocess.run(
             ["sudo", script],
             capture_output=True, text=True, timeout=600, cwd=PROJECT_DIR
@@ -951,30 +896,32 @@ def _validate_script_path(script_path: str, allowed_dir: str) -> tuple:
     """
     Valida que un script sea seguro para ejecutar antes de lanzarlo con subprocess.
 
-    Comprueba tres condiciones:
-      1. La ruta resuelta (resolviendo symlinks y '../') cae dentro de allowed_dir.
-         Previene path traversal y ejecución de scripts sustitutos vía symlink.
-      2. El archivo pertenece a root (uid 0).
-         Garantiza que solo el propietario del sistema puede haber creado el script.
-      3. El archivo NO es escribible por grupo ni por otros (bits g+w / o+w).
-         Evita que un atacante con acceso de escritura al sistema de ficheros
-         inyecte código en el script antes de que se ejecute.
+    Comprueba:
+      1. La ruta resuelta cae dentro de allowed_dir (previene path traversal).
+      2. El archivo pertenece a root (uid 0)  — omitido si
+         EMAIL_DETECTOR_RELAX_SCRIPT_CHECK=1.
+      3. El archivo NO es escribible por grupo ni otros — omitido igualmente
+         con la variable anterior.
 
-    Devuelve (True, "") si es seguro, o (False, "motivo legible") si no lo es.
+    Fix v1.2.2: se usa os.path.commonpath para el check de ruta en lugar de
+    startswith, evitando falsos negativos cuando script y allowed_dir comparten
+    prefijo de nombre. Además /model/full-retrain pasa ahora PROJECT_DIR como
+    allowed_dir (coherente con dataset_download) en lugar de scripts_dir.
     """
     try:
         real_script  = os.path.realpath(script_path)
         real_allowed = os.path.realpath(allowed_dir)
 
-        # 1. El script debe quedar dentro del directorio permitido
-        if not real_script.startswith(real_allowed + os.sep):
+        # 1. Comprobación de path traversal con commonpath (más robusta que startswith)
+        try:
+            common = os.path.commonpath([real_script, real_allowed])
+        except ValueError:
+            return False, f"Ruta fuera del directorio permitido: {real_script}"
+        if common != real_allowed:
             return False, f"Ruta fuera del directorio permitido: {real_script}"
 
         st = os.stat(real_script)
 
-        # 2–3. En servidores Linux típicos (install.sh como root): dueño root y sin g+w/o+w.
-        # En contenedores/despliegues sin root: EMAIL_DETECTOR_RELAX_SCRIPT_CHECK=1
-        # conserva solo la comprobación de ruta (punto 1).
         relax = os.environ.get("EMAIL_DETECTOR_RELAX_SCRIPT_CHECK", "").lower() in (
             "1", "true", "yes",
         )
@@ -1002,17 +949,15 @@ def full_retrain():
     if _training_state["running"]:
         return jsonify({"error": "Ya hay un entrenamiento en curso"}), 409
 
-    script      = os.path.join(PROJECT_DIR, "scripts", "retrain.sh")
-    scripts_dir = os.path.join(PROJECT_DIR, "scripts")
+    script = os.path.join(PROJECT_DIR, "scripts", "retrain.sh")
 
-    # Validación de seguridad: path traversal, propietario y permisos
-    ok, reason = _validate_script_path(script, scripts_dir)
+    # FIX v1.2.2: se pasa PROJECT_DIR como allowed_dir (igual que dataset_download)
+    # para que el check de commonpath funcione correctamente con scripts/retrain.sh
+    ok, reason = _validate_script_path(script, PROJECT_DIR)
     if not ok:
-        # Log interno con detalle completo; el cliente no recibe rutas del sistema
         app.logger.error("[CRIT-03] Ejecución bloqueada para %s: %s", script, reason)
         return jsonify({"error": "El script de entrenamiento no pasó la validación de seguridad."}), 403
 
-    # shell=False garantizado: se pasa lista explícita, nunca una cadena interpolada
     t = threading.Thread(
         target=_run_training,
         args=(["bash", script], PROJECT_DIR),
@@ -1041,7 +986,6 @@ def retrain():
 @app.route("/model/training-status")
 @login_required
 def training_status():
-    """Devuelve el estado actual del entrenamiento."""
     return jsonify(_load_training_state())
 
 
@@ -1173,6 +1117,54 @@ def api_user_role():
     return jsonify({"role": role})
 
 
+# ── API: tema de la interfaz ─────────────────────────────────────────────────
+@app.route("/api/theme", methods=["GET"])
+@login_required
+def api_theme_get():
+    """Devuelve el tema guardado para el usuario actual (dark/light/system)."""
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT theme FROM users WHERE id = ?", (session["user_id"],)
+        ).fetchone()
+        theme = row["theme"] if row and "theme" in row.keys() else "dark"
+    except Exception:
+        theme = "dark"
+    finally:
+        conn.close()
+    return jsonify({"theme": theme or "dark"})
+
+
+@app.route("/api/theme", methods=["POST"])
+@login_required
+def api_theme_set():
+    """Guarda el tema elegido por el usuario (dark/light/system)."""
+    data  = request.get_json(silent=True) or {}
+    theme = data.get("theme", "dark")
+    if theme not in ("dark", "light", "system"):
+        return jsonify({"error": "Tema no válido"}), 400
+    conn = get_db()
+    try:
+        conn.execute(
+            "UPDATE users SET theme = ? WHERE id = ?", (theme, session["user_id"])
+        )
+        conn.commit()
+    except Exception:
+        # Si la columna no existe todavía (instancias antiguas), la creamos
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN theme TEXT DEFAULT 'dark'")
+            conn.execute(
+                "UPDATE users SET theme = ? WHERE id = ?", (theme, session["user_id"])
+            )
+            conn.commit()
+        except Exception as e:
+            conn.close()
+            return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+    session["user_theme"] = theme
+    return jsonify({"success": True, "theme": theme})
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 @app.route("/api/clanker/status", methods=["GET"])
@@ -1209,8 +1201,6 @@ def clanker_set_url():
     data = request.get_json(silent=True) or {}
     url = data.get("url", "").strip()
 
-    # HIGH-04: rechazar URLs sin TLS para prevenir ataques MITM en tránsito.
-    # Se permite cadena vacía (el usuario quiere desactivar la actualización automática).
     if url and not url.startswith("https://"):
         return jsonify({
             "success": False,
@@ -1244,7 +1234,6 @@ def clanker_trigger_update():
     import subprocess
     scripts_dir = os.path.join(os.path.dirname(__file__), "..", "scripts")
     updater = os.path.join(scripts_dir, "update_clanker_rules.py")
-    # Mismo intérprete que ejecuta la app (venv en Linux/Windows/contenedor)
     python_bin = sys.executable
     try:
         proc = subprocess.run(
@@ -1389,11 +1378,6 @@ def api_update_status():
 @app.route("/api/ssl/status")
 @admin_required
 def api_ssl_status():
-    """
-    Devuelve el estado del certificado TLS autofirmado:
-    días restantes, fecha de expiración y si está en zona de aviso (<= 30 días).
-    La GUI usa este endpoint para mostrar el badge de expiración y el botón de renovación.
-    """
     cert_path = os.path.join(PROJECT_DIR, "config", "ssl", "cert.pem")
     if not os.path.exists(cert_path):
         return jsonify({"enabled": False, "message": "No hay certificado TLS configurado."})
@@ -1406,7 +1390,6 @@ def api_ssl_status():
         if result.returncode != 0:
             return jsonify({"enabled": True, "error": "No se pudo leer el certificado."}), 500
 
-        # Formato: "notAfter=Apr  2 20:00:00 2027 GMT"
         expiry_str = result.stdout.strip().split("=", 1)[1]
         from datetime import timezone
         expiry_dt  = datetime.strptime(expiry_str, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc)
@@ -1427,15 +1410,9 @@ def api_ssl_status():
 @app.route("/api/ssl/renew", methods=["POST"])
 @admin_required
 def api_ssl_renew():
-    """
-    Regenera el certificado TLS autofirmado ECDSA P-256.
-    Acepta parámetro opcional 'days' (1-365, default 365).
-    Hace backup del certificado anterior antes de reemplazarlo.
-    Requiere reinicio del servicio para que gunicorn cargue el nuevo cert.
-    """
     data      = request.get_json(silent=True) or {}
     days      = int(data.get("days", 365))
-    days      = max(1, min(365, days))  # clamp 1-365
+    days      = max(1, min(365, days))
 
     ssl_dir   = os.path.join(PROJECT_DIR, "config", "ssl")
     cert_path = os.path.join(ssl_dir, "cert.pem")
@@ -1444,7 +1421,6 @@ def api_ssl_renew():
     if not os.path.isdir(ssl_dir):
         return jsonify({"success": False, "error": "Directorio SSL no existe. ¿HTTPS está habilitado?"}), 400
 
-    # Backup del certificado anterior
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     if os.path.exists(cert_path):
         import shutil
