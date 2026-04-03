@@ -325,6 +325,7 @@ User=$SVC_USER
 WorkingDirectory=$INSTALL_DIR
 EnvironmentFile=$INSTALL_DIR/config/.env
 Environment=MPLCONFIGDIR=$INSTALL_DIR/tmp/matplotlib
+Environment=HOME=$INSTALL_DIR
 ExecStart=$GUNICORN --bind 0.0.0.0:$WEB_PORT --workers 2 --timeout 300 --preload $SSL_ARGS web.app:app
 Restart=always
 RestartSec=5
