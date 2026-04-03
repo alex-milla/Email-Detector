@@ -903,17 +903,25 @@ def model_info():
 def dataset_download():
     script = os.path.join(PROJECT_DIR, "download_dataset.sh")
 
-    # Validación de seguridad: path traversal, propietario y permisos
+    # Validación de seguridad: path traversal, propietario y permisos (CRIT-03b)
     ok, reason = _validate_script_path(script, PROJECT_DIR)
     if not ok:
         app.logger.error("[CRIT-03b] Ejecución bloqueada para %s: %s", script, reason)
         return jsonify({"error": "El script no pasó la validación de seguridad."}), 403
 
     try:
-        result = subprocess.run(["bash", script], capture_output=True,
-                                text=True, timeout=600, cwd=PROJECT_DIR)
-        return jsonify({"success": result.returncode == 0,
-                        "stdout": result.stdout[-3000:], "stderr": result.stderr[-1000:]})
+        # El script pertenece a root:root 750 (CRIT-03).
+        # El proceso corre como emaildetector, que tiene entrada NOPASSWD en sudoers
+        # para este script exacto. Se llama con sudo para obtener los permisos necesarios.
+        result = subprocess.run(
+            ["sudo", script],
+            capture_output=True, text=True, timeout=600, cwd=PROJECT_DIR
+        )
+        return jsonify({
+            "success": result.returncode == 0,
+            "stdout": result.stdout[-3000:],
+            "stderr": result.stderr[-1000:],
+        })
     except subprocess.TimeoutExpired:
         return jsonify({"error": "Timeout"}), 504
     except Exception as e:
