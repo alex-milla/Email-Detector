@@ -1,7 +1,7 @@
 {
-  "version": "1.2.2",
+  "version": "1.2.4",
   "release_date": "2026-04-03",
-  "changelog": "1.2.2 — Fix validación de seguridad en /model/full-retrain (allowed_dir=PROJECT_DIR en lugar de scripts_dir, coherente con dataset_download); selector de tema claro/oscuro/sistema en todos los templates.",
+  "changelog": "1.2.4 — Selector de tema claro/oscuro/sistema activado en todas las páginas (index, settings, training, users, update, error). Se incluye theme.js antes del cierre de body en todos los templates.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.2/email-detector-v1.2.2.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.4/email-detector-v1.2.4.zip"
 }
