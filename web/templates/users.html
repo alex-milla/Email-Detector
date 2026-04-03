@@ -64,6 +64,7 @@
         <a href="/users" class="nav-link active">👥 Usuarios</a>
         {% endif %}
         <a href="/settings" class="nav-link ">⚙️ Mi configuración</a>
+        {% if user.role == 'admin' %}<a href="/update" class="nav-link ">🔄 Actualizaciones</a>{% endif %}
         <div class="nav-right">
             <span class="nav-user">{{ user.username }}</span>
             <a href="/logout" class="nav-logout">Cerrar sesión</a>
