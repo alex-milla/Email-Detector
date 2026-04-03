@@ -60,6 +60,9 @@ ALLOWED_PATHS = {
     "requirements.txt",
 }
 
+# Raíces de proyecto conocidas (primer componente de ruta válido)
+_KNOWN_ROOTS = {"web", "scripts", "config", "VERSION", "version.json", "requirements.txt"}
+
 # ── Estado global del proceso de actualización ────────────────────────────────
 
 _update_state = {
@@ -217,11 +220,33 @@ def _download_zip(zip_url: str, dest_path: str) -> bool:
 
 # ── Validación ─────────────────────────────────────────────────────────────────
 
+def _strip_zip_prefix(name: str) -> str:
+    """
+    Elimina todos los segmentos de prefijo ajenos al proyecto.
+
+    GitHub genera ZIPs con uno o varios niveles de prefijo automático,
+    por ejemplo:
+      email-detector-v1.2.0/web/app.py          → web/app.py
+      repo-abc123/repo-abc123/VERSION            → VERSION
+
+    El algoritmo avanza por los segmentos hasta encontrar uno que pertenezca
+    a las raíces conocidas del proyecto (_KNOWN_ROOTS), eliminando todos los
+    anteriores. Si ningún segmento coincide devuelve la ruta original para
+    que el filtro de lista blanca la rechace explícitamente.
+    """
+    parts = name.split("/")
+    for i, part in enumerate(parts):
+        if part in _KNOWN_ROOTS:
+            return "/".join(parts[i:])
+    return name
+
+
 def _validate_zip(zip_path: str):
     """
     Valida el contenido del ZIP.
     - Comprueba que es un ZIP válido
     - Detecta path traversal (../)
+    - Elimina prefijos de empaquetado de cualquier profundidad
     - Filtra por lista blanca de rutas permitidas
     Devuelve (ok: bool, files_to_apply: list of (zip_name, dest_relative))
     """
@@ -248,15 +273,8 @@ def _validate_zip(zip_path: str):
                 rejected.append(name)
                 continue
 
-            # Quitar prefijo del paquete si existe
-            # Soporta cualquier prefijo de un nivel: v1.0.1/, update_package/, etc.
-            # Solo se elimina si el primer componente NO es carpeta conocida del proyecto.
-            parts = name.split("/")
-            known_roots = {"web", "scripts", "config"}
-            if len(parts) > 1 and parts[0] not in known_roots:
-                clean = "/".join(parts[1:])
-            else:
-                clean = name
+            # Eliminar prefijos de empaquetado (cualquier profundidad)
+            clean = _strip_zip_prefix(name)
 
             if not clean:
                 continue
