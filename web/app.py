@@ -859,7 +859,7 @@ def dataset_download():
 
     try:
         result = subprocess.run(
-            ["sudo", script],
+            [script],
             capture_output=True, text=True, timeout=600, cwd=PROJECT_DIR
         )
         return jsonify({
@@ -879,7 +879,14 @@ def _run_training(cmd, cwd):
              "started_at": datetime.now().isoformat(), "ended_at": None}
     _save_training_state(state)
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
+        # Forzar MPLCONFIGDIR a un directorio escribible dentro del proyecto.
+        # Sin esto, matplotlib intenta escribir en ~/.config/matplotlib y falla
+        # cuando el usuario del servicio (emaildetector) no tiene home directory.
+        _mpl_dir = os.path.join(PROJECT_DIR, "tmp", "matplotlib")
+        os.makedirs(_mpl_dir, exist_ok=True)
+        _train_env = os.environ.copy()
+        _train_env.setdefault("MPLCONFIGDIR", _mpl_dir)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd, env=_train_env)
         state["success"] = result.returncode == 0
         state["stdout"]  = result.stdout[-5000:]
         state["stderr"]  = result.stderr[-1000:]
