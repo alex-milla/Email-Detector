@@ -11,6 +11,63 @@ from datetime import datetime
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "users.db")
 
 
+def _migrate_schema(conn):
+    """
+    Renombra/añade columnas en BDs antiguas para coincidir con app.py
+    (sender→from_addr, details→full_json, prediction→original_pred, etc.).
+    """
+    try:
+        tables = {r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()}
+    except sqlite3.Error:
+        return
+
+    if "analysis_history" in tables:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(analysis_history)")}
+        if cols:
+            try:
+                if "sender" in cols and "from_addr" not in cols:
+                    conn.execute(
+                        "ALTER TABLE analysis_history RENAME COLUMN sender TO from_addr"
+                    )
+                    cols = {row[1] for row in conn.execute(
+                        "PRAGMA table_info(analysis_history)"
+                    )}
+                if "details" in cols and "full_json" not in cols:
+                    conn.execute(
+                        "ALTER TABLE analysis_history RENAME COLUMN details TO full_json"
+                    )
+                    cols = {row[1] for row in conn.execute(
+                        "PRAGMA table_info(analysis_history)"
+                    )}
+                if "vt_malicious_files" not in cols:
+                    conn.execute(
+                        "ALTER TABLE analysis_history ADD COLUMN vt_malicious_files INTEGER DEFAULT 0"
+                    )
+                if "vt_malicious_urls" not in cols:
+                    conn.execute(
+                        "ALTER TABLE analysis_history ADD COLUMN vt_malicious_urls INTEGER DEFAULT 0"
+                    )
+            except sqlite3.OperationalError as e:
+                print(f"  [auth] Aviso migración analysis_history: {e}")
+
+    if "feedback" in tables:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(feedback)")}
+        if cols:
+            try:
+                if "prediction" in cols and "original_pred" not in cols:
+                    conn.execute(
+                        "ALTER TABLE feedback RENAME COLUMN prediction TO original_pred"
+                    )
+                if "label" in cols and "corrected_label" not in cols:
+                    conn.execute(
+                        "ALTER TABLE feedback RENAME COLUMN label TO corrected_label"
+                    )
+            except sqlite3.OperationalError as e:
+                print(f"  [auth] Aviso migración feedback: {e}")
+
+
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -57,37 +114,39 @@ def init_db():
         )
     """)
 
-    # Historial de análisis
+    # Historial de análisis (columnas alineadas con app.save_result / get_history)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS analysis_history (
-            id             INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id        INTEGER,
-            timestamp      TEXT,
-            filename       TEXT,
-            subject        TEXT,
-            sender         TEXT,
-            prediction     TEXT,
-            risk_score     REAL,
-            risk_level     TEXT,
-            ml_prediction  TEXT,
-            body_entropy   REAL,
-            url_entropy    REAL,
-            feedback_label TEXT,
-            details        TEXT
+            id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id              INTEGER,
+            timestamp            TEXT,
+            filename             TEXT,
+            subject              TEXT,
+            from_addr            TEXT,
+            prediction           TEXT,
+            risk_score           REAL,
+            risk_level           TEXT,
+            ml_prediction        TEXT,
+            body_entropy         REAL,
+            url_entropy          REAL,
+            vt_malicious_files   INTEGER,
+            vt_malicious_urls    INTEGER,
+            full_json            TEXT,
+            feedback_label       INTEGER
         )
     """)
 
-    # Feedback de correcciones manuales
+    # Feedback de correcciones manuales (columnas alineadas con app.submit_feedback)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS feedback (
-            id           INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id      INTEGER,
-            analysis_id  INTEGER,
-            prediction   TEXT,
-            label        TEXT,
-            eml_filename TEXT,
-            labeled_path TEXT,
-            created_at   TEXT
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id         INTEGER,
+            analysis_id     INTEGER,
+            original_pred   TEXT,
+            corrected_label INTEGER,
+            eml_filename    TEXT,
+            labeled_path    TEXT,
+            created_at      TEXT
         )
     """)
 
@@ -102,6 +161,7 @@ def init_db():
         )
     """)
 
+    _migrate_schema(conn)
     conn.commit()
 
     # Crear admin por defecto si no existe ningún usuario

@@ -4,6 +4,7 @@ app.py — Historial por usuario + menú corregido.
 """
 
 import os
+import re
 import sys
 import json
 import sqlite3
@@ -666,16 +667,17 @@ def fetch_emails():
     from datetime import datetime as dt
     uid        = session["user_id"]
     cfg        = get_mail_config(uid)
-    provider   = request.json.get("provider", cfg.get("default_provider", "imap"))
-    max_emails = int(request.json.get("max_emails", 20))
-    folder     = request.json.get("folder", "inbox")
-    use_vt     = request.json.get("use_virustotal", False)
+    body       = request.get_json(silent=True) or {}
+    provider   = body.get("provider", cfg.get("default_provider", "imap"))
+    max_emails = int(body.get("max_emails", 20))
+    folder     = body.get("folder", "inbox")
+    use_vt     = body.get("use_virustotal", False)
 
     # Rango de fechas (con fallback a days_back)
     date_from = date_to = None
     days_back = 7
-    raw_from  = request.json.get("date_from")
-    raw_to    = request.json.get("date_to")
+    raw_from  = body.get("date_from")
+    raw_to    = body.get("date_to")
     if raw_from:
         try:
             date_from = dt.strptime(raw_from, "%Y-%m-%d")
@@ -683,7 +685,7 @@ def fetch_emails():
         except ValueError:
             pass
     else:
-        days_back = int(request.json.get("days_back", 7))
+        days_back = int(body.get("days_back", 7))
 
     env_map = {
         "imap":  {"IMAP_SERVER": cfg["imap_server"], "IMAP_PORT": cfg["imap_port"],
@@ -851,7 +853,7 @@ def api_test_connection():
 @app.route("/api/users", methods=["POST"])
 @admin_required
 def api_create_user():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     username = data.get("username", "").strip()
     password = data.get("password", "")
     role     = data.get("role", "user")
@@ -877,7 +879,8 @@ def api_delete_user(user_id):
 def api_change_password(user_id):
     if session["user_id"] != user_id and session.get("user_role") != "admin":
         return jsonify({"success": False, "error": "Sin permisos"}), 403
-    pwd = request.json.get("password", "")
+    body = request.get_json(silent=True) or {}
+    pwd = body.get("password", "")
     if len(pwd) < 6:
         return jsonify({"success": False, "error": "Mínimo 6 caracteres"}), 400
     change_password(user_id, pwd)
@@ -1154,9 +1157,8 @@ def clamav_results_for_email(email_id):
 @app.route("/api/user/role", methods=["GET"])
 @login_required
 def api_user_role():
-    try: role = session.get("role","user")
-    except: role = "user"
-    return jsonify({"role":role})
+    role = session.get("user_role", "user")
+    return jsonify({"role": role})
 
 
 
