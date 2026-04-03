@@ -1,6 +1,6 @@
 /**
  * theme.js — Selector de tema claro / oscuro / sistema
- * Email Malware Detector v1.2.2
+ * Email Malware Detector v1.2.4
  *
  * Uso: incluir este script en todos los templates ANTES de </body>
  * El tema se persiste en localStorage (respuesta inmediata) y se
