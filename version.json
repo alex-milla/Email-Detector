@@ -1,7 +1,7 @@
 {
   "version": "1.2.5",
   "release_date": "2026-04-04",
-  "changelog": "1.2.4 — Selector de tema claro/oscuro/sistema activado en todas las páginas (index, settings, training, users, update, error). Se incluye theme.js antes del cierre de body en todos los templates.",
+  "changelog": "1.2.5 — Selector de tema claro/oscuro/sistema activado en todas las páginas (index, settings, training, users, update, error). Se incluye theme.js antes del cierre de body en todos los templates.",
   "min_version": "1.0.0",
   "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.5/email-detector-v1.2.5.zip"
 }
