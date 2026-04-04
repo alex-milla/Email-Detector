@@ -441,6 +441,8 @@ EOF
 $SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN restart email-detector
 $SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN start email-detector
 $SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN stop email-detector
+$SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN stop clamav-freshclam
+$SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN start clamav-freshclam
 $SVC_USER ALL=(root) NOPASSWD: $FRESHCLAM_BIN --quiet
 SUDOEOF
     chmod 440 "$SUDOERS_FILE"
