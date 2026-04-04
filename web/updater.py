@@ -414,6 +414,10 @@ def _rollback(backup_path: str):
                 src      = os.path.join(root, fname)
                 relative = os.path.relpath(src, backup_path)
                 dest     = os.path.join(_BASE_DIR, relative)
+                # Igual que en apply: no tocar archivos root:root
+                if relative in _ROOT_OWNED_FILES:
+                    _log(f"  OMITIDO en rollback (root:root): {relative}")
+                    continue
                 os.makedirs(os.path.dirname(dest), exist_ok=True)
                 shutil.copy2(src, dest)
                 _log(f"  Restaurado: {relative}")
@@ -433,7 +437,7 @@ def _restart_service() -> bool:
         _log("Estado guardado en disco. Reiniciando servicio...")
 
         result = subprocess.run(
-            ["sudo", "systemctl", "restart", SERVICE_NAME],
+            ["sudo", "-n", "systemctl", "restart", SERVICE_NAME],
             capture_output=True, text=True, timeout=30
         )
         if result.returncode != 0:
