@@ -1,7 +1,7 @@
 {
-  "version": "1.2.8",
+  "version": "1.2.9",
   "release_date": "2026-04-04",
-  "changelog": "1.2.8 — Fix updater: sudo -n para systemctl (sin terminal); rollback omite ficheros root:root; sudoers con ruta real de systemctl resuelta en instalación.",
+  "changelog": "1.2.9 — Instalador: menú de zona horaria, HTTPS obligatorio, redirector HTTP(80)→HTTPS automático como segundo servicio systemd.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.8/email-detector-v1.2.8.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.9/email-detector-v1.2.9.zip"
 }

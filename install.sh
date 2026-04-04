@@ -54,6 +54,40 @@ printf "${N}\n"
 # ─────────────────────────────────────────────────────────────
 #  PREGUNTAS INICIALES
 # ─────────────────────────────────────────────────────────────
+# ── Zona horaria ──────────────────────────────────────────────────────────────
+CURRENT_TZ=$(timedatectl show -p Timezone --value 2>/dev/null || cat /etc/timezone 2>/dev/null || echo "UTC")
+printf "  ${B}Zona horaria actual: ${C}%s${N}\n" "$CURRENT_TZ"
+printf "  ${B}¿Cambiar zona horaria? [s/N]:${N} "
+read CHANGE_TZ; CHANGE_TZ="${CHANGE_TZ:-N}"
+case "$CHANGE_TZ" in [Ss]*)
+    echo ""
+    echo "  Zonas horarias disponibles (ejemplos frecuentes):"
+    echo "    1) Europe/Madrid       4) America/New_York"
+    echo "    2) Europe/London       5) America/Los_Angeles"
+    echo "    3) Europe/Paris        6) UTC"
+    echo "    7) Introducir manualmente"
+    echo ""
+    printf "  ${B}Selecciona [1-7]:${N} "
+    read TZ_CHOICE
+    case "$TZ_CHOICE" in
+        1) NEW_TZ="Europe/Madrid" ;;
+        2) NEW_TZ="Europe/London" ;;
+        3) NEW_TZ="Europe/Paris" ;;
+        4) NEW_TZ="America/New_York" ;;
+        5) NEW_TZ="America/Los_Angeles" ;;
+        6) NEW_TZ="UTC" ;;
+        7) printf "  ${B}Zona horaria (ej: America/Mexico_City):${N} "
+           read NEW_TZ ;;
+        *) NEW_TZ="" ;;
+    esac
+    if [ -n "$NEW_TZ" ] && timedatectl set-timezone "$NEW_TZ" 2>/dev/null; then
+        ok "Zona horaria establecida: $NEW_TZ"
+    elif [ -n "$NEW_TZ" ]; then
+        warn "No se pudo establecer '$NEW_TZ' — verifica que sea válida"
+    fi
+;; esac
+echo ""
+
 printf "  ${B}Directorio de instalación [/opt/email-detector]:${N} "
 read INSTALL_DIR
 INSTALL_DIR="${INSTALL_DIR:-/opt/email-detector}"
@@ -82,27 +116,25 @@ fi
 printf "  ${B}Instalar ClamAV? [S/n]:${N} "
 read DO_CLAMAV; DO_CLAMAV="${DO_CLAMAV:-S}"
 
-printf "  ${B}Habilitar HTTPS (cert autofirmado)? [s/N]:${N} "
-read DO_HTTPS; DO_HTTPS="${DO_HTTPS:-N}"
+# HTTPS siempre activo — única opción soportada
+DO_HTTPS="S"
 
 # días de validez del certificado (máximo 365)
 CERT_DAYS=365
-case "$DO_HTTPS" in [Ss]*)
-    printf "  ${B}Días de validez del certificado [365, máx 365]:${N} "
-    read CERT_DAYS_INPUT
-    if [[ "$CERT_DAYS_INPUT" =~ ^[0-9]+$ ]] && [ "$CERT_DAYS_INPUT" -gt 0 ] && [ "$CERT_DAYS_INPUT" -le 365 ]; then
-        CERT_DAYS="$CERT_DAYS_INPUT"
-    else
-        CERT_DAYS=365
-        info "Valor no válido — se usarán 365 días"
-    fi
-;; esac
+printf "  ${B}Días de validez del certificado HTTPS [365, máx 365]:${N} "
+read CERT_DAYS_INPUT
+if [[ "$CERT_DAYS_INPUT" =~ ^[0-9]+$ ]] && [ "$CERT_DAYS_INPUT" -gt 0 ] && [ "$CERT_DAYS_INPUT" -le 365 ]; then
+    CERT_DAYS="$CERT_DAYS_INPUT"
+else
+    CERT_DAYS=365
+    info "Valor no válido — se usarán 365 días"
+fi
 
 echo ""
 echo "  ─────────────────────────────────────────────────────"
 echo "  Directorio : $INSTALL_DIR"
 echo "  Puerto     : $WEB_PORT"
-echo "  ClamAV     : $DO_CLAMAV   |   HTTPS: $DO_HTTPS"
+echo "  ClamAV     : $DO_CLAMAV   |   HTTPS: activado (obligatorio)"
 echo "  ─────────────────────────────────────────────────────"
 printf "  Continuar? [S/n] "; read CONFIRM
 case "$CONFIRM" in [Nn]*) echo "Cancelado."; exit 0;; esac
@@ -177,6 +209,7 @@ cp "$REPO_DIR/scripts/"*.py             "$INSTALL_DIR/scripts/"
 
 # Scripts bash
 cp "$REPO_DIR/scripts/backup.sh"        "$INSTALL_DIR/scripts/"
+cp "$REPO_DIR/scripts/http_redirect.py" "$INSTALL_DIR/scripts/"
 cp "$REPO_DIR/scripts/retrain.sh"       "$INSTALL_DIR/scripts/"
 chmod +x "$INSTALL_DIR/scripts/"*.sh
 chmod +x "$INSTALL_DIR/scripts/"*.py
@@ -329,13 +362,32 @@ GUNICORN="$INSTALL_DIR/venv/bin/gunicorn"
 
 # systemd
 case "$INSTALL_SVC" in [Ss]*)
-    PROTO="http"
-    case "$DO_HTTPS" in [Ss]*) PROTO="https";; esac
+    # HTTPS obligatorio — siempre activado
+    PROTO="https"
+    SSL_ARGS="--certfile=$INSTALL_DIR/config/ssl/cert.pem --keyfile=$INSTALL_DIR/config/ssl/key.pem"
 
-    SSL_ARGS=""
-    case "$DO_HTTPS" in [Ss]*)
-        SSL_ARGS="--certfile=$INSTALL_DIR/config/ssl/cert.pem --keyfile=$INSTALL_DIR/config/ssl/key.pem"
-    ;; esac
+    # ── Servicio redirector HTTP(80)→HTTPS ───────────────────────────────────
+    cat > /etc/systemd/system/email-detector-redirect.service << REDIRECT_EOF
+[Unit]
+Description=Email Malware Detector HTTP to HTTPS redirect
+After=network.target
+Wants=email-detector.service
+
+[Service]
+Type=simple
+User=root
+Environment=HTTP_PORT=80
+Environment=HTTPS_PORT=$WEB_PORT
+ExecStart=$INSTALL_DIR/venv/bin/python3 $INSTALL_DIR/scripts/http_redirect.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+REDIRECT_EOF
+    systemctl enable email-detector-redirect
+    ok "redirector HTTP→HTTPS configurado (puerto 80 → $WEB_PORT)"
+    # ──────────────────────────────────────────────────────────────────────
 
     cat > /etc/systemd/system/email-detector.service << EOF
 [Unit]
@@ -375,6 +427,8 @@ SUDOEOF
     visudo -cf "$SUDOERS_FILE" && ok "reglas sudo configuradas ($SUDOERS_FILE)" || warn "error en sudoers — revisa $SUDOERS_FILE"
 
     systemctl enable email-detector
+    systemctl daemon-reload
+    systemctl restart email-detector-redirect 2>/dev/null || systemctl start email-detector-redirect || true
     svc_restart
     ok "servicio systemd configurado"
 ;; esac
@@ -399,8 +453,7 @@ case "$INSTALL_CRON" in [Ss]*)
 #  RESUMEN FINAL
 # ─────────────────────────────────────────────────────────────
 IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "TU_IP")
-PROTO="http"
-case "$DO_HTTPS" in [Ss]*) PROTO="https";; esac
+PROTO="https"
 
 printf "${B}${G}"
 echo ""
@@ -409,7 +462,8 @@ echo "  ║         Instalación completada ✓                    ║"
 echo "  ╚══════════════════════════════════════════════════════╝"
 printf "${N}"
 echo ""
-echo "  Acceso      : $PROTO://$IP:$WEB_PORT"
+echo "  Acceso HTTPS: $PROTO://$IP:$WEB_PORT"
+  echo "  Acceso HTTP : http://$IP  (redirige automáticamente a HTTPS)"
 echo "  Usuario     : admin"
 echo "  Contraseña  : admin1234"
 echo ""
@@ -420,8 +474,6 @@ echo "    systemctl status email-detector"
 echo "    journalctl -u email-detector -f"
 echo "    cd $INSTALL_DIR && source venv/bin/activate"
 echo ""
-case "$DO_HTTPS" in [Ss]*)
-    printf "  ${Y}HTTPS con cert autofirmado: acepta la excepción en tu navegador.${N}\n"
-    printf "  ${Y}Para Let's Encrypt: sustituye config/ssl/cert.pem y config/ssl/key.pem${N}\n"
-    echo ""
-;; esac
+printf "  ${Y}HTTPS con cert autofirmado: acepta la excepción en tu navegador.${N}\n"
+printf "  ${Y}Para Let's Encrypt: sustituye config/ssl/cert.pem y config/ssl/key.pem${N}\n"
+echo ""
