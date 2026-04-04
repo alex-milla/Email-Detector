@@ -193,9 +193,15 @@
       /* ══ ELEMENTOS INTERNOS ════════════════════════════════════════════════ */
       .stat-card, .model-card, .meta-item, .detail-item,
       .feedback-banner, .feedback-bar, .ensemble-banner,
-      .result-card, .log-box, .locked-msg, .step,
-      .sub-card, .default-select, .version-box,
+      .result-card, .locked-msg, .step,
+      .sub-card, .default-select,
       .upload-zone, .url-list {
+        background:   var(--bg-inner) !important;
+        border-color: var(--border) !important;
+        color:        var(--text-primary) !important;
+      }
+      /* version-box necesita mayor especificidad para ganar al style del template */
+      .card .version-box, .version-grid .version-box, .version-box {
         background:   var(--bg-inner) !important;
         border-color: var(--border) !important;
         color:        var(--text-primary) !important;
@@ -302,7 +308,11 @@
       .version-box .label,
       .version-box .date      { color: var(--text-faint) !important; }
       .version-box .number    { color: var(--text-primary) !important; }
-      .changelog              { color: var(--text-muted) !important; }
+      .changelog {
+        background:   var(--bg-inner) !important;
+        color:        var(--text-muted) !important;
+        border-color: var(--accent) !important;
+      }
 
       /* ══ RESULT BANNER ═════════════════════════════════════════════════════ */
       .result-banner.success {
