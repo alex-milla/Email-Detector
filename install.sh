@@ -361,15 +361,18 @@ EOF
     #   - systemctl restart/start/stop email-detector (updater y svc_restart)
     #   - freshclam (actualización de firmas ClamAV desde la UI)
     SUDOERS_FILE="/etc/sudoers.d/email-detector"
+    # Resolver ruta real de systemctl (puede ser /bin o /usr/bin según distro)
+    SYSTEMCTL_BIN="$(command -v systemctl)"
+    FRESHCLAM_BIN="$(command -v freshclam || echo /usr/bin/freshclam)"
     cat > "$SUDOERS_FILE" << SUDOEOF
 # Email Malware Detector — permisos sudo mínimos
-$SVC_USER ALL=(root) NOPASSWD: /bin/systemctl restart email-detector
-$SVC_USER ALL=(root) NOPASSWD: /bin/systemctl start email-detector
-$SVC_USER ALL=(root) NOPASSWD: /bin/systemctl stop email-detector
-$SVC_USER ALL=(root) NOPASSWD: /usr/bin/freshclam --quiet
+$SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN restart email-detector
+$SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN start email-detector
+$SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN stop email-detector
+$SVC_USER ALL=(root) NOPASSWD: $FRESHCLAM_BIN --quiet
 SUDOEOF
     chmod 440 "$SUDOERS_FILE"
-    ok "reglas sudo configuradas ($SUDOERS_FILE)"
+    visudo -cf "$SUDOERS_FILE" && ok "reglas sudo configuradas ($SUDOERS_FILE)" || warn "error en sudoers — revisa $SUDOERS_FILE"
 
     systemctl enable email-detector
     svc_restart
