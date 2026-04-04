@@ -1,7 +1,7 @@
 {
-  "version": "1.2.5",
-  "release_date": "2026-04-04",
-  "changelog": "1.2.5 — Selector de tema claro/oscuro/sistema activado en todas las páginas (index, settings, training, users, update, error). Se incluye theme.js antes del cierre de body en todos los templates.",
+  "version": "1.2.6",
+  "release_date": "2026-04-03",
+  "changelog": "1.2.6 — Fix permisos freshclam.log: emaildetector añadido al grupo clamav, log con chmod 664. Fix svc_restart: espera activa hasta 30s tras arranque del servicio.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.5/email-detector-v1.2.5.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.6/email-detector-v1.2.6.zip"
 }

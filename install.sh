@@ -117,6 +117,15 @@ apt-get install -y -qq python3 python3-pip python3-venv git curl wget cron
 case "$DO_CLAMAV" in [Ss]*)
     apt-get install -y -qq clamav clamav-daemon
     ok "ClamAV instalado"
+
+    # Permitir que emaildetector ejecute freshclam y escriba el log.
+    # freshclam escribe en /var/log/clamav/freshclam.log (propietario clamav:clamav).
+    # Añadimos emaildetector al grupo clamav y aseguramos escritura de grupo en el log.
+    usermod -aG clamav "$SVC_USER" 2>/dev/null || true
+    touch /var/log/clamav/freshclam.log 2>/dev/null || true
+    chown clamav:clamav /var/log/clamav/freshclam.log 2>/dev/null || true
+    chmod 664 /var/log/clamav/freshclam.log 2>/dev/null || true
+    ok "permisos freshclam.log configurados para $SVC_USER"
 ;; esac
 ok "$(python3 --version)"
 
@@ -348,6 +357,20 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
     systemctl daemon-reload
+    # Reglas sudo para el usuario de servicio:
+    #   - systemctl restart/start/stop email-detector (updater y svc_restart)
+    #   - freshclam (actualización de firmas ClamAV desde la UI)
+    SUDOERS_FILE="/etc/sudoers.d/email-detector"
+    cat > "$SUDOERS_FILE" << SUDOEOF
+# Email Malware Detector — permisos sudo mínimos
+$SVC_USER ALL=(root) NOPASSWD: /bin/systemctl restart email-detector
+$SVC_USER ALL=(root) NOPASSWD: /bin/systemctl start email-detector
+$SVC_USER ALL=(root) NOPASSWD: /bin/systemctl stop email-detector
+$SVC_USER ALL=(root) NOPASSWD: /usr/bin/freshclam --quiet
+SUDOEOF
+    chmod 440 "$SUDOERS_FILE"
+    ok "reglas sudo configuradas ($SUDOERS_FILE)"
+
     systemctl enable email-detector
     svc_restart
     ok "servicio systemd configurado"
