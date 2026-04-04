@@ -444,6 +444,7 @@ $SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN stop email-detector
 $SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN stop clamav-freshclam
 $SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN start clamav-freshclam
 $SVC_USER ALL=(root) NOPASSWD: $FRESHCLAM_BIN --quiet
+$SVC_USER ALL=(root) NOPASSWD: $FRESHCLAM_BIN --quiet --log=/dev/null
 SUDOEOF
     chmod 440 "$SUDOERS_FILE"
     visudo -cf "$SUDOERS_FILE" && ok "reglas sudo configuradas ($SUDOERS_FILE)" || warn "error en sudoers — revisa $SUDOERS_FILE"
