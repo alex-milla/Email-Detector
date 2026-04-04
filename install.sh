@@ -170,14 +170,18 @@ case "$DO_CLAMAV" in [Ss]*)
     apt-get install -y -qq clamav clamav-daemon
     ok "ClamAV instalado"
 
-    # Permitir que emaildetector ejecute freshclam y escriba el log.
-    # freshclam escribe en /var/log/clamav/freshclam.log (propietario clamav:clamav).
-    # Añadimos emaildetector al grupo clamav y aseguramos escritura de grupo en el log.
+    # Añadir emaildetector al grupo clamav y fijar permisos del log
     usermod -aG clamav "$SVC_USER" 2>/dev/null || true
     touch /var/log/clamav/freshclam.log 2>/dev/null || true
     chown clamav:clamav /var/log/clamav/freshclam.log 2>/dev/null || true
     chmod 664 /var/log/clamav/freshclam.log 2>/dev/null || true
     ok "permisos freshclam.log configurados para $SVC_USER"
+
+    # Asegurarse de que los servicios ClamAV están activos
+    systemctl enable clamav-daemon clamav-freshclam 2>/dev/null || true
+    systemctl restart clamav-freshclam 2>/dev/null || systemctl start clamav-freshclam 2>/dev/null || true
+    systemctl restart clamav-daemon    2>/dev/null || systemctl start clamav-daemon    2>/dev/null || true
+    ok "servicios ClamAV activos"
 ;; esac
 ok "$(python3 --version)"
 
@@ -496,6 +500,15 @@ echo "  Comandos útiles:"
 echo "    systemctl status email-detector"
 echo "    journalctl -u email-detector -f"
 echo "    cd $INSTALL_DIR && source venv/bin/activate"
+echo ""
+echo "  Servicios del sistema:"
+echo "    systemctl status email-detector          # Aplicación principal"
+echo "    systemctl status email-detector-redirect # Redirector HTTP→HTTPS"
+echo "    systemctl status clamav-daemon           # Escáner de adjuntos"
+echo "    systemctl status clamav-freshclam        # Actualizador de firmas"
+echo ""
+printf "  ${Y}Si algo no funciona tras la instalación:${N}\n"
+printf "  ${Y}  sudo systemctl restart email-detector clamav-daemon clamav-freshclam${N}\n"
 echo ""
 printf "  ${Y}HTTPS con cert autofirmado: acepta la excepción en tu navegador.${N}\n"
 printf "  ${Y}Para Let's Encrypt: sustituye config/ssl/cert.pem y config/ssl/key.pem${N}\n"
