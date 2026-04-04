@@ -56,36 +56,56 @@ printf "${N}\n"
 # ─────────────────────────────────────────────────────────────
 # ── Zona horaria ──────────────────────────────────────────────────────────────
 CURRENT_TZ=$(timedatectl show -p Timezone --value 2>/dev/null || cat /etc/timezone 2>/dev/null || echo "UTC")
-printf "  ${B}Zona horaria actual: ${C}%s${N}\n" "$CURRENT_TZ"
-printf "  ${B}¿Cambiar zona horaria? [s/N]:${N} "
-read CHANGE_TZ; CHANGE_TZ="${CHANGE_TZ:-N}"
-case "$CHANGE_TZ" in [Ss]*)
-    echo ""
-    echo "  Zonas horarias disponibles (ejemplos frecuentes):"
-    echo "    1) Europe/Madrid       4) America/New_York"
-    echo "    2) Europe/London       5) America/Los_Angeles"
-    echo "    3) Europe/Paris        6) UTC"
-    echo "    7) Introducir manualmente"
-    echo ""
-    printf "  ${B}Selecciona [1-7]:${N} "
-    read TZ_CHOICE
-    case "$TZ_CHOICE" in
-        1) NEW_TZ="Europe/Madrid" ;;
-        2) NEW_TZ="Europe/London" ;;
-        3) NEW_TZ="Europe/Paris" ;;
-        4) NEW_TZ="America/New_York" ;;
-        5) NEW_TZ="America/Los_Angeles" ;;
-        6) NEW_TZ="UTC" ;;
-        7) printf "  ${B}Zona horaria (ej: America/Mexico_City):${N} "
-           read NEW_TZ ;;
-        *) NEW_TZ="" ;;
-    esac
-    if [ -n "$NEW_TZ" ] && timedatectl set-timezone "$NEW_TZ" 2>/dev/null; then
-        ok "Zona horaria establecida: $NEW_TZ"
-    elif [ -n "$NEW_TZ" ]; then
-        warn "No se pudo establecer '$NEW_TZ' — verifica que sea válida"
-    fi
-;; esac
+echo ""
+echo "  Zona horaria actual: ${C}$CURRENT_TZ${N}"
+echo ""
+echo "  Selecciona la zona horaria:"
+echo "    1) Europe/Madrid"
+echo "    2) Europe/London"
+echo "    3) Europe/Paris"
+echo "    4) Europe/Berlin"
+echo "    5) America/New_York"
+echo "    6) America/Chicago"
+echo "    7) America/Los_Angeles"
+echo "    8) America/Mexico_City"
+echo "    9) America/Sao_Paulo"
+echo "   10) Asia/Tokyo"
+echo "   11) Asia/Shanghai"
+echo "   12) Asia/Kolkata"
+echo "   13) Australia/Sydney"
+echo "   14) UTC"
+echo "   15) Introducir manualmente"
+echo "    0) Mantener actual ($CURRENT_TZ)"
+echo ""
+printf "  ${B}Selecciona [0-15]:${N} "
+read TZ_CHOICE
+case "$TZ_CHOICE" in
+    1)  NEW_TZ="Europe/Madrid" ;;
+    2)  NEW_TZ="Europe/London" ;;
+    3)  NEW_TZ="Europe/Paris" ;;
+    4)  NEW_TZ="Europe/Berlin" ;;
+    5)  NEW_TZ="America/New_York" ;;
+    6)  NEW_TZ="America/Chicago" ;;
+    7)  NEW_TZ="America/Los_Angeles" ;;
+    8)  NEW_TZ="America/Mexico_City" ;;
+    9)  NEW_TZ="America/Sao_Paulo" ;;
+    10) NEW_TZ="Asia/Tokyo" ;;
+    11) NEW_TZ="Asia/Shanghai" ;;
+    12) NEW_TZ="Asia/Kolkata" ;;
+    13) NEW_TZ="Australia/Sydney" ;;
+    14) NEW_TZ="UTC" ;;
+    15) printf "  ${B}Zona horaria (ej: America/Argentina/Buenos_Aires):${N} "
+        read NEW_TZ ;;
+    0|"") NEW_TZ="" ;;
+    *) NEW_TZ="" ;;
+esac
+if [ -n "$NEW_TZ" ] && timedatectl set-timezone "$NEW_TZ" 2>/dev/null; then
+    ok "Zona horaria establecida: $NEW_TZ"
+elif [ -n "$NEW_TZ" ]; then
+    warn "No se pudo establecer '$NEW_TZ' — verifica el nombre exacto"
+else
+    info "Zona horaria sin cambios: $CURRENT_TZ"
+fi
 echo ""
 
 printf "  ${B}Directorio de instalación [/opt/email-detector]:${N} "

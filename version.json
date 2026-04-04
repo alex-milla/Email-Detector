@@ -1,7 +1,7 @@
 {
-  "version": "1.2.9",
+  "version": "1.2.10",
   "release_date": "2026-04-04",
-  "changelog": "1.2.9 — Instalador: menú de zona horaria, HTTPS obligatorio, redirector HTTP(80)→HTTPS automático como segundo servicio systemd.",
+  "changelog": "1.2.10 — Fix menú zona horaria: se muestra directamente con 15 opciones sin preguntar primero.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.9/email-detector-v1.2.9.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.10/email-detector-v1.2.10.zip"
 }
