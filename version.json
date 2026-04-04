@@ -1,7 +1,7 @@
 {
-  "version": "1.2.11",
+  "version": "1.2.12",
   "release_date": "2026-04-04",
-  "changelog": "1.2.11 — Fix ClamAV: freshclam con --log=/dev/null evita conflicto de lock; install.sh arranca clamav-daemon y clamav-freshclam automáticamente; resumen final con comandos de servicios.",
+  "changelog": "1.2.12 — Eliminado selector de carpeta (Bandeja/Spam/Entrada+Spam); ahora solo se analiza la bandeja de entrada por defecto.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.11/email-detector-v1.2.11.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.12/email-detector-v1.2.12.zip"
 }
