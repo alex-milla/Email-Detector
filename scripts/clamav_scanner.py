@@ -144,15 +144,25 @@ def scan_email_attachments(email_path):
     return results
 
 def update_signatures():
-    subprocess.run(["systemctl","stop","clamav-freshclam"], capture_output=True)
-    time.sleep(1)
+    # Parar el daemon con sudo -n para liberar el lock del log antes de llamar a freshclam.
+    # Sin sudo el stop falla silenciosamente y freshclam falla con "Resource temporarily unavailable".
+    subprocess.run(["sudo", "-n", "systemctl", "stop", "clamav-freshclam"], capture_output=True)
+
+    # Esperar hasta 5s a que el daemon libere el lock del log
+    for _ in range(5):
+        chk = subprocess.run(["systemctl", "is-active", "--quiet", "clamav-freshclam"])
+        if chk.returncode != 0:
+            break
+        time.sleep(1)
+
     try:
-        proc = subprocess.run(["sudo", "freshclam", "--quiet"], capture_output=True, text=True, timeout=300)
+        proc = subprocess.run(["sudo", "-n", "freshclam", "--quiet"],
+                               capture_output=True, text=True, timeout=300)
         result = {"success": proc.returncode == 0,
                   "output": (proc.stdout or proc.stderr or "Sin salida").strip(),
                   "updated_at": _local_now().isoformat()}
     except subprocess.TimeoutExpired: result = {"success": False, "output": "Timeout"}
     except FileNotFoundError:         result = {"success": False, "output": "freshclam no encontrado"}
     finally:
-        subprocess.run(["systemctl","start","clamav-freshclam"], capture_output=True)
+        subprocess.run(["sudo", "-n", "systemctl", "start", "clamav-freshclam"], capture_output=True)
     return result
