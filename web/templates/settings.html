@@ -6,46 +6,46 @@
     <title>Configuración — Email Malware Detector</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Segoe UI',system-ui,sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; }
+        body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg-body,#0f172a); color:var(--text-primary,#e2e8f0); min-height:100vh; }
         .container { max-width:900px; margin:0 auto; padding:20px; }
 
-        nav { background:#1e293b; border-bottom:2px solid #3b82f6; }
+        nav { background:var(--bg-nav,#1e293b); border-bottom:2px solid var(--border-nav,#3b82f6); }
         nav .nav-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; }
-        nav .nav-brand { padding:16px 24px; font-size:1.1em; font-weight:700; border-right:1px solid #334155; }
+        nav .nav-brand { padding:16px 24px; font-size:1.1em; font-weight:700; border-right:1px solid var(--border,#334155); }
         nav .nav-brand span { color:#3b82f6; }
-        nav a.nav-link { padding:18px 22px; color:#94a3b8; text-decoration:none; font-weight:500; border-bottom:3px solid transparent; transition:all 0.2s; }
-        nav a.nav-link:hover { color:#e2e8f0; background:rgba(59,130,246,0.08); }
+        nav a.nav-link { padding:18px 22px; color:var(--text-muted,#94a3b8); text-decoration:none; font-weight:500; border-bottom:3px solid transparent; transition:all 0.2s; }
+        nav a.nav-link:hover { color:var(--text-primary,#e2e8f0); background:var(--bg-hover,rgba(59,130,246,0.08)); }
         nav a.nav-link.active { color:#3b82f6; border-bottom-color:#3b82f6; }
         .nav-right { margin-left:auto; padding:0 20px; display:flex; align-items:center; gap:12px; }
-        .nav-user  { color:#64748b; font-size:0.9em; }
-        nav a.nav-logout { color:#ef4444; text-decoration:none; font-size:0.9em; }
+        .nav-user  { color:var(--text-faint,#64748b); font-size:0.9em; }
+        nav a.nav-logout { color:var(--danger,#ef4444); text-decoration:none; font-size:0.9em; }
 
         .page-header { margin:30px 0 24px; }
         .page-header h1 { font-size:1.5em; }
-        .page-header p  { color:#64748b; margin-top:5px; font-size:0.9em; }
+        .page-header p  { color:var(--text-faint,#64748b); margin-top:5px; font-size:0.9em; }
 
-        .card { background:#1e293b; border-radius:12px; padding:24px; margin-bottom:20px; border:1px solid #283548; }
-        .card-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; padding-bottom:14px; border-bottom:1px solid #334155; }
-        .card-header-left h2 { font-size:1.05em; display:flex; align-items:center; gap:8px; }
-        .card-header-left p  { color:#64748b; font-size:0.83em; margin-top:4px; }
+        .card { background:var(--bg-card,#1e293b); border-radius:12px; padding:24px; margin-bottom:20px; border:1px solid var(--border-alt,#283548); }
+        .card-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; padding-bottom:14px; border-bottom:1px solid var(--border,#334155); }
+        .card-header-left h2 { font-size:1.05em; display:flex; align-items:center; gap:8px; color:var(--text-primary,#e2e8f0); }
+        .card-header-left p  { color:var(--text-faint,#64748b); font-size:0.83em; margin-top:4px; }
 
         .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
         .form-grid.cols-1 { grid-template-columns:1fr; }
         .form-group { display:flex; flex-direction:column; gap:5px; }
-        label { color:#94a3b8; font-size:0.78em; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
+        label { color:var(--text-muted,#94a3b8); font-size:0.78em; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
         input[type=text], input[type=password], input[type=number], input[type=email], input[type=url], select {
-            background:#0a1020; color:#e2e8f0; border:1px solid #2d3f55;
+            background:var(--bg-input-alt,#0a1020); color:var(--text-primary,#e2e8f0); border:1px solid var(--border-input,#2d3f55);
             border-radius:7px; padding:10px 13px; font-size:0.93em; transition:border-color 0.2s;
         }
         input:focus, select:focus { outline:none; border-color:#3b82f6; }
-        input::placeholder { color:#3d5068; }
+        input::placeholder { color:var(--placeholder,#3d5068); }
 
         .card-footer { display:flex; gap:10px; align-items:center; margin-top:18px; flex-wrap:wrap; }
         .btn { padding:9px 18px; border:none; border-radius:7px; cursor:pointer; font-size:0.88em; font-weight:600; transition:all 0.2s; display:inline-flex; align-items:center; gap:6px; text-decoration:none; }
         .btn-primary   { background:#3b82f6; color:white; }
         .btn-primary:hover { background:#2563eb; }
-        .btn-secondary { background:#1a2535; color:#94a3b8; border:1px solid #2d3f55; }
-        .btn-secondary:hover { background:#243044; color:#e2e8f0; }
+        .btn-secondary { background:var(--bg-inner,#1a2535); color:var(--text-muted,#94a3b8); border:1px solid var(--border-input,#2d3f55); }
+        .btn-secondary:hover { background:var(--bg-card,#243044); color:var(--text-primary,#e2e8f0); }
         .btn-warning   { background:#d97706; color:white; }
         .btn-warning:hover { background:#b45309; }
         .btn-sm { padding:6px 13px; font-size:0.82em; }
@@ -62,44 +62,45 @@
         .badge-status.warn    { background:rgba(245,158,11,0.1); color:#fbbf24; }
         .badge-status.info    { background:rgba(59,130,246,0.1); color:#60a5fa; }
 
-        .default-select { display:flex; align-items:center; gap:10px; margin-bottom:20px; padding:14px; background:#0a1020; border-radius:8px; border:1px solid #2d3f55; }
-        .default-select label { color:#94a3b8; font-size:0.85em; margin:0; text-transform:none; letter-spacing:0; }
+        .default-select { display:flex; align-items:center; gap:10px; margin-bottom:20px; padding:14px; background:var(--bg-input-alt,#0a1020); border-radius:8px; border:1px solid var(--border-input,#2d3f55); }
+        .default-select label { color:var(--text-muted,#94a3b8); font-size:0.85em; margin:0; text-transform:none; letter-spacing:0; }
 
-        .section-admin { border:1px solid #4c3000; background:#1a1200; }
-        .section-admin .card-header { border-bottom-color:#6b4500; }
-        .admin-badge { background:#92400e; color:#fcd34d; padding:2px 8px; border-radius:6px; font-size:0.75em; }
+        .section-admin { border:1px solid var(--section-admin-border,#4c3000); background:var(--section-admin-bg,#1a1200); }
+        .section-admin .card-header { border-bottom-color:var(--section-admin-border,#6b4500); }
+        .admin-badge { background:var(--badge-admin-bg,#92400e); color:var(--badge-admin-fg,#fcd34d); padding:2px 8px; border-radius:6px; font-size:0.75em; }
 
         .info-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:16px; margin-bottom:16px; }
-        .info-item small { color:#64748b; font-size:0.78em; display:block; margin-bottom:3px; }
-        .info-item strong { font-size:0.93em; }
+        .info-item small { color:var(--text-faint,#64748b); font-size:0.78em; display:block; margin-bottom:3px; }
+        .info-item strong { font-size:0.93em; color:var(--text-primary,#e2e8f0); }
 
-        .sub-card { background:#0a1020; border:1px solid #2d3f55; border-radius:8px; padding:16px; }
-        .sub-card h3 { font-size:0.9em; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+        .sub-card { background:var(--bg-input-alt,#0a1020); border:1px solid var(--border-input,#2d3f55); border-radius:8px; padding:16px; }
+        .sub-card h3 { font-size:0.9em; margin-bottom:6px; display:flex; align-items:center; gap:6px; color:var(--text-primary,#e2e8f0); }
 
         .input-row { display:flex; gap:8px; align-items:stretch; }
         .input-row input { flex:1; min-width:0; }
 
-        hr.divider { border:none; border-top:1px solid #334155; margin:16px 0; }
+        hr.divider { border:none; border-top:1px solid var(--border,#334155); margin:16px 0; }
 
         .table-wrapper { overflow-x:auto; }
         table.rules-table { width:100%; border-collapse:collapse; font-size:0.83em; }
-        table.rules-table th { color:#64748b; font-weight:600; text-align:left; padding:6px 10px; border-bottom:1px solid #334155; }
-        table.rules-table td { padding:6px 10px; border-bottom:1px solid #1e293b; vertical-align:middle; }
+        table.rules-table th { color:var(--text-faint,#64748b); font-weight:600; text-align:left; padding:6px 10px; border-bottom:1px solid var(--border,#334155); }
+        table.rules-table td { padding:6px 10px; border-bottom:1px solid var(--border-alt,#1e293b); vertical-align:middle; color:var(--text-primary,#e2e8f0); }
         table.rules-table tr:last-child td { border-bottom:none; }
+        table.rules-table tr:hover td { background:var(--bg-inner,#0f172a); }
         .sev-badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:0.8em; font-weight:600; }
         .sev-critical { background:rgba(239,68,68,0.15);  color:#f87171; }
         .sev-high     { background:rgba(245,158,11,0.15); color:#fbbf24; }
         .sev-medium   { background:rgba(59,130,246,0.15); color:#60a5fa; }
         .sev-low      { background:rgba(100,116,139,0.15);color:#94a3b8; }
-        .cat-badge    { display:inline-block; padding:2px 7px; border-radius:5px; font-size:0.78em; background:#1e293b; color:#94a3b8; border:1px solid #334155; }
-        code.small-code { font-family:monospace; font-size:0.82em; color:#7dd3fc; }
+        .cat-badge    { display:inline-block; padding:2px 7px; border-radius:5px; font-size:0.78em; background:var(--bg-card,#1e293b); color:var(--text-muted,#94a3b8); border:1px solid var(--border,#334155); }
+        code.small-code { font-family:monospace; font-size:0.82em; color:var(--text-code,#7dd3fc); }
 
         .toggle-switch { position:relative; display:inline-block; width:48px; height:26px; flex-shrink:0; }
         .toggle-switch input { opacity:0; width:0; height:0; }
         .toggle-slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
-            background:#1a2535; border-radius:26px; transition:.3s; border:1px solid #2d3f55; }
+            background:var(--toggle-bg,#1a2535); border-radius:26px; transition:.3s; border:1px solid var(--border-input,#2d3f55); }
         .toggle-slider:before { position:absolute; content:""; height:18px; width:18px;
-            left:3px; bottom:3px; background:#64748b; border-radius:50%; transition:.3s; }
+            left:3px; bottom:3px; background:var(--toggle-knob,#64748b); border-radius:50%; transition:.3s; }
         input:checked + .toggle-slider { background:#3b82f6; border-color:#3b82f6; }
         input:checked + .toggle-slider:before { transform:translateX(22px); background:white; }
         .form-check-switch { display:flex; align-items:center; gap:8px; }
@@ -109,7 +110,7 @@
         .toast.success { background:#22c55e; color:white; }
         .toast.error   { background:#ef4444; color:white; }
 
-        .save-bar { position:sticky; bottom:0; background:#0f172a; border-top:1px solid #1e293b; padding:14px 0; margin-top:8px; display:flex; justify-content:flex-end; }
+        .save-bar { position:sticky; bottom:0; background:var(--save-bar-bg,#0f172a); border-top:1px solid var(--save-bar-border,#1e293b); padding:14px 0; margin-top:8px; display:flex; justify-content:flex-end; }
 
         @media(max-width:600px) { .form-grid { grid-template-columns:1fr; } }
     </style>
@@ -298,9 +299,9 @@
                 <input type="checkbox" id="use-gpu-toggle">
                 <span class="toggle-slider"></span>
             </label>
-            <span id="gpu-status-text" style="color:#64748b;font-size:0.85em;">Cargando...</span>
+            <span id="gpu-status-text" style="color:var(--text-faint,#64748b);font-size:0.85em;">Cargando...</span>
         </div>
-        <p style="color:#475569;font-size:0.82em;margin-top:10px;">
+        <p style="color:var(--text-faint,#475569);font-size:0.82em;margin-top:10px;">
             Solo tiene efecto con GPU NVIDIA y CUDA instalado. Requiere re-entrenar para aplicar.
         </p>
         <div class="card-footer">
@@ -328,16 +329,16 @@
             </div>
         </div>
         <hr class="divider">
-        <p style="color:#94a3b8;font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Escanear archivo manualmente</p>
+        <p style="color:var(--text-muted,#94a3b8);font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Escanear archivo manualmente</p>
         <div class="input-row" style="margin-bottom:12px;">
-            <input type="file" id="clamav-file-input" style="flex:1;">
+            <input type="file" id="clamav-file-input" style="flex:1;background:var(--bg-input-alt,#0a1020);color:var(--text-primary,#e2e8f0);border:1px solid var(--border-input,#2d3f55);border-radius:7px;padding:8px 10px;">
             <button class="btn btn-secondary" onclick="clamavScanFile()">🔍 Analizar</button>
         </div>
         <div class="test-result" id="clamav-scan-result"></div>
         <div id="clamav-admin-section">
             <hr class="divider">
-            <p style="color:#94a3b8;font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Base de datos de firmas</p>
-            <p style="color:#64748b;font-size:0.83em;margin-bottom:12px;">Se actualiza automáticamente cada día a las 08:00.</p>
+            <p style="color:var(--text-muted,#94a3b8);font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Base de datos de firmas</p>
+            <p style="color:var(--text-faint,#64748b);font-size:0.83em;margin-bottom:12px;">Se actualiza automáticamente cada día a las 08:00.</p>
             <div class="card-footer" style="margin-top:0;">
                 <button class="btn btn-warning btn-sm" onclick="clamavUpdateDB()">🔄 Actualizar ahora</button>
                 <div class="test-result" id="clamav-update-result"></div>
@@ -368,28 +369,28 @@
             </div>
         </div>
         <hr class="divider">
-        <p style="color:#94a3b8;font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Reglas cargadas</p>
+        <p style="color:var(--text-muted,#94a3b8);font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Reglas cargadas</p>
         <div id="clanker-rules-table" style="margin-bottom:16px;">
-            <span style="color:#64748b;font-size:0.85em;">Cargando...</span>
+            <span style="color:var(--text-faint,#64748b);font-size:0.85em;">Cargando...</span>
         </div>
         {% if user.role == 'admin' %}
         <hr class="divider">
-        <p style="color:#94a3b8;font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">
+        <p style="color:var(--text-muted,#94a3b8);font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">
             Gestión de reglas <span class="admin-badge">Admin</span>
         </p>
         <div class="form-grid">
             <div class="sub-card">
                 <h3>⬆️ Subir fichero local</h3>
-                <p style="color:#64748b;font-size:0.82em;margin-bottom:10px;">Sube un .yaml con el nuevo conjunto de reglas. Se valida antes de aplicar y se hace backup del anterior.</p>
+                <p style="color:var(--text-faint,#64748b);font-size:0.82em;margin-bottom:10px;">Sube un .yaml con el nuevo conjunto de reglas. Se valida antes de aplicar y se hace backup del anterior.</p>
                 <div class="input-row">
-                    <input type="file" id="clanker-rules-file" accept=".yaml,.yml" style="flex:1;">
+                    <input type="file" id="clanker-rules-file" accept=".yaml,.yml" style="flex:1;background:var(--bg-body,#0f172a);color:var(--text-primary,#e2e8f0);border:1px solid var(--border-input,#2d3f55);border-radius:7px;padding:8px 10px;">
                     <button class="btn btn-secondary btn-sm" onclick="clankerUploadRules()">⬆️ Subir</button>
                 </div>
                 <div class="test-result" id="clanker-upload-result" style="margin-top:8px;"></div>
             </div>
             <div class="sub-card">
                 <h3>🌐 URL remota de actualización</h3>
-                <p style="color:#64748b;font-size:0.82em;margin-bottom:10px;">URL pública del fichero YAML. El sistema comprueba diariamente si hay versión más reciente.</p>
+                <p style="color:var(--text-faint,#64748b);font-size:0.82em;margin-bottom:10px;">URL pública del fichero YAML. El sistema comprueba diariamente si hay versión más reciente.</p>
                 <div class="input-row" style="margin-bottom:8px;">
                     <input type="url" id="clanker-url-input" placeholder="https://ejemplo.com/clanker" style="flex:1;">
                     <button class="btn btn-secondary btn-sm" onclick="clankerSaveUrl()">💾 Guardar</button>
@@ -426,12 +427,12 @@
             </div>
         </div>
         <hr class="divider">
-        <p style="color:#94a3b8;font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Renovar certificado</p>
-        <p style="color:#64748b;font-size:0.83em;margin-bottom:12px;">
+        <p style="color:var(--text-muted,#94a3b8);font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Renovar certificado</p>
+        <p style="color:var(--text-faint,#64748b);font-size:0.83em;margin-bottom:12px;">
             Genera un nuevo certificado ECDSA P-256 autofirmado. Se hace backup del actual. Requiere reiniciar el servicio para aplicarlo.
         </p>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <label style="color:#94a3b8;font-size:0.78em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">Días de validez</label>
+            <label style="color:var(--text-muted,#94a3b8);font-size:0.78em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">Días de validez</label>
             <input type="number" id="ssl-days-input" value="365" min="1" max="365" style="width:90px;">
             <button class="btn btn-primary" onclick="sslRenew()">🔄 Renovar ahora</button>
         </div>
@@ -598,7 +599,6 @@
 
     async function clamavScanFile() {
         const input = document.getElementById('clamav-file-input');
-        const box   = document.getElementById('clamav-scan-result');
         if (!input.files.length) { alert('Selecciona un archivo primero'); return; }
         showResult('clamav-scan-result', 'loading', '⏳ Analizando...');
         const fd = new FormData();
@@ -657,7 +657,7 @@
         try {
             const r = await fetch('/api/clanker/rules');
             const d = await r.json();
-            if (!d.rules || !d.rules.length) { box.innerHTML = '<span style="color:#64748b;font-size:0.85em;">Sin reglas.</span>'; return; }
+            if (!d.rules || !d.rules.length) { box.innerHTML = '<span style="color:var(--text-faint,#64748b);font-size:0.85em;">Sin reglas.</span>'; return; }
             const sevClass = { critical:'sev-critical', high:'sev-high', medium:'sev-medium', low:'sev-low' };
             let html = '<div class="table-wrapper"><table class="rules-table"><thead><tr><th>ID</th><th>Categoría</th><th>Severidad</th><th>Descripción</th><th>Activa</th></tr></thead><tbody>';
             for (const rule of d.rules) {
@@ -667,13 +667,13 @@
                     <td><code class="small-code">${rule.id}</code></td>
                     <td><span class="cat-badge">${rule.category}</span></td>
                     <td><span class="sev-badge ${sc}">${rule.severity}</span></td>
-                    <td style="color:#94a3b8;">${rule.description || ''}</td>
+                    <td style="color:var(--text-muted,#94a3b8);">${rule.description || ''}</td>
                     <td><div class="form-check-switch"><label class="toggle-switch" style="width:36px;height:20px;"><input type="checkbox" ${enabled ? 'checked' : ''} onchange="clankerToggleRule('${rule.id}', this)"><span class="toggle-slider"></span></label></div></td>
                 </tr>`;
             }
             html += '</tbody></table></div>';
             box.innerHTML = html;
-        } catch(e) { box.innerHTML = '<span style="color:#64748b;font-size:0.85em;">Error cargando reglas.</span>'; }
+        } catch(e) { box.innerHTML = '<span style="color:var(--text-faint,#64748b);font-size:0.85em;">Error cargando reglas.</span>'; }
     }
 
     async function clankerToggleRule(id, cb) {
