@@ -381,7 +381,44 @@
       }
       input:checked + .toggle-slider:before { background: white !important; }
 
-      /* ══ SAVE BAR ══════════════════════════════════════════════════════════ */
+
+      /* ══ ADDITIONAL SELECTORS ══════════════════════════════════════════════════ */
+      /* stat cards */
+      .stat-card {
+        background: var(--bg-inner) !important;
+      }
+      /* upload zone */
+      .upload-zone {
+        border-color: var(--border) !important;
+        color: var(--text-primary) !important;
+      }
+      .upload-zone p { color: var(--text-muted) !important; }
+      /* risk badges */
+      .risk-badge { background: var(--border) !important; color: var(--text-primary) !important; }
+      /* table rows */
+      tr { background: transparent !important; }
+      /* inline style overrides for JS-generated content */
+      [style*="background:#0f172a"] { background: var(--bg-body) !important; }
+      [style*="background:#1e293b"] { background: var(--bg-card) !important; }
+      /* History table */
+      #historyTable td { color: var(--text-primary) !important; }
+      /* Form row */
+      .form-row label { color: var(--text-muted) !important; }
+      /* Nav logout */
+      .nav-logout { color: var(--danger) !important; }
+      /* Step numbers - only color, not background */
+      .step-body p { color: var(--text-faint) !important; }
+      .step-body h4 { color: var(--text-primary) !important; }
+      /* model meta */
+      .meta-label { color: var(--text-faint) !important; }
+      .meta-value { color: var(--text-primary) !important; }
+      /* Spinner */
+      .spinner { border-color: var(--border) !important; border-top-color: var(--accent) !important; }
+      /* Log boxes */
+      .log-box { background: var(--bg-input-alt) !important; border-color: var(--border) !important; color: var(--text-muted) !important; }
+
+
+            /* ══ SAVE BAR ══════════════════════════════════════════════════════════ */
       .save-bar {
         background:   var(--save-bar-bg) !important;
         border-color: var(--save-bar-border) !important;
