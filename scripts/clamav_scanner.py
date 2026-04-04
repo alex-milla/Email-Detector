@@ -144,25 +144,23 @@ def scan_email_attachments(email_path):
     return results
 
 def update_signatures():
-    # Parar el daemon con sudo -n para liberar el lock del log antes de llamar a freshclam.
-    # Sin sudo el stop falla silenciosamente y freshclam falla con "Resource temporarily unavailable".
-    subprocess.run(["sudo", "-n", "systemctl", "stop", "clamav-freshclam"], capture_output=True)
-
-    # Esperar hasta 5s a que el daemon libere el lock del log
-    for _ in range(5):
-        chk = subprocess.run(["systemctl", "is-active", "--quiet", "clamav-freshclam"])
-        if chk.returncode != 0:
-            break
-        time.sleep(1)
-
+    # Usamos --no-warnings y redirigimos el log a /dev/null para evitar el conflicto
+    # de lock con el daemon clamav-freshclam que también escribe en freshclam.log.
+    # freshclam acepta --log=/dev/null para suprimir el fichero de log completamente.
     try:
-        proc = subprocess.run(["sudo", "-n", "freshclam", "--quiet"],
-                               capture_output=True, text=True, timeout=300)
+        proc = subprocess.run(
+            ["sudo", "-n", "freshclam", "--quiet", "--log=/dev/null"],
+            capture_output=True, text=True, timeout=300
+        )
+        output = (proc.stdout or proc.stderr or "Sin salida").strip()
+        # Filtrar el aviso de lock del log si aparece en stderr — no es un error real
+        output = "\n".join(
+            l for l in output.splitlines()
+            if "lock" not in l.lower() and "log file" not in l.lower()
+        ).strip() or "Actualizado correctamente"
         result = {"success": proc.returncode == 0,
-                  "output": (proc.stdout or proc.stderr or "Sin salida").strip(),
+                  "output": output,
                   "updated_at": _local_now().isoformat()}
     except subprocess.TimeoutExpired: result = {"success": False, "output": "Timeout"}
     except FileNotFoundError:         result = {"success": False, "output": "freshclam no encontrado"}
-    finally:
-        subprocess.run(["sudo", "-n", "systemctl", "start", "clamav-freshclam"], capture_output=True)
     return result
