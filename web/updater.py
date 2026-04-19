@@ -23,6 +23,8 @@ import threading
 import zipfile
 from datetime import datetime
 
+import time
+
 import requests
 from packaging.version import Version
 
@@ -38,6 +40,22 @@ BACKUP_DIR   = os.path.join(_BASE_DIR, "config", "update_backups")
 SERVICE_NAME = "email-detector"
 UPDATE_STATE_FILE = os.path.join(_BASE_DIR, "results", "update_state.json")
 REQUEST_TIMEOUT = 15
+
+# Archivos que pertenecen a root:root por diseño de seguridad (CRIT-03).
+# El updater no puede sobreescribirlos directamente (corre como email-detector).
+# Se validan en el ZIP pero se omiten al aplicar — requieren reinstalación manual
+# solo si hay cambios funcionales en esos scripts.
+_ROOT_OWNED_FILES = {
+    "scripts/retrain.sh",
+    "scripts/train_model.py",
+}
+
+# ── Caché del check de versión ─────────────────────────────────────────────────
+# Evita consultar GitHub en cada petición y elimina la condición de carrera
+# post-actualización (el servicio se reinicia con VERSION ya actualizado,
+# pero GitHub podría devolver la misma versión durante unos segundos).
+_CHECK_CACHE_TTL = 60  # segundos
+_check_cache: dict = {"result": None, "ts": 0.0}
 
 
 def _venv_pip_path() -> str:
@@ -59,6 +77,9 @@ ALLOWED_PATHS = {
     "version.json",
     "requirements.txt",
 }
+
+# Raíces de proyecto conocidas (primer componente de ruta válido)
+_KNOWN_ROOTS = {"web", "scripts", "config", "VERSION", "version.json", "requirements.txt"}
 
 # ── Estado global del proceso de actualización ────────────────────────────────
 
@@ -163,7 +184,18 @@ def get_remote_version_info() -> dict:
         return {"error": f"Error inesperado: {e}"}
 
 
+def invalidate_update_cache():
+    """Fuerza que la próxima llamada a check_for_updates consulte GitHub de nuevo."""
+    _check_cache["ts"] = 0.0
+    _check_cache["result"] = None
+
+
 def check_for_updates() -> dict:
+    # Devolver resultado cacheado si aún es válido
+    now = time.monotonic()
+    if _check_cache["result"] is not None and (now - _check_cache["ts"]) < _CHECK_CACHE_TTL:
+        return dict(_check_cache["result"])
+
     local = get_local_version()
     if local.startswith("error:"):
         return {
@@ -185,7 +217,7 @@ def check_for_updates() -> dict:
     except Exception:
         update_available = False
 
-    return {
+    result = {
         "local_version":    local,
         "remote_version":   remote,
         "update_available": update_available,
@@ -194,6 +226,12 @@ def check_for_updates() -> dict:
         "release_date":     remote_info.get("release_date", ""),
         "error":            None,
     }
+
+    # Guardar en caché
+    _check_cache["result"] = result
+    _check_cache["ts"] = time.monotonic()
+
+    return dict(result)
 
 
 # ── Descarga ───────────────────────────────────────────────────────────────────
@@ -217,11 +255,33 @@ def _download_zip(zip_url: str, dest_path: str) -> bool:
 
 # ── Validación ─────────────────────────────────────────────────────────────────
 
+def _strip_zip_prefix(name: str) -> str:
+    """
+    Elimina todos los segmentos de prefijo ajenos al proyecto.
+
+    GitHub genera ZIPs con uno o varios niveles de prefijo automático,
+    por ejemplo:
+      email-detector-v1.2.0/web/app.py          → web/app.py
+      repo-abc123/repo-abc123/VERSION            → VERSION
+
+    El algoritmo avanza por los segmentos hasta encontrar uno que pertenezca
+    a las raíces conocidas del proyecto (_KNOWN_ROOTS), eliminando todos los
+    anteriores. Si ningún segmento coincide devuelve la ruta original para
+    que el filtro de lista blanca la rechace explícitamente.
+    """
+    parts = name.split("/")
+    for i, part in enumerate(parts):
+        if part in _KNOWN_ROOTS:
+            return "/".join(parts[i:])
+    return name
+
+
 def _validate_zip(zip_path: str):
     """
     Valida el contenido del ZIP.
     - Comprueba que es un ZIP válido
     - Detecta path traversal (../)
+    - Elimina prefijos de empaquetado de cualquier profundidad
     - Filtra por lista blanca de rutas permitidas
     Devuelve (ok: bool, files_to_apply: list of (zip_name, dest_relative))
     """
@@ -248,15 +308,8 @@ def _validate_zip(zip_path: str):
                 rejected.append(name)
                 continue
 
-            # Quitar prefijo del paquete si existe
-            # Soporta cualquier prefijo de un nivel: v1.0.1/, update_package/, etc.
-            # Solo se elimina si el primer componente NO es carpeta conocida del proyecto.
-            parts = name.split("/")
-            known_roots = {"web", "scripts", "config"}
-            if len(parts) > 1 and parts[0] not in known_roots:
-                clean = "/".join(parts[1:])
-            else:
-                clean = name
+            # Eliminar prefijos de empaquetado (cualquier profundidad)
+            clean = _strip_zip_prefix(name)
 
             if not clean:
                 continue
@@ -320,6 +373,14 @@ def _apply_files(zip_path: str, files_to_apply: list) -> bool:
     try:
         with zipfile.ZipFile(zip_path, "r") as zf:
             for zip_name, dest_relative in files_to_apply:
+
+                # Archivos root:root — el proceso (email-detector) no puede
+                # sobreescribirlos. Se omiten con aviso; solo cambian en
+                # instalaciones manuales o si hay un cambio funcional relevante.
+                if dest_relative in _ROOT_OWNED_FILES:
+                    _log(f"  OMITIDO (root:root, requiere reinstalación manual si cambió): {dest_relative}")
+                    continue
+
                 dest_abs = os.path.join(_BASE_DIR, dest_relative)
                 os.makedirs(os.path.dirname(dest_abs), exist_ok=True)
                 with zf.open(zip_name) as src_f, open(dest_abs, "wb") as dst_f:
@@ -353,6 +414,10 @@ def _rollback(backup_path: str):
                 src      = os.path.join(root, fname)
                 relative = os.path.relpath(src, backup_path)
                 dest     = os.path.join(_BASE_DIR, relative)
+                # Igual que en apply: no tocar archivos root:root
+                if relative in _ROOT_OWNED_FILES:
+                    _log(f"  OMITIDO en rollback (root:root): {relative}")
+                    continue
                 os.makedirs(os.path.dirname(dest), exist_ok=True)
                 shutil.copy2(src, dest)
                 _log(f"  Restaurado: {relative}")
@@ -372,7 +437,7 @@ def _restart_service() -> bool:
         _log("Estado guardado en disco. Reiniciando servicio...")
 
         result = subprocess.run(
-            ["sudo", "systemctl", "restart", SERVICE_NAME],
+            ["sudo", "-n", "systemctl", "restart", SERVICE_NAME],
             capture_output=True, text=True, timeout=30
         )
         if result.returncode != 0:
@@ -406,6 +471,9 @@ def _restart_service() -> bool:
 
 def _run_update(zip_url: str):
     """Proceso completo de actualización. Se ejecuta en un thread separado."""
+    # Invalidar caché para que el check post-reinicio consulte GitHub de nuevo
+    # con la versión local ya actualizada
+    invalidate_update_cache()
     _set_state(
         running=True, success=None, log=[],
         started_at=datetime.now().isoformat(),

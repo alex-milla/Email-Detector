@@ -1,7 +1,7 @@
 {
-  "version": "1.2.0",
+  "version": "1.2.13",
   "release_date": "2026-04-04",
-  "changelog": "1.2.0 — Esquema SQLite alineado con la app y migración automática; fixes validación EML (import re), JSON/sesión y pestaña Actualizaciones en toda la navegación admin; contenedores (RELAX_SCRIPT_CHECK, sys.executable Anti-Clanker, pip venv Linux/Windows); scripts .sh ejecutables en Git; README y dependencias (sin imaplib2); version.json alineado con VERSION.",
+  "changelog": "1.2.13 — Corrección de tema CSS: todos los templates ahora usan variables CSS para que los temas claro/oscuro/sistema funcionen correctamente en todas las páginas.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.0/email-detector-v1.2.0.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.13/email-detector-v1.2.13.zip"
 }

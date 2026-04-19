@@ -82,13 +82,15 @@ def download_emails_imap(max_emails=50, date_from=None, date_to=None,
                          folder="inbox", days_back=7):
     """
     Descarga correos por IMAP con rango de fechas.
+    Siempre analiza únicamente la bandeja de entrada (INBOX).
 
     Parámetros:
         date_from: datetime o None (usa days_back si es None)
         date_to:   datetime o None (usa hoy si es None)
-        folder:    'inbox', 'spam', 'all'
+        folder:    ignorado — siempre se usa 'inbox'
         days_back: fallback si no hay date_from
     """
+    folder = "inbox"  # Fijo: solo se analiza la bandeja de entrada
     server   = os.getenv("IMAP_SERVER", "")
     port     = int(os.getenv("IMAP_PORT", "993"))
     user     = os.getenv("IMAP_USER", "")
@@ -115,57 +117,45 @@ def download_emails_imap(max_emails=50, date_from=None, date_to=None,
 
     downloaded = []
 
-    # Determinar carpetas a revisar
-    if folder == "all":
-        folders_to_check = ["inbox", "spam"]
-    else:
-        folders_to_check = [folder]
+    # Siempre se analiza únicamente la bandeja de entrada
+    imap_folder = _find_inbox_folder(mail)
+    print(f"\n  📥 Conectando a bandeja de entrada: '{imap_folder}'...")
 
-    for folder_key in folders_to_check:
-        print(f"\n  📂 Buscando carpeta: {folder_key}...")
+    # Seleccionar carpeta
+    status, _ = mail.select(f'"{imap_folder}"')
+    if status != "OK":
+        status, _ = mail.select(imap_folder)
+    if status != "OK":
+        print(f"  ✗ No se pudo acceder a '{imap_folder}'")
+        mail.logout()
+        return []
 
-        if folder_key == "spam":
-            imap_folder = _find_spam_folder(mail)
-            if not imap_folder:
-                print("  ⚠ No se encontró carpeta de spam en este servidor")
-                continue
-            print(f"  ✓ Carpeta spam encontrada: '{imap_folder}'")
-        else:
-            imap_folder = _find_inbox_folder(mail)
+    # Buscar correos en el rango de fechas
+    search_criteria = f'(SINCE {since_str} BEFORE {before_str})'
+    status, msg_ids = mail.search(None, search_criteria)
 
-        # Seleccionar carpeta
-        status, _ = mail.select(f'"{imap_folder}"')
-        if status != "OK":
-            status, _ = mail.select(imap_folder)
-        if status != "OK":
-            print(f"  ✗ No se pudo acceder a '{imap_folder}'")
-            continue
+    if status != "OK" or not msg_ids[0]:
+        print("  Sin correos en el rango de fechas")
+        mail.logout()
+        return []
 
-        # Buscar correos en el rango de fechas
-        search_criteria = f'(SINCE {since_str} BEFORE {before_str})'
-        status, msg_ids = mail.search(None, search_criteria)
+    id_list = msg_ids[0].split()
+    # Limitar a los más recientes
+    id_list = id_list[-max_emails:]
+    print(f"  Encontrados: {len(id_list)} correos")
 
-        if status != "OK" or not msg_ids[0]:
-            print(f"  Sin correos en el rango de fechas")
-            continue
-
-        id_list = msg_ids[0].split()
-        # Limitar y coger los más recientes
-        id_list = id_list[-max_emails:]
-        print(f"  Encontrados: {len(id_list)} correos")
-
-        for i, msg_id in enumerate(id_list):
-            status, msg_data = mail.fetch(msg_id, "(RFC822)")
-            if status == "OK":
-                raw_email = msg_data[0][1]
-                parsed    = email.message_from_bytes(raw_email)
-                subject   = parsed.get("Subject", "") or ""
-                filename  = _safe_filename(subject, f"imap_{folder_key}", i)
-                filepath  = os.path.join(RAW_DIR, filename)
-                with open(filepath, "wb") as f:
-                    f.write(raw_email)
-                downloaded.append(filepath)
-                print(f"  [{i+1}/{len(id_list)}] {filename[:70]}")
+    for i, msg_id in enumerate(id_list):
+        status, msg_data = mail.fetch(msg_id, "(RFC822)")
+        if status == "OK":
+            raw_email = msg_data[0][1]
+            parsed    = email.message_from_bytes(raw_email)
+            subject   = parsed.get("Subject", "") or ""
+            filename  = _safe_filename(subject, "imap_inbox", i)
+            filepath  = os.path.join(RAW_DIR, filename)
+            with open(filepath, "wb") as f:
+                f.write(raw_email)
+            downloaded.append(filepath)
+            print(f"  [{i+1}/{len(id_list)}] {filename[:70]}")
 
     mail.logout()
     print(f"\nTotal descargados: {len(downloaded)}")

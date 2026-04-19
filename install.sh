@@ -18,13 +18,27 @@ info()  { printf "  %s\n" "$1"; }
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 svc_restart() {
+    # Arrancar o reiniciar el servicio
     if systemctl is-active --quiet email-detector 2>/dev/null || \
        systemctl is-failed --quiet email-detector 2>/dev/null; then
-        systemctl restart email-detector && sleep 2
-        systemctl is-active --quiet email-detector \
-            && ok "servicio reiniciado" \
-            || warn "revisar con: journalctl -u email-detector -n 30"
+        systemctl restart email-detector
+    else
+        systemctl start email-detector
     fi
+
+    # Esperar hasta 30 segundos a que quede activo
+    local i=0
+    while [ $i -lt 30 ]; do
+        if systemctl is-active --quiet email-detector; then
+            ok "servicio activo (${i}s)"
+            return 0
+        fi
+        sleep 1
+        i=$((i + 1))
+    done
+
+    warn "el servicio no levantó en 30s — revisa con: journalctl -u email-detector -n 40 --no-pager"
+    return 1
 }
 
 # ─────────────────────────────────────────────────────────────
@@ -40,6 +54,60 @@ printf "${N}\n"
 # ─────────────────────────────────────────────────────────────
 #  PREGUNTAS INICIALES
 # ─────────────────────────────────────────────────────────────
+# ── Zona horaria ──────────────────────────────────────────────────────────────
+CURRENT_TZ=$(timedatectl show -p Timezone --value 2>/dev/null || cat /etc/timezone 2>/dev/null || echo "UTC")
+echo ""
+echo "  Zona horaria actual: ${C}$CURRENT_TZ${N}"
+echo ""
+echo "  Selecciona la zona horaria:"
+echo "    1) Europe/Madrid"
+echo "    2) Europe/London"
+echo "    3) Europe/Paris"
+echo "    4) Europe/Berlin"
+echo "    5) America/New_York"
+echo "    6) America/Chicago"
+echo "    7) America/Los_Angeles"
+echo "    8) America/Mexico_City"
+echo "    9) America/Sao_Paulo"
+echo "   10) Asia/Tokyo"
+echo "   11) Asia/Shanghai"
+echo "   12) Asia/Kolkata"
+echo "   13) Australia/Sydney"
+echo "   14) UTC"
+echo "   15) Introducir manualmente"
+echo "    0) Mantener actual ($CURRENT_TZ)"
+echo ""
+printf "  ${B}Selecciona [0-15]:${N} "
+read TZ_CHOICE
+case "$TZ_CHOICE" in
+    1)  NEW_TZ="Europe/Madrid" ;;
+    2)  NEW_TZ="Europe/London" ;;
+    3)  NEW_TZ="Europe/Paris" ;;
+    4)  NEW_TZ="Europe/Berlin" ;;
+    5)  NEW_TZ="America/New_York" ;;
+    6)  NEW_TZ="America/Chicago" ;;
+    7)  NEW_TZ="America/Los_Angeles" ;;
+    8)  NEW_TZ="America/Mexico_City" ;;
+    9)  NEW_TZ="America/Sao_Paulo" ;;
+    10) NEW_TZ="Asia/Tokyo" ;;
+    11) NEW_TZ="Asia/Shanghai" ;;
+    12) NEW_TZ="Asia/Kolkata" ;;
+    13) NEW_TZ="Australia/Sydney" ;;
+    14) NEW_TZ="UTC" ;;
+    15) printf "  ${B}Zona horaria (ej: America/Argentina/Buenos_Aires):${N} "
+        read NEW_TZ ;;
+    0|"") NEW_TZ="" ;;
+    *) NEW_TZ="" ;;
+esac
+if [ -n "$NEW_TZ" ] && timedatectl set-timezone "$NEW_TZ" 2>/dev/null; then
+    ok "Zona horaria establecida: $NEW_TZ"
+elif [ -n "$NEW_TZ" ]; then
+    warn "No se pudo establecer '$NEW_TZ' — verifica el nombre exacto"
+else
+    info "Zona horaria sin cambios: $CURRENT_TZ"
+fi
+echo ""
+
 printf "  ${B}Directorio de instalación [/opt/email-detector]:${N} "
 read INSTALL_DIR
 INSTALL_DIR="${INSTALL_DIR:-/opt/email-detector}"
@@ -68,27 +136,25 @@ fi
 printf "  ${B}Instalar ClamAV? [S/n]:${N} "
 read DO_CLAMAV; DO_CLAMAV="${DO_CLAMAV:-S}"
 
-printf "  ${B}Habilitar HTTPS (cert autofirmado)? [s/N]:${N} "
-read DO_HTTPS; DO_HTTPS="${DO_HTTPS:-N}"
+# HTTPS siempre activo — única opción soportada
+DO_HTTPS="S"
 
-# MED-07: días de validez del certificado (máximo 365)
+# días de validez del certificado (máximo 365)
 CERT_DAYS=365
-case "$DO_HTTPS" in [Ss]*)
-    printf "  ${B}Días de validez del certificado [365, máx 365]:${N} "
-    read CERT_DAYS_INPUT
-    if [[ "$CERT_DAYS_INPUT" =~ ^[0-9]+$ ]] && [ "$CERT_DAYS_INPUT" -gt 0 ] && [ "$CERT_DAYS_INPUT" -le 365 ]; then
-        CERT_DAYS="$CERT_DAYS_INPUT"
-    else
-        CERT_DAYS=365
-        info "Valor no válido — se usarán 365 días"
-    fi
-;; esac
+printf "  ${B}Días de validez del certificado HTTPS [365, máx 365]:${N} "
+read CERT_DAYS_INPUT
+if [[ "$CERT_DAYS_INPUT" =~ ^[0-9]+$ ]] && [ "$CERT_DAYS_INPUT" -gt 0 ] && [ "$CERT_DAYS_INPUT" -le 365 ]; then
+    CERT_DAYS="$CERT_DAYS_INPUT"
+else
+    CERT_DAYS=365
+    info "Valor no válido — se usarán 365 días"
+fi
 
 echo ""
 echo "  ─────────────────────────────────────────────────────"
 echo "  Directorio : $INSTALL_DIR"
 echo "  Puerto     : $WEB_PORT"
-echo "  ClamAV     : $DO_CLAMAV   |   HTTPS: $DO_HTTPS"
+echo "  ClamAV     : $DO_CLAMAV   |   HTTPS: activado (obligatorio)"
 echo "  ─────────────────────────────────────────────────────"
 printf "  Continuar? [S/n] "; read CONFIRM
 case "$CONFIRM" in [Nn]*) echo "Cancelado."; exit 0;; esac
@@ -103,6 +169,19 @@ apt-get install -y -qq python3 python3-pip python3-venv git curl wget cron
 case "$DO_CLAMAV" in [Ss]*)
     apt-get install -y -qq clamav clamav-daemon
     ok "ClamAV instalado"
+
+    # Añadir emaildetector al grupo clamav y fijar permisos del log
+    usermod -aG clamav "$SVC_USER" 2>/dev/null || true
+    touch /var/log/clamav/freshclam.log 2>/dev/null || true
+    chown clamav:clamav /var/log/clamav/freshclam.log 2>/dev/null || true
+    chmod 664 /var/log/clamav/freshclam.log 2>/dev/null || true
+    ok "permisos freshclam.log configurados para $SVC_USER"
+
+    # Asegurarse de que los servicios ClamAV están activos
+    systemctl enable clamav-daemon clamav-freshclam 2>/dev/null || true
+    systemctl restart clamav-freshclam 2>/dev/null || systemctl start clamav-freshclam 2>/dev/null || true
+    systemctl restart clamav-daemon    2>/dev/null || systemctl start clamav-daemon    2>/dev/null || true
+    ok "servicios ClamAV activos"
 ;; esac
 ok "$(python3 --version)"
 
@@ -110,7 +189,7 @@ ok "$(python3 --version)"
 #  BLOQUE 2 — ESTRUCTURA DE DIRECTORIOS
 # ─────────────────────────────────────────────────────────────
 step "2/6" "Creando estructura de directorios"
-mkdir -p "$INSTALL_DIR"/{config,logs,models/all_models,results,scripts}
+mkdir -p "$INSTALL_DIR"/{config,logs,models/all_models,results,scripts,tmp/matplotlib}
 mkdir -p "$INSTALL_DIR"/data/{raw,processed,samples,labeled/benign,labeled/malicious}
 mkdir -p "$INSTALL_DIR"/web/templates
 mkdir -p "$INSTALL_DIR"/web/static/{css,js}
@@ -129,9 +208,9 @@ pip install -r "$REPO_DIR/requirements.txt" --quiet
 ok "librerías instaladas"
 
 # Modelos opcionales con GPU
-pip install xgboost --quiet  && ok "xgboost"   || warn "xgboost falló (opcional)"
-pip install lightgbm --quiet && ok "lightgbm"  || warn "lightgbm falló (opcional)"
-pip install catboost --quiet && ok "catboost"  || warn "catboost falló (opcional)"
+pip install xgboost  --quiet && ok "xgboost"  || warn "xgboost falló (opcional)"
+pip install lightgbm --quiet && ok "lightgbm" || warn "lightgbm falló (opcional)"
+pip install catboost --quiet && ok "catboost" || warn "catboost falló (opcional)"
 
 # ─────────────────────────────────────────────────────────────
 #  BLOQUE 4 — COPIAR CÓDIGO FUENTE
@@ -139,27 +218,47 @@ pip install catboost --quiet && ok "catboost"  || warn "catboost falló (opciona
 step "4/6" "Copiando archivos del proyecto"
 
 # Web
-cp "$REPO_DIR/web/app.py"              "$INSTALL_DIR/web/"
-cp "$REPO_DIR/web/auth.py"             "$INSTALL_DIR/web/"
-cp "$REPO_DIR/web/settings_manager.py" "$INSTALL_DIR/web/"
-cp "$REPO_DIR/web/updater.py"          "$INSTALL_DIR/web/"
+cp "$REPO_DIR/web/app.py"               "$INSTALL_DIR/web/"
+cp "$REPO_DIR/web/auth.py"              "$INSTALL_DIR/web/"
+cp "$REPO_DIR/web/settings_manager.py"  "$INSTALL_DIR/web/"
+
+# Módulo updater (opcional — no falla si no existe)
+[ -f "$REPO_DIR/web/updater.py" ] && cp "$REPO_DIR/web/updater.py" "$INSTALL_DIR/web/" || true
 
 # Templates
-cp "$REPO_DIR/web/templates/"*.html    "$INSTALL_DIR/web/templates/"
+cp "$REPO_DIR/web/templates/"*.html     "$INSTALL_DIR/web/templates/"
 
 # Scripts Python
-cp "$REPO_DIR/scripts/"*.py            "$INSTALL_DIR/scripts/"
+cp "$REPO_DIR/scripts/"*.py             "$INSTALL_DIR/scripts/"
 
-# Scripts bash — deben pertenecer a root y no ser escribibles por otros (CRIT-03)
-cp "$REPO_DIR/scripts/backup.sh"  "$INSTALL_DIR/scripts/"
-cp "$REPO_DIR/scripts/retrain.sh" "$INSTALL_DIR/scripts/"
-chown root:root "$INSTALL_DIR/scripts/backup.sh" "$INSTALL_DIR/scripts/retrain.sh"
-chmod 750 "$INSTALL_DIR/scripts/backup.sh" "$INSTALL_DIR/scripts/retrain.sh"
+# Scripts bash
+cp "$REPO_DIR/scripts/backup.sh"        "$INSTALL_DIR/scripts/"
+cp "$REPO_DIR/scripts/http_redirect.py" "$INSTALL_DIR/scripts/"
+cp "$REPO_DIR/scripts/retrain.sh"       "$INSTALL_DIR/scripts/"
+chmod +x "$INSTALL_DIR/scripts/"*.sh
+chmod +x "$INSTALL_DIR/scripts/"*.py
 
-# Script descarga dataset — mismo tratamiento (CRIT-03)
-cp "$REPO_DIR/download_dataset.sh" "$INSTALL_DIR/"
-chown root:root "$INSTALL_DIR/download_dataset.sh"
-chmod 750 "$INSTALL_DIR/download_dataset.sh"
+# Script descarga dataset (en raíz del proyecto) — opcional
+if [ -f "$REPO_DIR/download_dataset.sh" ]; then
+    cp "$REPO_DIR/download_dataset.sh" "$INSTALL_DIR/"
+    chmod 755 "$INSTALL_DIR/download_dataset.sh"
+    chown root:root "$INSTALL_DIR/download_dataset.sh"
+    ok "download_dataset.sh copiado"
+fi
+
+# ── FIX CRIT-03: permisos requeridos por _validate_script_path ───────────────
+# Los scripts ejecutados vía subprocess deben pertenecer a root (uid=0)
+# y no ser escribibles por grupo u otros (st_mode & 0o022 == 0).
+# Sin esto el instalador deja uid=emaildetector y la validación bloquea
+# el botón "Entrenar" con "no pasó la validación de seguridad".
+chown root:root \
+    "$INSTALL_DIR/scripts/retrain.sh"    \
+    "$INSTALL_DIR/scripts/train_model.py"
+chmod 755 \
+    "$INSTALL_DIR/scripts/retrain.sh"    \
+    "$INSTALL_DIR/scripts/train_model.py"
+ok "permisos root:root 755 aplicados a scripts ejecutables"
+# ─────────────────────────────────────────────────────────────────────────────
 
 # Config
 cp "$REPO_DIR/config/clanker_rules.yaml" "$INSTALL_DIR/config/"
@@ -176,7 +275,6 @@ SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))" 2>/dev/nu
 # .env (solo si no existe)
 ENV_FILE="$INSTALL_DIR/config/.env"
 if [ ! -f "$ENV_FILE" ]; then
-    # Soporte para ambos nombres: .env.example (correcto) y env.example (legacy)
     if [ -f "$REPO_DIR/config/.env.example" ]; then
         cp "$REPO_DIR/config/.env.example" "$ENV_FILE"
     elif [ -f "$REPO_DIR/config/env.example" ]; then
@@ -186,22 +284,22 @@ if [ ! -f "$ENV_FILE" ]; then
     fi
     sed -i "s|cambia_esto_por_un_valor_aleatorio|$SECRET_KEY|" "$ENV_FILE"
     sed -i "s|^WEB_PORT=.*|WEB_PORT=$WEB_PORT|" "$ENV_FILE"
-    ok ".env generado"
+    ok ".env generado desde .env.example"
 else
     info ".env existente — no se sobreescribe"
 fi
 
-# MED-08: el .env contiene credenciales sensibles — restringir acceso.
-# El propietario debe ser el mismo usuario que ejecuta el servicio.
-# Se aplica siempre, tanto en instalación nueva como en actualización.
+# Crear usuario de servicio si no existe
 SVC_USER="emaildetector"
 if ! id "$SVC_USER" &>/dev/null; then
     useradd --system --no-create-home --shell /usr/sbin/nologin "$SVC_USER"
     ok "usuario de servicio '$SVC_USER' creado"
 fi
+
+# Proteger .env
 chown "$SVC_USER":"$SVC_USER" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
-ok ".env protegido (chmod 600, $SVC_USER:$SVC_USER)"
+ok ".env protegido (chmod 600, $SVC_USER)"
 
 # HTTPS: certificado autofirmado
 case "$DO_HTTPS" in [Ss]*)
@@ -209,7 +307,6 @@ case "$DO_HTTPS" in [Ss]*)
     mkdir -p "$SSL_DIR"
     if [ ! -f "$SSL_DIR/cert.pem" ]; then
         SERVER_HN=$(hostname -f 2>/dev/null || echo "localhost")
-        # MED-07: ECDSA P-256 (más seguro y rápido que RSA-2048) + días configurables
         openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 \
             -nodes -days "$CERT_DAYS" \
             -keyout "$SSL_DIR/key.pem" -out "$SSL_DIR/cert.pem" \
@@ -219,18 +316,15 @@ case "$DO_HTTPS" in [Ss]*)
             || echo "SSL_CERT=$SSL_DIR/cert.pem" >> "$ENV_FILE"
         grep -q "^SSL_KEY="  "$ENV_FILE" 2>/dev/null \
             || echo "SSL_KEY=$SSL_DIR/key.pem"   >> "$ENV_FILE"
-        ok "certificado ECDSA P-256 generado en $SSL_DIR (válido $CERT_DAYS días)"
+        ok "certificado autofirmado generado en $SSL_DIR"
     else
         info "certificado ya existe — no se regenera"
     fi
 
-    # MED-07: cron de aviso de expiración — avisa 30 días antes por log
-    # La GUI lee /api/ssl/status para mostrar el estado y botón de renovación
+    # Script de aviso de expiración
     CERT_CHECK_SCRIPT="$INSTALL_DIR/scripts/check_cert_expiry.sh"
     cat > "$CERT_CHECK_SCRIPT" << 'CERT_EOF'
 #!/bin/bash
-# Comprueba la expiración del certificado TLS y avisa si faltan <=30 días.
-# Ejecutado diariamente por cron. La GUI lee /api/ssl/status para el mismo dato.
 CERT="INSTALL_DIR_PLACEHOLDER/config/ssl/cert.pem"
 LOG="INSTALL_DIR_PLACEHOLDER/logs/cert_expiry.log"
 [ ! -f "$CERT" ] && exit 0
@@ -240,16 +334,15 @@ NOW_EPOCH=$(date +%s)
 DAYS_LEFT=$(( (EXPIRY_EPOCH - NOW_EPOCH) / 86400 ))
 echo "$(date '+%Y-%m-%d %H:%M') — Certificado expira en $DAYS_LEFT días ($EXPIRY)" >> "$LOG"
 if [ "$DAYS_LEFT" -le 30 ]; then
-    echo "$(date '+%Y-%m-%d %H:%M') — AVISO: el certificado expira en $DAYS_LEFT días. Renuévalo desde la GUI." >> "$LOG"
+    echo "$(date '+%Y-%m-%d %H:%M') — AVISO: el certificado expira en $DAYS_LEFT días." >> "$LOG"
 fi
 CERT_EOF
-    # Sustituir placeholder por ruta real
     sed -i "s|INSTALL_DIR_PLACEHOLDER|$INSTALL_DIR|g" "$CERT_CHECK_SCRIPT"
     chmod +x "$CERT_CHECK_SCRIPT"
-    ok "script de aviso de expiración creado en scripts/check_cert_expiry.sh"
+    ok "script de expiración de certificado creado"
 ;; esac
 
-# Base de datos inicial — delegamos en auth.py que tiene el esquema completo
+# Base de datos inicial
 VENV_DIR="$INSTALL_DIR/venv"
 "$VENV_DIR/bin/python3" - <<PYEOF_DB
 import sys, os
@@ -276,39 +369,49 @@ ok "configuración completada"
 # ─────────────────────────────────────────────────────────────
 step "6/6" "Configurando servicios"
 
-# El usuario de servicio necesita acceso de escritura al directorio de instalación
-# (logs, results, data, models). Los scripts bash quedan en root:root por CRIT-03.
+# Dar propiedad del directorio al usuario de servicio
 chown -R "$SVC_USER":"$SVC_USER" "$INSTALL_DIR"
-# Restaurar propiedad root en scripts bash (CRIT-03)
-chown root:root "$INSTALL_DIR/scripts/retrain.sh" \
-                "$INSTALL_DIR/scripts/backup.sh" \
-                "$INSTALL_DIR/download_dataset.sh" 2>/dev/null || true
-ok "permisos de directorio configurados ($SVC_USER)"
 
-# Sudoers: el usuario de servicio necesita reiniciar el servicio y ejecutar
-# los scripts bash de root sin contraseña (updater y CRIT-03)
-SUDOERS_FILE="/etc/sudoers.d/email-detector"
-cat > "$SUDOERS_FILE" << SUDOERS_EOF
-# Email Malware Detector — permisos sin contraseña para el usuario de servicio
-$SVC_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart email-detector, /bin/systemctl start email-detector, /bin/systemctl stop email-detector, /bin/systemctl reload email-detector
-$SVC_USER ALL=(root) NOPASSWD: $INSTALL_DIR/download_dataset.sh, $INSTALL_DIR/scripts/retrain.sh
-SUDOERS_EOF
-chmod 440 "$SUDOERS_FILE"
-ok "sudoers configurado ($SUDOERS_FILE)"
+# Restaurar root:root en scripts que pasan por _validate_script_path
+# (chown -R los habría pisado)
+chown root:root \
+    "$INSTALL_DIR/scripts/retrain.sh"    \
+    "$INSTALL_DIR/scripts/train_model.py"
+[ -f "$INSTALL_DIR/download_dataset.sh" ] && \
+    chown root:root "$INSTALL_DIR/download_dataset.sh" || true
+ok "permisos de directorio configurados"
 
 PYTHON_BIN="$INSTALL_DIR/venv/bin/python"
 GUNICORN="$INSTALL_DIR/venv/bin/gunicorn"
 
 # systemd
 case "$INSTALL_SVC" in [Ss]*)
-    PROTO="http"
-    case "$DO_HTTPS" in [Ss]*) PROTO="https";; esac
+    # HTTPS obligatorio — siempre activado
+    PROTO="https"
+    SSL_ARGS="--certfile=$INSTALL_DIR/config/ssl/cert.pem --keyfile=$INSTALL_DIR/config/ssl/key.pem"
 
-    # Construir ExecStart con o sin SSL
-    SSL_ARGS=""
-    case "$DO_HTTPS" in [Ss]*)
-        SSL_ARGS="--certfile=$INSTALL_DIR/config/ssl/cert.pem --keyfile=$INSTALL_DIR/config/ssl/key.pem"
-    ;; esac
+    # ── Servicio redirector HTTP(80)→HTTPS ───────────────────────────────────
+    cat > /etc/systemd/system/email-detector-redirect.service << REDIRECT_EOF
+[Unit]
+Description=Email Malware Detector HTTP to HTTPS redirect
+After=network.target
+Wants=email-detector.service
+
+[Service]
+Type=simple
+User=root
+Environment=HTTP_PORT=80
+Environment=HTTPS_PORT=$WEB_PORT
+ExecStart=$INSTALL_DIR/venv/bin/python3 $INSTALL_DIR/scripts/http_redirect.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+REDIRECT_EOF
+    systemctl enable email-detector-redirect
+    ok "redirector HTTP→HTTPS configurado (puerto 80 → $WEB_PORT)"
+    # ──────────────────────────────────────────────────────────────────────
 
     cat > /etc/systemd/system/email-detector.service << EOF
 [Unit]
@@ -320,6 +423,8 @@ Type=simple
 User=$SVC_USER
 WorkingDirectory=$INSTALL_DIR
 EnvironmentFile=$INSTALL_DIR/config/.env
+Environment=MPLCONFIGDIR=$INSTALL_DIR/tmp/matplotlib
+Environment=HOME=$INSTALL_DIR
 ExecStart=$GUNICORN --bind 0.0.0.0:$WEB_PORT --workers 2 --timeout 300 --preload $SSL_ARGS web.app:app
 Restart=always
 RestartSec=5
@@ -328,7 +433,29 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
     systemctl daemon-reload
+    # Reglas sudo para el usuario de servicio:
+    #   - systemctl restart/start/stop email-detector (updater y svc_restart)
+    #   - freshclam (actualización de firmas ClamAV desde la UI)
+    SUDOERS_FILE="/etc/sudoers.d/email-detector"
+    # Resolver ruta real de systemctl (puede ser /bin o /usr/bin según distro)
+    SYSTEMCTL_BIN="$(command -v systemctl)"
+    FRESHCLAM_BIN="$(command -v freshclam || echo /usr/bin/freshclam)"
+    cat > "$SUDOERS_FILE" << SUDOEOF
+# Email Malware Detector — permisos sudo mínimos
+$SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN restart email-detector
+$SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN start email-detector
+$SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN stop email-detector
+$SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN stop clamav-freshclam
+$SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN start clamav-freshclam
+$SVC_USER ALL=(root) NOPASSWD: $FRESHCLAM_BIN --quiet
+$SVC_USER ALL=(root) NOPASSWD: $FRESHCLAM_BIN --quiet --log=/dev/null
+SUDOEOF
+    chmod 440 "$SUDOERS_FILE"
+    visudo -cf "$SUDOERS_FILE" && ok "reglas sudo configuradas ($SUDOERS_FILE)" || warn "error en sudoers — revisa $SUDOERS_FILE"
+
     systemctl enable email-detector
+    systemctl daemon-reload
+    systemctl restart email-detector-redirect 2>/dev/null || systemctl start email-detector-redirect || true
     svc_restart
     ok "servicio systemd configurado"
 ;; esac
@@ -340,34 +467,20 @@ case "$INSTALL_CRON" in [Ss]*)
      echo "0 2  * * * $INSTALL_DIR/scripts/backup.sh >> $INSTALL_DIR/logs/backup.log 2>&1"
      echo "*/5 * * * * $PYTHON_BIN $INSTALL_DIR/scripts/auto_scan.py >> $INSTALL_DIR/logs/auto_scan.log 2>&1"
      echo "0 9  * * * $PYTHON_BIN $INSTALL_DIR/scripts/update_clanker_rules.py >> $INSTALL_DIR/logs/clanker_update.log 2>&1"
-     echo "0 8  * * * $INSTALL_DIR/scripts/check_cert_expiry.sh >> $INSTALL_DIR/logs/cert_expiry.log 2>&1"
+     [ -f "$INSTALL_DIR/scripts/check_cert_expiry.sh" ] && \
+         echo "0 8  * * * $INSTALL_DIR/scripts/check_cert_expiry.sh >> $INSTALL_DIR/logs/cert_expiry.log 2>&1" || true
     ) | crontab -
     touch "$INSTALL_DIR/logs/backup.log" \
           "$INSTALL_DIR/logs/auto_scan.log" \
-          "$INSTALL_DIR/logs/clanker_update.log" \
-          "$INSTALL_DIR/logs/cert_expiry.log" 2>/dev/null || true
+          "$INSTALL_DIR/logs/clanker_update.log" 2>/dev/null || true
     ok "cron jobs configurados"
-
-    # HIGH-06: logrotate — evita que los logs de cron llenen el disco.
-    # Rotación diaria, 14 días de historial comprimido.
-    LOGROTATE_CONF="$REPO_DIR/email-detector-logrotate"
-    if [ -f "$LOGROTATE_CONF" ]; then
-        # Sustituir la ruta de instalación en la plantilla y copiar al sistema
-        sed "s|INSTALL_DIR|$INSTALL_DIR|g" "$LOGROTATE_CONF" \
-            > /etc/logrotate.d/email-detector
-        chmod 644 /etc/logrotate.d/email-detector
-        ok "logrotate configurado (/etc/logrotate.d/email-detector)"
-    else
-        warn "No se encontró email-detector-logrotate — configura logrotate manualmente"
-    fi
 ;; esac
 
 # ─────────────────────────────────────────────────────────────
 #  RESUMEN FINAL
 # ─────────────────────────────────────────────────────────────
 IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "TU_IP")
-PROTO="http"
-case "$DO_HTTPS" in [Ss]*) PROTO="https";; esac
+PROTO="https"
 
 printf "${B}${G}"
 echo ""
@@ -376,7 +489,8 @@ echo "  ║         Instalación completada ✓                    ║"
 echo "  ╚══════════════════════════════════════════════════════╝"
 printf "${N}"
 echo ""
-echo "  Acceso      : $PROTO://$IP:$WEB_PORT"
+echo "  Acceso HTTPS: $PROTO://$IP:$WEB_PORT"
+  echo "  Acceso HTTP : http://$IP  (redirige automáticamente a HTTPS)"
 echo "  Usuario     : admin"
 echo "  Contraseña  : admin1234"
 echo ""
@@ -387,8 +501,15 @@ echo "    systemctl status email-detector"
 echo "    journalctl -u email-detector -f"
 echo "    cd $INSTALL_DIR && source venv/bin/activate"
 echo ""
-case "$DO_HTTPS" in [Ss]*)
-    printf "  ${Y}HTTPS con cert autofirmado: acepta la excepción en tu navegador.${N}\n"
-    printf "  ${Y}Para Let's Encrypt: sustituye config/ssl/cert.pem y config/ssl/key.pem${N}\n"
-    echo ""
-;; esac
+echo "  Servicios del sistema:"
+echo "    systemctl status email-detector          # Aplicación principal"
+echo "    systemctl status email-detector-redirect # Redirector HTTP→HTTPS"
+echo "    systemctl status clamav-daemon           # Escáner de adjuntos"
+echo "    systemctl status clamav-freshclam        # Actualizador de firmas"
+echo ""
+printf "  ${Y}Si algo no funciona tras la instalación:${N}\n"
+printf "  ${Y}  sudo systemctl restart email-detector clamav-daemon clamav-freshclam${N}\n"
+echo ""
+printf "  ${Y}HTTPS con cert autofirmado: acepta la excepción en tu navegador.${N}\n"
+printf "  ${Y}Para Let's Encrypt: sustituye config/ssl/cert.pem y config/ssl/key.pem${N}\n"
+echo ""

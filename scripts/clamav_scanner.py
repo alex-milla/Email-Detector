@@ -1,7 +1,37 @@
 """clamav_scanner.py — Wrapper ClamAV para Email Malware Detector."""
 import os, time, subprocess, logging
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Optional
+
+def _local_now() -> datetime:
+    """Hora local del sistema, con zona horaria, sin dependencias externas."""
+    try:
+        from zoneinfo import ZoneInfo
+        import subprocess as _sp
+        # Leer TZ del sistema (timedatectl o /etc/timezone)
+        tz_name = None
+        try:
+            r = _sp.run(["timedatectl","show","-p","Timezone","--value"],
+                        capture_output=True, text=True, timeout=3)
+            tz_name = r.stdout.strip() or None
+        except Exception:
+            pass
+        if not tz_name:
+            try:
+                with open("/etc/timezone") as _f:
+                    tz_name = _f.read().strip() or None
+            except Exception:
+                pass
+        if tz_name:
+            return datetime.now(ZoneInfo(tz_name))
+    except Exception:
+        pass
+    # Fallback: offset UTC del sistema
+    offset = -time.timezone if time.daylight == 0 else -time.altzone
+    return datetime.now(timezone(timedelta(seconds=offset)))
+
+def _fmt(dt: datetime) -> str:
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 logger = logging.getLogger(__name__)
 CLAMD_SOCKET  = "/var/run/clamav/clamd.ctl"
@@ -33,13 +63,13 @@ def get_db_info():
     info = {"version": get_version(), "updated_at": None, "signatures": None}
     for p in ["/var/lib/clamav/daily.cld", "/var/lib/clamav/daily.cvd"]:
         if os.path.exists(p):
-            info["updated_at"] = datetime.fromtimestamp(os.path.getmtime(p)).strftime("%Y-%m-%d %H:%M:%S")
+            info["updated_at"] = _fmt(_local_now().fromtimestamp(os.path.getmtime(p), tz=_local_now().tzinfo))
             break
     return info
 
 def scan_file(filepath):
     result = {"clean": False, "infected": False, "threat": None, "error": None,
-              "engine": get_version(), "scanned_at": datetime.now().isoformat()}
+              "engine": get_version(), "scanned_at": _local_now().isoformat()}
     if not os.path.isfile(filepath):
         result["error"] = f"Archivo no encontrado: {filepath}"; return result
     fsize = os.path.getsize(filepath)
@@ -77,7 +107,7 @@ def scan_file(filepath):
 def scan_bytes(data, filename="stream"):
     import tempfile
     result = {"clean": False, "infected": False, "threat": None, "error": None,
-              "engine": get_version(), "scanned_at": datetime.now().isoformat(), "filename": filename}
+              "engine": get_version(), "scanned_at": _local_now().isoformat(), "filename": filename}
     if not data: result["clean"] = True; return result
     with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{filename}") as tmp:
         tmp.write(data); tmp_path = tmp.name
@@ -110,19 +140,27 @@ def scan_email_attachments(email_path):
             results.append(scan_bytes(payload, filename))
         except Exception as e:
             results.append({"filename":filename,"error":str(e),"clean":False,"infected":False,
-                            "threat":None,"scanned_at":datetime.now().isoformat()})
+                            "threat":None,"scanned_at":_local_now().isoformat()})
     return results
 
 def update_signatures():
-    subprocess.run(["systemctl","stop","clamav-freshclam"], capture_output=True)
-    time.sleep(1)
+    # Usamos --no-warnings y redirigimos el log a /dev/null para evitar el conflicto
+    # de lock con el daemon clamav-freshclam que también escribe en freshclam.log.
+    # freshclam acepta --log=/dev/null para suprimir el fichero de log completamente.
     try:
-        proc = subprocess.run(["freshclam","--quiet"], capture_output=True, text=True, timeout=300)
+        proc = subprocess.run(
+            ["sudo", "-n", "freshclam", "--quiet", "--log=/dev/null"],
+            capture_output=True, text=True, timeout=300
+        )
+        output = (proc.stdout or proc.stderr or "Sin salida").strip()
+        # Filtrar el aviso de lock del log si aparece en stderr — no es un error real
+        output = "\n".join(
+            l for l in output.splitlines()
+            if "lock" not in l.lower() and "log file" not in l.lower()
+        ).strip() or "Actualizado correctamente"
         result = {"success": proc.returncode == 0,
-                  "output": (proc.stdout or proc.stderr or "Sin salida").strip(),
-                  "updated_at": datetime.now().isoformat()}
+                  "output": output,
+                  "updated_at": _local_now().isoformat()}
     except subprocess.TimeoutExpired: result = {"success": False, "output": "Timeout"}
     except FileNotFoundError:         result = {"success": False, "output": "freshclam no encontrado"}
-    finally:
-        subprocess.run(["systemctl","start","clamav-freshclam"], capture_output=True)
     return result

@@ -5,11 +5,11 @@
     <title>Error — Email Malware Detector</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Segoe UI',system-ui,sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; display:flex; align-items:center; justify-content:center; }
+        body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg-body); color:var(--text-primary); min-height:100vh; display:flex; align-items:center; justify-content:center; }
         .card { text-align:center; padding:40px; }
-        h1 { font-size:4em; color:#ef4444; }
-        p  { color:#94a3b8; margin:16px 0 24px; }
-        a  { color:#3b82f6; text-decoration:none; }
+        h1 { font-size:4em; color:var(--danger); }
+        p  { color:var(--text-muted); margin:16px 0 24px; }
+        a  { color:var(--accent); text-decoration:none; }
     </style>
 </head>
 <body>
@@ -19,5 +19,6 @@
     <p>No tienes permisos para acceder a esta sección.</p>
     <a href="/">← Volver al Dashboard</a>
 </div>
+<script src="/static/theme.js"></script>
 </body>
 </html>

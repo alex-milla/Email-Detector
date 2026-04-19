@@ -6,26 +6,26 @@
     <title>Usuarios — Email Malware Detector</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Segoe UI',system-ui,sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; }
+        body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg-body); color:var(--text-primary); min-height:100vh; }
         .container { max-width:1200px; margin:0 auto; padding:20px; }
-        nav { background:#1e293b; border-bottom:2px solid #3b82f6; }
+        nav { background:var(--bg-card); border-bottom:2px solid var(--accent); }
         nav .nav-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; }
-        nav .nav-brand { padding:16px 24px; font-size:1.1em; font-weight:700; border-right:1px solid #334155; }
-        nav .nav-brand span { color:#3b82f6; }
-        nav a.nav-link { padding:18px 22px; color:#94a3b8; text-decoration:none; font-weight:500; transition:all 0.2s; border-bottom:3px solid transparent; }
-        nav a.nav-link:hover { color:#e2e8f0; background:rgba(59,130,246,0.08); }
-        nav a.nav-link.active { color:#3b82f6; border-bottom-color:#3b82f6; }
+        nav .nav-brand { padding:16px 24px; font-size:1.1em; font-weight:700; border-right:1px solid var(--border); }
+        nav .nav-brand span { color:var(--accent); }
+        nav a.nav-link { padding:18px 22px; color:var(--text-muted); text-decoration:none; font-weight:500; transition:all 0.2s; border-bottom:3px solid transparent; }
+        nav a.nav-link:hover { color:var(--text-primary); background:var(--bg-hover); }
+        nav a.nav-link.active { color:var(--accent); border-bottom-color:var(--accent); }
         nav .nav-right { margin-left:auto; padding:0 20px; display:flex; align-items:center; gap:12px; }
-        nav .nav-user { color:#64748b; font-size:0.9em; }
-        nav a.nav-logout { color:#ef4444; text-decoration:none; font-size:0.9em; }
+        nav .nav-user { color:var(--text-faint); font-size:0.9em; }
+        nav a.nav-logout { color:var(--danger); text-decoration:none; font-size:0.9em; }
 
-        .section { background:#1e293b; border-radius:12px; padding:25px; margin-bottom:20px; margin-top:30px; }
+        .section { background:var(--bg-card); border-radius:12px; padding:25px; margin-bottom:20px; margin-top:30px; }
         .section h2 { font-size:1.3em; margin-bottom:6px; }
-        .section .subtitle { color:#64748b; font-size:0.9em; margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid #334155; }
+        .section .subtitle { color:var(--text-faint); font-size:0.9em; margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid var(--border); }
 
         table { width:100%; border-collapse:collapse; }
-        th { text-align:left; padding:10px 12px; color:#94a3b8; border-bottom:1px solid #334155; font-size:0.85em; text-transform:uppercase; letter-spacing:0.05em; }
-        td { padding:12px; border-bottom:1px solid #1e293b; }
+        th { text-align:left; padding:10px 12px; color:var(--text-muted); border-bottom:1px solid var(--border); font-size:0.85em; text-transform:uppercase; letter-spacing:0.05em; }
+        td { padding:12px; border-bottom:1px solid var(--bg-card); }
         tr:last-child td { border-bottom:none; }
 
         .badge { display:inline-block; padding:3px 10px; border-radius:12px; font-size:0.8em; font-weight:600; }
@@ -33,25 +33,25 @@
         .badge-user  { background:rgba(59,130,246,0.15); color:#60a5fa; }
 
         .btn { padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-size:0.9em; font-weight:600; transition:all 0.2s; }
-        .btn-primary { background:#3b82f6; color:white; }
-        .btn-primary:hover { background:#2563eb; }
-        .btn-danger  { background:transparent; color:#ef4444; border:1px solid #ef4444; }
-        .btn-danger:hover  { background:#ef4444; color:white; }
+        .btn-primary { background:var(--accent); color:white; }
+        .btn-primary:hover { background:var(--accent-hover); }
+        .btn-danger  { background:transparent; color:var(--danger); border:1px solid var(--danger); }
+        .btn-danger:hover  { background:var(--danger); color:white; }
         .btn-sm { padding:5px 12px; font-size:0.85em; }
 
         .form-row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:20px; }
         .form-group { display:flex; flex-direction:column; gap:6px; }
-        .form-group label { color:#94a3b8; font-size:0.85em; }
+        .form-group label { color:var(--text-muted); font-size:0.85em; }
         input[type=text], input[type=password], select {
-            background:#0f172a; color:#e2e8f0; border:1px solid #334155;
+            background:var(--bg-body); color:var(--text-primary); border:1px solid var(--border);
             border-radius:6px; padding:9px 12px; font-size:0.95em;
         }
-        input:focus, select:focus { outline:none; border-color:#3b82f6; }
+        input:focus, select:focus { outline:none; border-color:var(--accent); }
 
         .toast { position:fixed; bottom:24px; right:24px; padding:14px 20px; border-radius:10px; font-weight:600; font-size:0.95em; opacity:0; transition:opacity 0.3s; z-index:999; }
         .toast.show { opacity:1; }
-        .toast.success { background:#22c55e; color:white; }
-        .toast.error   { background:#ef4444; color:white; }
+        .toast.success { background:var(--success); color:white; }
+        .toast.error   { background:var(--danger); color:white; }
     </style>
 </head>
 <body>
@@ -78,7 +78,7 @@
         <p class="subtitle">Crea, elimina y gestiona los usuarios del sistema</p>
 
         <!-- Crear usuario -->
-        <h3 style="margin-bottom:12px; color:#94a3b8; font-size:0.95em; text-transform:uppercase; letter-spacing:0.05em">Nuevo usuario</h3>
+        <h3 style="margin-bottom:12px; color:var(--text-muted); font-size:0.95em; text-transform:uppercase; letter-spacing:0.05em">Nuevo usuario</h3>
         <div class="form-row">
             <div class="form-group">
                 <label>Usuario</label>
@@ -113,11 +113,11 @@
             <tbody id="usersTable">
                 {% for u in users %}
                 <tr id="row-{{ u.id }}">
-                    <td style="color:#475569">{{ u.id }}</td>
+                    <td style="color:var(--text-faint)">{{ u.id }}</td>
                     <td><strong>{{ u.username }}</strong></td>
                     <td><span class="badge badge-{{ u.role }}">{{ u.role }}</span></td>
-                    <td style="color:#64748b; font-size:0.9em">{{ u.created_at[:16] }}</td>
-                    <td style="color:#64748b; font-size:0.9em">{{ u.last_login[:16] if u.last_login else '—' }}</td>
+                    <td style="color:var(--text-faint); font-size:0.9em">{{ u.created_at[:16] }}</td>
+                    <td style="color:var(--text-faint); font-size:0.9em">{{ u.last_login[:16] if u.last_login else '—' }}</td>
                     <td style="display:flex; gap:8px">
                         <button class="btn btn-sm btn-primary" onclick="changePassword({{ u.id }}, '{{ u.username }}')">🔑 Contraseña</button>
                         {% if u.id != user.id %}
@@ -170,5 +170,6 @@
         else showToast(data.error, 'error');
     }
 </script>
+<script src="/static/theme.js"></script>
 </body>
 </html>
