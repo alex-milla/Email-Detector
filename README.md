@@ -14,18 +14,28 @@ Herramienta de detección de correos maliciosos mediante modelos de aprendizaje 
 - Soporte opcional de **GPU** (CUDA) para el modelo Anti-Clanker
 - Interfaz web con **HTTPS** configurable
 
-## Instalación
+## Despliegue rápido
+
+Un solo script para cualquier Linux pelado: VM, LXC, VPS, bare-metal...
 
 ```bash
 git clone https://github.com/alex-milla/Email-Detector.git
 cd Email-Detector
-chmod +x install.sh
-./install.sh
+chmod +x deploy.sh
+./deploy.sh
 ```
 
-El instalador pregunta el directorio destino (por defecto `/opt/email-detector`), el puerto web, y si instalar ClamAV y HTTPS.
+El script detecta automáticamente si tienes **systemd** y configura el servicio; si no (LXC sin privilegios, WSL...), genera scripts `run.sh` / `stop.sh` para arranque manual.
 
-Al finalizar, accede a `http://TU_IP:5000` con las credenciales iniciales **`admin` / `admin1234`** (cámbialas en `/users`).
+### Requisitos
+
+- Linux con Python 3.9+
+- 2 GB RAM, 10 GB disco
+- Puerto TCP libre (por defecto 5000)
+
+### Al finalizar
+
+Accede a `http://TU_IP:5000` con el usuario **`admin`** y la contraseña que el script genera automáticamente (se muestra en pantalla y se guarda en `config/first-login.txt`).
 
 > **Cambia la contraseña** en `/users` antes de usar en producción.
 
@@ -33,7 +43,8 @@ Al finalizar, accede a `http://TU_IP:5000` con las credenciales iniciales **`adm
 
 ```
 email-detector/
-├── install.sh              # Instalador (no contiene código de la app)
+├── deploy.sh               # Despliegue universal (systemd / standalone)
+├── install.sh              # Instalador legacy (Debian/Ubuntu con systemd)
 ├── requirements.txt        # Dependencias Python
 ├── web/
 │   ├── app.py              # Aplicación Flask principal
@@ -69,7 +80,7 @@ Variables principales:
 
 | Variable | Descripción |
 |---|---|
-| `SECRET_KEY` | Clave secreta Flask (generada automáticamente en instalación) |
+| `SECRET_KEY` | Clave secreta Flask (generada automáticamente en despliegue) |
 | `IMAP_SERVER` / `IMAP_USER` / `IMAP_PASSWORD` | Conexión IMAP genérica |
 | `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` | OAuth2 Gmail |
 | `MS365_CLIENT_ID` / `MS365_TENANT_ID` | Microsoft 365 |
@@ -82,13 +93,12 @@ Variables principales:
 Para actualizar el código sin reinstalar:
 
 ```bash
-git pull
-cp web/*.py      /root/email-detector/web/
-cp web/templates/*.html /root/email-detector/web/templates/
-cp scripts/*.py  /root/email-detector/scripts/
-cp config/clanker_rules.yaml /root/email-detector/config/
-systemctl restart email-detector
+cd /opt/email-detector   # o ~/email-detector en standalone
+git pull origin main
+./deploy.sh
 ```
+
+`deploy.sh` es **idempotente**: no sobrescribe `.env`, `users.db`, modelos ni datos etiquetados.
 
 ## Actualización de reglas Anti-Clanker
 
@@ -102,6 +112,8 @@ El formato de las reglas está documentado en `CLANKER_RULES_FORMAT.md` (generad
 
 ## Comandos útiles
 
+### Con systemd
+
 ```bash
 # Estado del servicio
 systemctl status email-detector
@@ -110,11 +122,39 @@ systemctl status email-detector
 journalctl -u email-detector -f
 
 # Entorno virtual
-cd /root/email-detector && source venv/bin/activate
+cd /opt/email-detector && source venv/bin/activate
+```
 
-# Actualizar reglas Anti-Clanker manualmente
+### Modo standalone (sin systemd)
+
+```bash
+# Iniciar
+cd ~/email-detector
+nohup ./run.sh > logs/server.log 2>&1 &
+
+# Detener
+./stop.sh
+
+# Logs
+tail -f logs/access.log logs/error.log
+```
+
+### Actualizar reglas Anti-Clanker manualmente
+
+```bash
+cd /opt/email-detector   # o tu directorio de instalación
+source venv/bin/activate
 python scripts/update_clanker_rules.py --force
 ```
+
+## Troubleshooting
+
+Consulta [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) para problemas comunes:
+- LXC sin privilegios
+- Dependencias que fallan
+- Puerto ocupado
+- xgboost/lightgbm/catboost no compilan
+- ClamAV no responde
 
 ## Licencia
 

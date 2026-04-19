@@ -4,7 +4,7 @@ predict.py — Ensemble de todos los modelos habilitados, ponderado por AUC.
 Lee DISABLED_MODELS de config/.env para excluir modelos.
 """
 
-import sys, os, json, argparse
+import sys, os, json, argparse, hashlib
 import numpy as np, joblib
 from datetime import datetime
 
@@ -48,10 +48,28 @@ def get_disabled_models():
     return disabled
 
 
+def _compute_checksum(filepath):
+    h = hashlib.sha256()
+    with open(filepath, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _load_checksums():
+    checksum_path = os.path.join(PROJECT_DIR, "models", "model_checksums.json")
+    if os.path.exists(checksum_path):
+        with open(checksum_path) as f:
+            return json.load(f)
+    return {}
+
+
 def load_all_models(metadata):
     available = metadata.get("models_available", [])
     disabled  = get_disabled_models()
     loaded    = {}
+    checksums = _load_checksums()
+
     if os.path.isdir(ALL_MODELS_DIR):
         for name in available:
             if name in disabled:
@@ -60,6 +78,13 @@ def load_all_models(metadata):
             path = os.path.join(ALL_MODELS_DIR, f"{name}.joblib")
             if os.path.exists(path):
                 try:
+                    rel = os.path.relpath(path, os.path.join(PROJECT_DIR, "models"))
+                    expected = checksums.get(rel)
+                    if expected:
+                        actual = _compute_checksum(path)
+                        if actual != expected:
+                            print(f"   WARN: {name}: checksum inválido (posible manipulación)")
+                            continue
                     loaded[name] = joblib.load(path)
                 except Exception as e:
                     print(f"   WARN: {name}: {e}")
@@ -95,6 +120,26 @@ def ensemble_predict(models_dict, features, metadata):
     return weighted, individual
 
 
+def _clanker_predict(html_raw: str, weight: float = 0.15) -> dict:
+    """Genera el voto del Modelo 10 Anti-Clanker para el ensemble."""
+    if not _CLANKER_AVAILABLE or not html_raw:
+        return {"model": "anti_clanker", "score": 0.0, "available": False}
+    try:
+        feats = extract_clanker_features(html_raw)
+        score = feats.get("clanker_weighted_score", 0.0)
+        return {
+            "model": "anti_clanker",
+            "score": score,
+            "available": True,
+            "features": feats,
+            "weight": weight,
+        }
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Anti-Clanker predict error: %s", e)
+        return {"model": "anti_clanker", "score": 0.0, "available": False}
+
+
 def predict_email(eml_path, use_virustotal=True):
     print(f"\n Analizando: {os.path.basename(eml_path)}")
     features, meta_eml = extract_features_from_eml(eml_path)
@@ -116,6 +161,16 @@ def predict_email(eml_path, use_virustotal=True):
     proba, individual = ensemble_predict(models_dict, features, model_meta)
     ml_pred = "MALICIOSO" if proba[1] >= threshold else "BENIGNO"
 
+    # ── Modelo 10: Anti-Clanker ─────────────────────────────────────────────
+    clanker_result = _clanker_predict(meta_eml.get("body_html", ""))
+    clanker_boost = 0.0
+    if clanker_result.get("available"):
+        score = clanker_result.get("score", 0.0)
+        # Un score alto de clanker aumenta el riesgo (artefactos LLM detectados)
+        clanker_boost = score * 100 * clanker_result.get("weight", 0.15)
+        print(f"   Anti-Clanker: score={score:.3f} boost={clanker_boost:.1f}%")
+    # ─────────────────────────────────────────────────────────────────────────
+
     vt_results = None
     if use_virustotal:
         vt_results = check_email_artifacts(
@@ -131,6 +186,10 @@ def predict_email(eml_path, use_virustotal=True):
     risk  = proba[1] * 100
     if vt_alert:
         risk = max(risk, 90)
+    # Aplicar boost de Anti-Clanker
+    risk = min(risk + clanker_boost, 100.0)
+    if clanker_result.get("available") and clanker_result.get("score", 0) > 0.5:
+        final = "MALICIOSO"
 
     if   risk >= 80: level = "CRITICO"
     elif risk >= 60: level = "ALTO"
@@ -155,6 +214,7 @@ def predict_email(eml_path, use_virustotal=True):
         "ensemble_detail":   individual,
         "models_count":      n_models,
         "disabled_models":   list(get_disabled_models()),
+        "anti_clanker":      clanker_result,
         "entropy_analysis": {
             "body_entropy":                   features.get("body_entropy", 0),
             "subject_entropy":                features.get("subject_entropy", 0),
@@ -170,28 +230,6 @@ def predict_email(eml_path, use_virustotal=True):
     }
     print(f"   Resultado: {final}  Riesgo: {level} ({risk:.1f}%)")
     return result
-
-
-
-
-def _clanker_predict(html_raw: str, weight: float = 0.1) -> dict:
-    """Genera el voto del Modelo 10 Anti-Clanker para el ensemble."""
-    if not _CLANKER_AVAILABLE or not html_raw:
-        return {"model": "anti_clanker", "score": 0.0, "available": False}
-    try:
-        feats = extract_clanker_features(html_raw)
-        score = feats.get("clanker_weighted_score", 0.0)
-        return {
-            "model": "anti_clanker",
-            "score": score,
-            "available": True,
-            "features": feats,
-            "weight": weight,
-        }
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning("Anti-Clanker predict error: %s", e)
-        return {"model": "anti_clanker", "score": 0.0, "available": False}
 
 
 if __name__ == "__main__":

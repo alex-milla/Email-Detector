@@ -244,7 +244,7 @@ def extract_features_from_eml(eml_path):
         "attachment_content_entropy_max":  attachment_content_entropy_max,
     }
 
-    # Metadatos (no van al modelo, útiles para VirusTotal y GUI)
+    # Metadatos (no van al modelo, útiles para VirusTotal, Anti-Clanker y GUI)
     metadata = {
         "filename":          os.path.basename(eml_path),
         "subject":           subject,
@@ -253,6 +253,7 @@ def extract_features_from_eml(eml_path):
         "urls_found":        urls,
         "attachments":       attachments,
         "attachment_hashes": attachment_hashes,
+        "body_html":         body_html,
     }
 
     return features, metadata

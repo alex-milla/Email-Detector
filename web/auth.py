@@ -166,8 +166,14 @@ def init_db():
 
     # Crear admin por defecto si no existe ningún usuario
     if not conn.execute("SELECT 1 FROM users").fetchone():
-        create_user("admin", "admin1234", role="admin")
-        print("  ✓ Usuario admin creado (password: admin1234)")
+        import secrets
+        admin_password = secrets.token_urlsafe(16)
+        create_user("admin", admin_password, role="admin")
+        first_login_path = os.path.join(os.path.dirname(DB_PATH), "first-login.txt")
+        with open(first_login_path, "w") as f:
+            f.write(f"admin:{admin_password}\n")
+        print(f"  ✓ Usuario admin creado (password: {admin_password})")
+        print(f"  ✓ Credenciales guardadas en: {first_login_path}")
 
     conn.close()
 

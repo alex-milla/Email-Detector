@@ -43,7 +43,13 @@ from updater import check_for_updates, get_update_state, start_update
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "config", ".env"))
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "clave-temporal-cambiar-ahora")
+_secret_key = os.getenv("SECRET_KEY")
+if not _secret_key:
+    raise RuntimeError(
+        "SECRET_KEY no está configurado. "
+        "Define la variable de entorno SECRET_KEY en config/.env"
+    )
+app.secret_key = _secret_key
 CORS(app)
 
 # MED-10: rate limiting para prevenir fuerza bruta en el login.
