@@ -1,7 +1,7 @@
 {
-  "version": "1.2.16",
+  "version": "1.2.17",
   "release_date": "2026-04-19",
-  "changelog": "1.2.16 — Hotfix: corrección de NameError en arranque causado por referencia a PROJECT_DIR antes de su definición.",
+  "changelog": "1.2.17 — Validación pre-release automatizada (validate_release.py) y generador de releases seguro (bump_version.py). Previene errores de sintaxis, imports rotos y NameError en producción.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.16.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.17.zip"
 }
