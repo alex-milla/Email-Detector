@@ -160,6 +160,10 @@
             y los sustituye. Si el servicio no levanta correctamente, se restaura
             el backup de forma automática.
         </p>
+        <p id="standalone-notice" style="display:none; color:var(--warning,#f59e0b); font-size:0.85em; margin-top:10px;">
+            ⚠️ <strong>Modo standalone detectado.</strong> Tras la actualización deberás reiniciar manualmente
+            ejecutando <code>./stop.sh && ./run.sh</code> en el servidor.
+        </p>
     </div>
 </div>
 
@@ -329,6 +333,11 @@ async function pollStatus() {
         const resp = await fetch("/api/update/status");
         const st   = await resp.json();
 
+        // Mostrar aviso de standalone si aplica
+        if (st.has_systemd === false) {
+            document.getElementById("standalone-notice").style.display = "block";
+        }
+
         // Actualizar log
         if (st.log && st.log.length > 0) {
             appendLog(st.log);
@@ -341,9 +350,9 @@ async function pollStatus() {
             onUpdateFinished(st);
         }
     } catch (err) {
-        // Si el servidor no responde puede ser que se esté reiniciando
-        // Esperamos un poco más antes de cancelar
-        appendLog(["[...] Servidor reiniciándose, esperando..."]);
+        // Si el servidor no responde puede ser que se esté reiniciando (systemd)
+        // o simplemente no hay conectividad momentánea (standalone)
+        appendLog(["[...] Esperando respuesta del servidor..."]);
     }
 }
 
@@ -355,10 +364,18 @@ function onUpdateFinished(st) {
         setLogVisible("success");
         badge.innerHTML = "✅ Actualización aplicada";
         badge.className = "badge badge-ok";
-        banner.textContent = "✅ Actualización completada correctamente. La página se recargará en 5 segundos.";
-        banner.className   = "result-banner success visible";
-        showToast("Actualización aplicada correctamente.", "success");
-        setTimeout(() => location.reload(), 5000);
+
+        if (st.needs_restart) {
+            banner.innerHTML = "✅ Ficheros actualizados correctamente.<br><strong>Reinicio manual requerido:</strong> ejecuta <code>./stop.sh && ./run.sh</code> en el servidor y recarga esta página.";
+            banner.className = "result-banner success visible";
+            showToast("Ficheros actualizados. Reinicia manualmente el servidor.", "success");
+            renderActionButtons(true, false);
+        } else {
+            banner.textContent = "✅ Actualización completada correctamente. La página se recargará en 5 segundos.";
+            banner.className   = "result-banner success visible";
+            showToast("Actualización aplicada correctamente.", "success");
+            setTimeout(() => location.reload(), 5000);
+        }
     } else {
         setLogVisible("error");
         badge.innerHTML = "❌ Error en la actualización";

@@ -10,7 +10,7 @@ Responsabilidades:
   - Validar su contenido (lista blanca de rutas, sin path traversal)
   - Hacer backup de los ficheros afectados
   - Aplicar los nuevos ficheros
-  - Reiniciar el servicio systemd
+  - Reiniciar el servicio (systemd) o solicitar reinicio manual (standalone)
   - Rollback automático si el servicio no levanta
 """
 
@@ -41,14 +41,23 @@ SERVICE_NAME = "email-detector"
 UPDATE_STATE_FILE = os.path.join(_BASE_DIR, "results", "update_state.json")
 REQUEST_TIMEOUT = 15
 
+# Detectar si estamos en un entorno con systemd funcional
+_HAS_SYSTEMD = False
+try:
+    subprocess.run(
+        ["systemctl", "is-system-running"],
+        capture_output=True, timeout=5
+    )
+    _HAS_SYSTEMD = True
+except Exception:
+    pass
+
 # Archivos que pertenecen a root:root por diseño de seguridad (CRIT-03).
-# El updater no puede sobreescribirlos directamente (corre como email-detector).
-# Se validan en el ZIP pero se omiten al aplicar — requieren reinstalación manual
-# solo si hay cambios funcionales en esos scripts.
+# Solo aplican en modo systemd — en standalone no hay esta restricción.
 _ROOT_OWNED_FILES = {
     "scripts/retrain.sh",
     "scripts/train_model.py",
-}
+} if _HAS_SYSTEMD else set()
 
 # ── Caché del check de versión ─────────────────────────────────────────────────
 # Evita consultar GitHub en cada petición y elimina la condición de carrera
@@ -90,6 +99,7 @@ _update_state = {
     "started_at":  None,
     "ended_at":    None,
     "backup_path": None,
+    "needs_restart": False,
 }
 _update_lock = threading.Lock()
 
@@ -104,6 +114,8 @@ def get_update_state() -> dict:
             "started_at":  _update_state["started_at"],
             "ended_at":    _update_state["ended_at"],
             "backup_path": _update_state["backup_path"],
+            "needs_restart": _update_state.get("needs_restart", False),
+            "has_systemd": _HAS_SYSTEMD,
         }
 
 
@@ -236,8 +248,23 @@ def check_for_updates() -> dict:
 
 # ── Descarga ───────────────────────────────────────────────────────────────────
 
+def _is_trusted_zip_url(url: str) -> bool:
+    """Valida que la URL del ZIP pertenezca a nuestro repo en GitHub."""
+    if not url:
+        return False
+    url_lower = url.lower()
+    trusted_prefixes = (
+        "https://github.com/alex-milla/email-detector/",
+        "https://raw.githubusercontent.com/alex-milla/email-detector/",
+    )
+    return any(url_lower.startswith(p) for p in trusted_prefixes)
+
+
 def _download_zip(zip_url: str, dest_path: str) -> bool:
     _log(f"Descargando ZIP desde: {zip_url}")
+    if not _is_trusted_zip_url(zip_url):
+        _log("ERROR: La URL del ZIP no pertenece a GitHub de este proyecto. Abortando.")
+        return False
     try:
         resp = requests.get(zip_url, timeout=60, stream=True)
         resp.raise_for_status()
@@ -276,13 +303,29 @@ def _strip_zip_prefix(name: str) -> str:
     return name
 
 
+def _is_allowed_path(clean: str) -> bool:
+    """
+    Comprueba si una ruta limpia está en la lista blanca.
+    - Directorios: se permiten si empiezan por una entrada de ALLOWED_PATHS que termine en /
+    - Archivos: se permite solo coincidencia exacta con entradas que NO terminen en /
+    """
+    for allowed in ALLOWED_PATHS:
+        if allowed.endswith("/"):
+            if clean.startswith(allowed) or clean == allowed.rstrip("/"):
+                return True
+        else:
+            if clean == allowed:
+                return True
+    return False
+
+
 def _validate_zip(zip_path: str):
     """
     Valida el contenido del ZIP.
     - Comprueba que es un ZIP válido
     - Detecta path traversal (../)
     - Elimina prefijos de empaquetado de cualquier profundidad
-    - Filtra por lista blanca de rutas permitidas
+    - Filtra por lista blanca de rutas permitidas (estricta)
     Devuelve (ok: bool, files_to_apply: list of (zip_name, dest_relative))
     """
     _log("Validando contenido del ZIP...")
@@ -314,13 +357,8 @@ def _validate_zip(zip_path: str):
             if not clean:
                 continue
 
-            # Comprobar contra lista blanca
-            allowed = any(
-                clean == p or clean.startswith(p)
-                for p in ALLOWED_PATHS
-            )
-
-            if allowed:
+            # Comprobar contra lista blanca (estricta)
+            if _is_allowed_path(clean):
                 files_to_apply.append((name, clean))
                 _log(f"  OK: {clean}")
             else:
@@ -368,59 +406,77 @@ def _backup_files(files_to_apply: list) -> str:
 
 # ── Apply ──────────────────────────────────────────────────────────────────────
 
-def _apply_files(zip_path: str, files_to_apply: list) -> bool:
+def _apply_files(zip_path: str, files_to_apply: list) -> tuple:
+    """
+    Aplica los ficheros del ZIP.
+    Devuelve (success: bool, created_files: list) donde created_files son rutas
+    de ficheros nuevos que no existían antes (necesarios para rollback completo).
+    """
     _log("Aplicando ficheros...")
+    created_files = []
     try:
         with zipfile.ZipFile(zip_path, "r") as zf:
             for zip_name, dest_relative in files_to_apply:
 
-                # Archivos root:root — el proceso (email-detector) no puede
-                # sobreescribirlos. Se omiten con aviso; solo cambian en
-                # instalaciones manuales o si hay un cambio funcional relevante.
+                # Archivos root:root — el proceso no puede sobreescribirlos.
                 if dest_relative in _ROOT_OWNED_FILES:
                     _log(f"  OMITIDO (root:root, requiere reinstalación manual si cambió): {dest_relative}")
                     continue
 
                 dest_abs = os.path.join(_BASE_DIR, dest_relative)
+                existed_before = os.path.exists(dest_abs)
                 os.makedirs(os.path.dirname(dest_abs), exist_ok=True)
                 with zf.open(zip_name) as src_f, open(dest_abs, "wb") as dst_f:
                     shutil.copyfileobj(src_f, dst_f)
 
-                # Los scripts .sh deben ser ejecutables por root y legibles
-                # por el grupo, pero nunca escribibles por nadie más.
-                # open() crea archivos con 0o644 por defecto — sin ejecución.
-                # Sin este chmod, retrain.sh quedaría bloqueado por la
-                # validación de seguridad (CRIT-03) en cada actualización.
+                if not existed_before:
+                    created_files.append(dest_relative)
+
+                # Los scripts .sh deben ser ejecutables, pero no forzamos 750
+                # si no somos root (evita bloquear el script en standalone).
                 if dest_relative.endswith(".sh"):
-                    os.chmod(dest_abs, 0o750)  # rwxr-x--- (root:root)
-                    _log(f"  Aplicado: {dest_relative} [chmod 750]")
+                    if os.geteuid() == 0:
+                        os.chmod(dest_abs, 0o750)
+                        _log(f"  Aplicado: {dest_relative} [chmod 750]")
+                    else:
+                        os.chmod(dest_abs, 0o755)
+                        _log(f"  Aplicado: {dest_relative} [chmod 755]")
                 else:
                     _log(f"  Aplicado: {dest_relative}")
 
         _log("Todos los ficheros aplicados correctamente.")
-        return True
+        return True, created_files
     except Exception as e:
         _log(f"ERROR al aplicar ficheros: {e}")
-        return False
+        return False, []
 
 
 # ── Rollback ───────────────────────────────────────────────────────────────────
 
-def _rollback(backup_path: str):
+def _rollback(backup_path: str, created_files: list = None):
     _log(f"⚠️  Iniciando rollback...")
     try:
+        # 1. Restaurar archivos desde backup
         for root, _, files in os.walk(backup_path):
             for fname in files:
                 src      = os.path.join(root, fname)
                 relative = os.path.relpath(src, backup_path)
                 dest     = os.path.join(_BASE_DIR, relative)
-                # Igual que en apply: no tocar archivos root:root
                 if relative in _ROOT_OWNED_FILES:
                     _log(f"  OMITIDO en rollback (root:root): {relative}")
                     continue
                 os.makedirs(os.path.dirname(dest), exist_ok=True)
                 shutil.copy2(src, dest)
                 _log(f"  Restaurado: {relative}")
+
+        # 2. Eliminar archivos nuevos creados por el update
+        if created_files:
+            for rel in created_files:
+                abs_path = os.path.join(_BASE_DIR, rel)
+                if os.path.exists(abs_path):
+                    os.unlink(abs_path)
+                    _log(f"  Eliminado (nuevo en update): {rel}")
+
         _log("Rollback completado.")
     except Exception as e:
         _log(f"ERROR durante rollback: {e}")
@@ -429,6 +485,15 @@ def _rollback(backup_path: str):
 # ── Servicio ───────────────────────────────────────────────────────────────────
 
 def _restart_service() -> bool:
+    """
+    Reinicia el servicio si hay systemd; en standalone indica que se necesita
+    reinicio manual.
+    """
+    if not _HAS_SYSTEMD:
+        _log("Modo standalone detectado — reinicio manual requerido.")
+        _log("Ejecuta: ./stop.sh && ./run.sh   (o reinicia el contenedor/VM)")
+        return True  # No es un fallo, solo requiere acción del usuario
+
     _log(f"Reiniciando servicio '{SERVICE_NAME}'...")
     try:
         # Guardar estado en disco ANTES de reiniciar — el worker morirá con el SIGTERM
@@ -467,6 +532,23 @@ def _restart_service() -> bool:
         return False
 
 
+def _verify_service_health() -> bool:
+    """
+    Verifica que el servicio responde tras un reinicio systemd.
+    En standalone siempre devuelve True.
+    """
+    if not _HAS_SYSTEMD:
+        return True
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-active", SERVICE_NAME],
+            capture_output=True, text=True, timeout=10
+        )
+        return result.stdout.strip() == "active"
+    except Exception:
+        return False
+
+
 # ── Proceso principal ──────────────────────────────────────────────────────────
 
 def _run_update(zip_url: str):
@@ -477,11 +559,13 @@ def _run_update(zip_url: str):
     _set_state(
         running=True, success=None, log=[],
         started_at=datetime.now().isoformat(),
-        ended_at=None, backup_path=None
+        ended_at=None, backup_path=None,
+        needs_restart=False,
     )
 
     tmp_zip     = None
     backup_path = None
+    created_files = []
 
     try:
         # 1. Descargar
@@ -503,15 +587,14 @@ def _run_update(zip_url: str):
         _set_state(backup_path=backup_path)
 
         # 4. Aplicar
-        if not _apply_files(tmp_zip, files_to_apply):
+        apply_ok, created_files = _apply_files(tmp_zip, files_to_apply)
+        if not apply_ok:
             _log("Aplicación fallida — iniciando rollback...")
-            _rollback(backup_path)
+            _rollback(backup_path, created_files)
             _set_state(running=False, success=False, ended_at=datetime.now().isoformat())
             return
 
         # 4b. Instalar dependencias si el ZIP incluía requirements.txt
-        # Necesario para que nuevas librerías (ej: flask-limiter) estén disponibles
-        # antes de que gunicorn arranque con el código nuevo.
         req_file = os.path.join(_BASE_DIR, "requirements.txt")
         req_included = any(dest == "requirements.txt" for _, dest in files_to_apply)
         if req_included and os.path.isfile(req_file):
@@ -528,12 +611,16 @@ def _run_update(zip_url: str):
                 # No abortamos — puede que las dependencias críticas ya estuvieran instaladas
 
         # 5. Reiniciar servicio
-        if not _restart_service():
+        restart_ok = _restart_service()
+        if not restart_ok:
             _log("El servicio no levantó — iniciando rollback...")
-            _rollback(backup_path)
+            _rollback(backup_path, created_files)
             _restart_service()
             _set_state(running=False, success=False, ended_at=datetime.now().isoformat())
             return
+
+        if not _HAS_SYSTEMD:
+            _set_state(needs_restart=True)
 
         _log("✅ Actualización completada correctamente.")
         _set_state(running=False, success=True, ended_at=datetime.now().isoformat())
@@ -541,7 +628,7 @@ def _run_update(zip_url: str):
     except Exception as e:
         _log(f"ERROR crítico inesperado: {e}")
         if backup_path:
-            _rollback(backup_path)
+            _rollback(backup_path, created_files)
             _restart_service()
         _set_state(running=False, success=False, ended_at=datetime.now().isoformat())
     finally:
