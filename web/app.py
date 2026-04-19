@@ -18,7 +18,6 @@ from flask import (
     Flask, render_template, request, jsonify,
     redirect, url_for, session
 )
-from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
@@ -50,7 +49,33 @@ if not _secret_key:
         "Define la variable de entorno SECRET_KEY en config/.env"
     )
 app.secret_key = _secret_key
-CORS(app)
+
+# Cookies de sesión seguras
+_has_ssl = os.path.exists(os.path.join(PROJECT_DIR, "config", "ssl", "cert.pem"))
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=_has_ssl,
+)
+
+# Headers de seguridad HTTP
+@app.after_request
+def security_headers(response):
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if _has_ssl:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # CSP básico: permite inline styles/scripts que usa la app actualmente
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "connect-src 'self'; "
+        "font-src 'self';"
+    )
+    return response
 
 # MED-10: rate limiting para prevenir fuerza bruta en el login.
 limiter = Limiter(

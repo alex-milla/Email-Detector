@@ -71,6 +71,7 @@ def _migrate_schema(conn):
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
@@ -162,6 +163,11 @@ def init_db():
     """)
 
     _migrate_schema(conn)
+
+    # Índices para rendimiento en tablas grandes
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_analysis_history_user_id ON analysis_history(user_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_feedback_analysis_id ON feedback(analysis_id)")
+
     conn.commit()
 
     # Crear admin por defecto si no existe ningún usuario
@@ -304,21 +310,24 @@ def save_mail_config(user_id, data: dict):
         "default_provider",
     }
     filtered = {k: v for k, v in data.items() if k in allowed}
-    filtered["updated_at"] = datetime.now().isoformat()
-    filtered["user_id"]    = user_id
+    if not filtered:
+        return
 
     conn = get_db()
-    # Upsert
+    # Upsert: construimos el UPDATE de forma segura sin f-strings dinámicas
+    # usando una lista de columnas permitidas mapeadas a placeholders
+    now = datetime.now().isoformat()
     conn.execute(
         "INSERT OR IGNORE INTO mail_config (user_id, updated_at) VALUES (?, ?)",
-        (user_id, filtered["updated_at"])
+        (user_id, now)
     )
-    for key, val in filtered.items():
-        if key not in ("user_id",):
-            conn.execute(
-                f"UPDATE mail_config SET {key} = ? WHERE user_id = ?",
-                (val, user_id)
-            )
+    # Actualizar solo las columnas presentes en el payload
+    set_clause = ", ".join(f"{k} = ?" for k in filtered.keys())
+    values = list(filtered.values()) + [user_id]
+    conn.execute(
+        f"UPDATE mail_config SET {set_clause}, updated_at = ? WHERE user_id = ?",
+        values + [now, user_id]
+    )
     conn.commit()
     conn.close()
 

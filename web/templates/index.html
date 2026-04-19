@@ -333,6 +333,13 @@ function closeModal() {
     document.getElementById('detailModal').classList.remove('open');
 }
 
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 function renderModal(r) {
     const dbId = r._db_id || currentDbId;
     const ea   = r.entropy_analysis || {};
@@ -349,15 +356,15 @@ function renderModal(r) {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
             <div>
                 <div style="color:var(--text-muted);font-size:0.78em">ASUNTO</div>
-                <div style="font-weight:600;margin-bottom:4px">${r.subject||'(sin asunto)'}</div>
-                <div style="color:var(--text-faint);font-size:0.83em">De: ${r.from||'-'}</div>
-                <div style="color:var(--text-faint);font-size:0.83em">Fecha: ${(r.timestamp||'').slice(0,16)}</div>
-                <div style="color:var(--text-faint);font-size:0.83em">Analizado por: ${r.analyzed_by||'-'}</div>
+                <div style="font-weight:600;margin-bottom:4px">${escapeHtml(r.subject)||'(sin asunto)'}</div>
+                <div style="color:var(--text-faint);font-size:0.83em">De: ${escapeHtml(r.from)||'-'}</div>
+                <div style="color:var(--text-faint);font-size:0.83em">Fecha: ${escapeHtml((r.timestamp||'').slice(0,16))}</div>
+                <div style="color:var(--text-faint);font-size:0.83em">Analizado por: ${escapeHtml(r.analyzed_by)||'-'}</div>
             </div>
             <div style="text-align:right">
-                <div style="background:${rc};color:white;padding:5px 14px;border-radius:20px;font-weight:700">${r.prediction||'-'}</div>
-                <div style="color:${rc};font-weight:600;margin-top:5px">${r.risk_level||'-'} — ${r.risk_score||0}%</div>
-                <div style="color:var(--text-faint);font-size:0.8em;margin-top:3px">Modelo: ${r.model_used||'-'}</div>
+                <div style="background:${rc};color:white;padding:5px 14px;border-radius:20px;font-weight:700">${escapeHtml(r.prediction)||'-'}</div>
+                <div style="color:${rc};font-weight:600;margin-top:5px">${escapeHtml(r.risk_level)||'-'} — ${r.risk_score||0}%</div>
+                <div style="color:var(--text-faint);font-size:0.8em;margin-top:3px">Modelo: ${escapeHtml(r.model_used)||'-'}</div>
             </div>
         </div>
     </div>
@@ -387,11 +394,20 @@ function renderModal(r) {
         </div>
     </div>`;
 
-    // URLs
+    // URLs — sanitizadas para prevenir XSS
     const urls = r.urls || [];
     if (urls.length > 0) {
         html += `<div class="detail-section"><h4>🔗 URLs detectadas (${urls.length})</h4><ul class="url-list">`;
-        urls.slice(0,10).forEach(u => { html += `<li><a href="${u}" target="_blank" rel="noopener">${u}</a></li>`; });
+        urls.slice(0,10).forEach(u => {
+            const safeU = escapeHtml(u);
+            // Solo enlaces http/https; el resto se muestra como texto plano
+            const isHttp = /^https?:\/\//i.test(u);
+            if (isHttp) {
+                html += `<li><a href="${safeU}" target="_blank" rel="noopener">${safeU}</a></li>`;
+            } else {
+                html += `<li style="color:var(--warning)">⚠️ ${safeU} <em>(protocolo no seguro)</em></li>`;
+            }
+        });
         if (urls.length > 10) html += `<li style="color:var(--text-faint)">... y ${urls.length-10} más</li>`;
         html += `</ul></div>`;
     }
@@ -408,7 +424,7 @@ function renderModal(r) {
         </div>`;
     }
 
-    document.getElementById('modalTitle').textContent = r.filename || 'Detalle';
+    document.getElementById('modalTitle').textContent = escapeHtml(r.filename) || 'Detalle';
     document.getElementById('modalBody').innerHTML = html;
     document.getElementById('detailModal').classList.add('open');
 }
