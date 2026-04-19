@@ -50,6 +50,31 @@ if not _secret_key:
     )
 app.secret_key = _secret_key
 
+# MED-10: rate limiting para prevenir fuerza bruta en el login.
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri="memory://",
+)
+
+# ── Límites de seguridad para uploads (HIGH-05) ───────────────────────────────
+EML_MAX_SIZE_BYTES = 10 * 1024 * 1024   # 10 MB por archivo
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB total por petición
+
+EML_ALLOWED_MIMETYPES = {
+    "message/rfc822",
+    "text/plain",
+    "application/octet-stream",
+}
+
+PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..")
+UPLOAD_DIR  = os.path.join(PROJECT_DIR, "data", "samples")
+RESULTS_DIR = os.path.join(PROJECT_DIR, "results")
+MODELS_DIR  = os.path.join(PROJECT_DIR, "models")
+LABELED_DIR = os.path.join(PROJECT_DIR, "data", "labeled")
+DB_PATH     = os.path.join(PROJECT_DIR, "config", "users.db")
+
 # Cookies de sesión seguras
 _has_ssl = os.path.exists(os.path.join(PROJECT_DIR, "config", "ssl", "cert.pem"))
 app.config.update(
@@ -76,31 +101,6 @@ def security_headers(response):
         "font-src 'self';"
     )
     return response
-
-# MED-10: rate limiting para prevenir fuerza bruta en el login.
-limiter = Limiter(
-    get_remote_address,
-    app=app,
-    default_limits=[],
-    storage_uri="memory://",
-)
-
-# ── Límites de seguridad para uploads (HIGH-05) ───────────────────────────────
-EML_MAX_SIZE_BYTES = 10 * 1024 * 1024   # 10 MB por archivo
-app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB total por petición
-
-EML_ALLOWED_MIMETYPES = {
-    "message/rfc822",
-    "text/plain",
-    "application/octet-stream",
-}
-
-PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..")
-UPLOAD_DIR  = os.path.join(PROJECT_DIR, "data", "samples")
-RESULTS_DIR = os.path.join(PROJECT_DIR, "results")
-MODELS_DIR  = os.path.join(PROJECT_DIR, "models")
-LABELED_DIR = os.path.join(PROJECT_DIR, "data", "labeled")
-DB_PATH     = os.path.join(PROJECT_DIR, "config", "users.db")
 
 os.makedirs(UPLOAD_DIR,  exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
