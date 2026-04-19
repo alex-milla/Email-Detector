@@ -1,7 +1,7 @@
 {
-  "version": "1.2.13",
-  "release_date": "2026-04-04",
-  "changelog": "1.2.13 — Corrección de tema CSS: todos los templates ahora usan variables CSS para que los temas claro/oscuro/sistema funcionen correctamente en todas las páginas.",
+  "version": "1.2.14",
+  "release_date": "2026-04-19",
+  "changelog": "1.2.14 — Despliegue universal (deploy.sh), corrección de bugs críticos de seguridad y funcionalidad, sistema de actualizaciones robusto para systemd y standalone, y documentación de troubleshooting.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v1.2.13/email-detector-v1.2.13.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.14.zip"
 }
