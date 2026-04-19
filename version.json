@@ -1,7 +1,7 @@
 {
-  "version": "1.2.15",
+  "version": "1.2.16",
   "release_date": "2026-04-19",
-  "changelog": "1.2.15 — Correcciones críticas de seguridad web: sanitización XSS en dashboard, eliminación de SQL injection en auth.py, activación de foreign keys en SQLite, índices de rendimiento, headers HTTP de seguridad (CSP, HSTS, X-Frame-Options), cookies seguras (HttpOnly, SameSite, Secure) y eliminación de CORS global.",
+  "changelog": "1.2.16 — Hotfix: corrección de NameError en arranque causado por referencia a PROJECT_DIR antes de su definición.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.15.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.16.zip"
 }
