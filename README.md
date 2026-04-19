@@ -156,6 +156,37 @@ Consulta [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) para problemas comun
 - xgboost/lightgbm/catboost no compilan
 - ClamAV no responde
 
+## Desarrollo y Releases
+
+### Validación pre-release (obligatoria)
+
+Antes de generar cualquier release, ejecuta la validación para evitar romper producción:
+
+```bash
+python3 scripts/validate_release.py
+```
+
+Esto verifica:
+- Sintaxis de todos los `.py` y `.sh`
+- Que `web.app` importa sin errores (simula `gunicorn --preload`)
+- Que `train_model.py` no ejecuta side-effects al importar
+- Que no hay referencias a variables antes de su definición en `app.py`
+
+### Generar una release nueva
+
+```bash
+python3 scripts/bump_version.py
+```
+
+Este script:
+1. Ejecuta `validate_release.py` (bloquea si falla)
+2. Pide la nueva versión y changelog
+3. Actualiza `VERSION` y `version.json`
+4. Crea commit + tag y hace push a GitHub
+5. Crea la release en GitHub (requiere `GITHUB_TOKEN`)
+
+> **Nunca generes una release sin pasar validate_release.py primero.**
+
 ## Licencia
 
 MIT
