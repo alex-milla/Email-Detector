@@ -1,0 +1,1 @@
+﻿{"tag_name":"v1.2.20","name":"Email Malware Detector v1.2.20","body":"Hotfix: _validate_script_path now accepts scripts owned by the current process user (in addition to root). Fixes download_dataset.sh and retrain.sh being blocked on non-root deployments.","draft":false,"prerelease":false}

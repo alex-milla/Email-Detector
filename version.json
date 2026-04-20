@@ -1,7 +1,7 @@
 {
-  "version": "1.2.20",
+  "version": "1.2.21",
   "release_date": "2026-04-19",
-  "changelog": "1.2.20 — Hotfix: _validate_script_path ahora acepta scripts propiedad del usuario actual (además de root). Corrige 'El script no pasó la validación de seguridad' en download_dataset.sh y retrain.sh en despliegues no-root.",
+  "changelog": "1.2.21 — Unificación visual: todo el CSS común (.btn, .card, .toast, .page-header, inputs, tablas) movido a layout.html. Eliminados ~109 líneas de CSS duplicado entre index, training, users, settings y update. Apariencia idéntica en todos los menús.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.20.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.21.zip"
 }

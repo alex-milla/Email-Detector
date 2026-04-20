@@ -4,41 +4,11 @@
 
 {% block styles %}
     <style>
-        .container { max-width:1200px; margin:0 auto; padding:20px; }
-
-        .section { background:var(--bg-card); border-radius:12px; padding:25px; margin-bottom:20px; margin-top:30px; }
+        .section { margin-top:30px; }
         .section h2 { font-size:1.3em; margin-bottom:6px; }
         .section .subtitle { color:var(--text-faint); font-size:0.9em; margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid var(--border); }
-
-        table { width:100%; border-collapse:collapse; }
-        th { text-align:left; padding:10px 12px; color:var(--text-muted); border-bottom:1px solid var(--border); font-size:0.85em; text-transform:uppercase; letter-spacing:0.05em; }
-        td { padding:12px; border-bottom:1px solid var(--bg-card); }
-        tr:last-child td { border-bottom:none; }
-
-        .badge { display:inline-block; padding:3px 10px; border-radius:12px; font-size:0.8em; font-weight:600; }
-        .badge-admin { background:rgba(139,92,246,0.2); color:#a78bfa; }
-        .badge-user  { background:rgba(59,130,246,0.15); color:#60a5fa; }
-
-        .btn { padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-size:0.9em; font-weight:600; transition:all 0.2s; }
-        .btn-primary { background:var(--accent); color:white; }
-        .btn-primary:hover { background:var(--accent-hover); }
-        .btn-danger  { background:transparent; color:var(--danger); border:1px solid var(--danger); }
-        .btn-danger:hover  { background:var(--danger); color:white; }
-        .btn-sm { padding:5px 12px; font-size:0.85em; }
-
-        .form-row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:20px; }
-        .form-group { display:flex; flex-direction:column; gap:6px; }
-        .form-group label { color:var(--text-muted); font-size:0.85em; }
-        input[type=text], input[type=password], select {
-            background:var(--bg-body); color:var(--text-primary); border:1px solid var(--border);
-            border-radius:6px; padding:9px 12px; font-size:0.95em;
-        }
-        input:focus, select:focus { outline:none; border-color:var(--accent); }
-
-        .toast { position:fixed; bottom:24px; right:24px; padding:14px 20px; border-radius:10px; font-weight:600; font-size:0.95em; opacity:0; transition:opacity 0.3s; z-index:999; }
-        .toast.show { opacity:1; }
-        .toast.success { background:var(--success); color:white; }
-        .toast.error   { background:var(--danger); color:white; }
+        .form-row { margin-bottom:20px; }
+        .form-group label { color:var(--text-muted); font-size:0.85em; text-transform:none; letter-spacing:0; }
     </style>
 {% endblock %}
 

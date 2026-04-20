@@ -4,8 +4,6 @@
 
 {% block styles %}
     <style>
-        .container { max-width:1200px; margin:0 auto; padding:20px; }
-
         .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:15px; margin-bottom:30px; }
         .stat-card { background:var(--bg-card); border-radius:12px; padding:20px; border-left:4px solid var(--accent); }
         .stat-card.danger  { border-left-color:var(--danger); }
@@ -14,20 +12,14 @@
         .stat-number { font-size:2em; font-weight:bold; }
         .stat-label  { color:var(--text-muted); font-size:0.9em; }
 
-        .section { background:var(--bg-card); border-radius:12px; padding:25px; margin-bottom:20px; }
         .section h2 { font-size:1.3em; margin-bottom:15px; padding-bottom:10px; border-bottom:1px solid var(--border); }
 
         .upload-zone { border:2px dashed var(--toggle-knob); border-radius:12px; padding:40px; text-align:center; cursor:pointer; transition:all 0.3s; }
         .upload-zone:hover, .upload-zone.dragover { border-color:var(--accent); background:rgba(59,130,246,0.1); }
         .upload-zone p { color:var(--text-muted); margin-top:10px; }
 
-        .btn { padding:10px 20px; border:none; border-radius:8px; cursor:pointer; font-size:0.9em; font-weight:600; transition:all 0.2s; }
-        .btn-primary   { background:var(--accent); color:white; }
-        .btn-primary:hover { background:var(--accent-hover); }
         .btn-secondary { background:var(--border); color:var(--text-primary); }
         .btn-secondary:hover { background:var(--toggle-knob); }
-        .btn-danger    { background:transparent; color:var(--danger); border:1px solid var(--danger); }
-        .btn-danger:hover  { background:var(--danger); color:white; }
         .btn-benign    { background:rgba(34,197,94,0.15); color:var(--success); border:1px solid var(--success); border-radius:6px; padding:6px 14px; cursor:pointer; font-weight:600; }
         .btn-malicious { background:rgba(239,68,68,0.15); color:var(--danger); border:1px solid var(--danger); border-radius:6px; padding:6px 14px; cursor:pointer; font-weight:600; }
 
@@ -52,8 +44,6 @@
         .entropy-bar { height:6px; background:var(--border); border-radius:4px; overflow:hidden; margin-top:4px; }
         .entropy-fill { height:100%; border-radius:4px; transition:width 0.5s; }
 
-        table { width:100%; border-collapse:collapse; }
-        th { text-align:left; padding:10px; color:var(--text-muted); border-bottom:1px solid var(--border); font-size:0.82em; text-transform:uppercase; letter-spacing:0.04em; }
         td { padding:10px; border-bottom:1px solid var(--toggle-bg); font-size:0.9em; }
         tr:hover td { background:var(--toggle-bg); cursor:pointer; }
 
