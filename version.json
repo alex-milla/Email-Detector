@@ -1,7 +1,7 @@
 {
-  "version": "1.2.33",
+  "version": "1.2.34",
   "release_date": "2026-04-19",
-  "changelog": "1.2.33 — Fix definitivo Anti-Clanker YAML: CLK-020 y CLK-022 usan comillas simples YAML con escape '' para comilla simple interna. Fix train_model.py para soportar DataFrames de pandas en Modelo 10.",
+  "changelog": "1.2.34 — Fix updater: elimina scripts/train_model.py de _ROOT_OWNED_FILES para permitir actualizacion OTA del script de entrenamiento.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.33.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.34.zip"
 }

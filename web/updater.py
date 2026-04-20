@@ -56,7 +56,6 @@ except Exception:
 # Solo aplican en modo systemd — en standalone no hay esta restricción.
 _ROOT_OWNED_FILES = {
     "scripts/retrain.sh",
-    "scripts/train_model.py",
 } if _HAS_SYSTEMD else set()
 
 # ── Caché del check de versión ─────────────────────────────────────────────────
