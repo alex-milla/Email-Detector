@@ -138,7 +138,7 @@
             </select>
             <!-- Carpeta fija: siempre se analiza la bandeja de entrada -->
             <input type="hidden" id="folder" value="inbox">
-            <label>Máx: <input type="number" id="maxEmails" value="20" min="1" max="500" style="width:65px"></label>
+            <label>Máx: <input type="number" id="maxEmails" value="20" min="1" max="50" style="width:65px"></label>
             <label><input type="checkbox" id="fetchVT"> VirusTotal</label>
         </div>
         <div class="date-row">
@@ -549,7 +549,11 @@ async function fetchEmails() {
             rd.innerHTML = `<div class="result-card critico">❌ Error: ${data.error}</div>`;
         }
     } catch(err) {
-        rd.innerHTML = `<div class="result-card critico">❌ Error: ${err.message}</div>`;
+        let msg = err.message;
+        if (err instanceof SyntaxError || msg.includes('JSON') || msg.includes('token')) {
+            msg = 'El servidor tardó demasiado en responder (timeout). Reduce el número de correos o el rango de fechas.';
+        }
+        rd.innerHTML = `<div class="result-card critico">❌ Error: ${msg}</div>`;
     }
     spinner.style.display = 'none';
 }

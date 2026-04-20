@@ -630,7 +630,7 @@ def fetch_emails():
     cfg        = get_mail_config(uid)
     body       = request.get_json(silent=True) or {}
     provider   = body.get("provider", cfg.get("default_provider", "imap"))
-    max_emails = int(body.get("max_emails", 20))
+    max_emails = min(int(body.get("max_emails", 20)), 50)
     folder     = "inbox"  # Fijo: solo se analiza la bandeja de entrada
     use_vt     = body.get("use_virustotal", False)
 

@@ -1,7 +1,7 @@
 {
-  "version": "1.2.28",
+  "version": "1.2.29",
   "release_date": "2026-04-19",
-  "changelog": "1.2.28 — Fix crítico: corrige desajuste de parámetros SQL en save_mail_config (bindings 13 vs 14) que impedía guardar configuración de correo.",
+  "changelog": "1.2.29 — Fix timeout descarga de correos: limita max_emails a 50 en backend y frontend, mensaje de error amigable ante timeout/proxy HTML.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.28.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.29.zip"
 }
