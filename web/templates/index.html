@@ -40,6 +40,8 @@
         .risk-badge.risk-MEDIO   { background:rgba(234,179,8,0.2);  color:var(--warning); }
         .risk-badge.risk-BAJO    { background:rgba(34,197,94,0.2);  color:var(--success); }
         .risk-badge.risk-MINIMO  { background:rgba(107,114,128,0.2);color:#6b7280; }
+        .risk-badge.pred-benigno    { background:rgba(34,197,94,0.2); color:var(--success); }
+        .risk-badge.pred-malicioso  { background:rgba(239,68,68,0.2); color:var(--danger); }
 
         .entropy-bar { height:6px; background:var(--border); border-radius:4px; overflow:hidden; margin-top:4px; }
         .entropy-fill { height:100%; border-radius:4px; transition:width 0.5s; }
@@ -242,7 +244,7 @@ function renderHistoryTable(items) {
             <td style="white-space:nowrap">${(r.timestamp||'-').slice(0,16)}</td>
             <td style="color:var(--text-faint);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r.filename||'-').slice(0,28)}</td>
             <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r.subject||'(sin asunto)').slice(0,40)}</td>
-            <td><span class="risk-badge risk-${rl}">${r.prediction||'-'}</span></td>
+            <td><span class="risk-badge ${r.prediction==='MALICIOSO'?'pred-malicioso':'pred-benigno'}">${r.prediction||'-'}</span></td>
             <td>${r.risk_score||0}%</td>
             <td>${r.body_entropy||'-'}</td>
             <td>${fb}</td>
@@ -311,7 +313,7 @@ function renderModal(r) {
     const vt   = r.virustotal       || {};
     const vts  = vt.summary         || {};
     const rl   = nl(r.risk_level||'');
-    const rc   = colorMap[rl] || '#6b7280';
+    const rc   = colorMap[rl] || (r.prediction === 'MALICIOSO' ? '#ef4444' : '#22c55e');
     const fb   = (r.feedback_label !== null && r.feedback_label !== undefined) ? r.feedback_label : null;
 
     let html = `
@@ -484,7 +486,7 @@ function renderCard(r) {
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
             <div><strong>${r.file||''}</strong><br><small style="color:var(--text-muted)">${r.subject||'-'}</small></div>
             <div style="text-align:right">
-                <span class="risk-badge risk-${rl}">${r.prediction} — ${r.risk_level}</span><br>
+                <span class="risk-badge ${r.prediction==='MALICIOSO'?'pred-malicioso':'pred-benigno'}">${r.prediction} — ${r.risk_level}</span><br>
                 <small>Riesgo: ${r.risk_score}%</small>
             </div>
         </div>

@@ -1,7 +1,7 @@
 {
-  "version": "1.2.34",
+  "version": "1.2.35",
   "release_date": "2026-04-19",
-  "changelog": "1.2.34 — Fix updater: elimina scripts/train_model.py de _ROOT_OWNED_FILES para permitir actualizacion OTA del script de entrenamiento.",
+  "changelog": "1.2.35 — Fix colores de badges resultado: ahora usan prediction (BENIGNO=verde, MALICIOSO=rojo) en tabla historial, tarjetas y modal de detalle.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.34.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.35.zip"
 }
