@@ -147,24 +147,51 @@ def update_signatures():
     # Usamos --no-warnings y redirigimos el log a /dev/null para evitar el conflicto
     # de lock con el daemon clamav-freshclam que también escribe en freshclam.log.
     # freshclam acepta --log=/dev/null para suprimir el fichero de log completamente.
+
+    def _clean(text):
+        out = (text or "Sin salida").strip()
+        return "\n".join(
+            l for l in out.splitlines()
+            if "lock" not in l.lower() and "log file" not in l.lower()
+        ).strip() or "Actualizado correctamente"
+
+    # 1. Intentar sin sudo (usuario puede pertenecer al grupo clamav)
+    try:
+        proc = subprocess.run(
+            ["freshclam", "--quiet", "--log=/dev/null"],
+            capture_output=True, text=True, timeout=25
+        )
+        if proc.returncode == 0:
+            return {"success": True, "output": _clean(proc.stderr),
+                    "updated_at": _local_now().isoformat()}
+        err = (proc.stderr or "").lower()
+        if "permission" in err or "denied" in err or "can't create" in err:
+            pass  # fallback a sudo
+        else:
+            return {"success": False, "output": _clean(proc.stderr)}
+    except FileNotFoundError:
+        return {"success": False, "output": "freshclam no encontrado"}
+
+    # 2. Intentar con sudo -n (requiere configuración en /etc/sudoers)
     try:
         proc = subprocess.run(
             ["sudo", "-n", "freshclam", "--quiet", "--log=/dev/null"],
             capture_output=True, text=True, timeout=25
         )
-        output = (proc.stdout or proc.stderr or "Sin salida").strip()
-        # Filtrar el aviso de lock del log si aparece en stderr — no es un error real
-        output = "\n".join(
-            l for l in output.splitlines()
-            if "lock" not in l.lower() and "log file" not in l.lower()
-        ).strip() or "Actualizado correctamente"
-        result = {"success": proc.returncode == 0,
-                  "output": output,
-                  "updated_at": _local_now().isoformat()}
+        if proc.returncode == 0:
+            return {"success": True, "output": _clean(proc.stderr),
+                    "updated_at": _local_now().isoformat()}
+        err = (proc.stderr or "").lower()
+        if "password" in err or "a password is required" in err:
+            return {"success": False,
+                    "output": "El usuario del servicio no tiene permisos sudo para freshclam. "
+                              "ClamAV se actualiza automáticamente cada día a las 08:00. "
+                              "Para forzar una actualización manual, ejecuta 'sudo freshclam' "
+                              "directamente en el servidor."}
+        return {"success": False, "output": _clean(proc.stderr)}
     except subprocess.TimeoutExpired:
-        result = {"success": False, "output": "Timeout (25s). El daemon freshclam puede estar ocupado o la red es lenta. Intenta de nuevo en unos minutos o ejecuta 'sudo freshclam' manualmente en el servidor."}
-    except FileNotFoundError:
-        result = {"success": False, "output": "freshclam no encontrado"}
+        return {"success": False,
+                "output": "Timeout (25s). El daemon freshclam puede estar ocupado o la red es lenta. "
+                          "Intenta de nuevo en unos minutos."}
     except Exception as e:
-        result = {"success": False, "output": f"Error inesperado: {e}"}
-    return result
+        return {"success": False, "output": f"Error inesperado: {e}"}
