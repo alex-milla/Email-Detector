@@ -77,7 +77,16 @@ def _train_clanker_model(X_train, y_train, feature_names):
     if not clanker_cols:
         return None, []
 
-    X_clanker = X_train[:, clanker_cols] if hasattr(X_train, "__getitem__") else X_train
+    # Soportar tanto numpy arrays como pandas DataFrames
+    try:
+        import pandas as pd
+        if isinstance(X_train, pd.DataFrame):
+            X_clanker = X_train.iloc[:, clanker_cols].to_numpy()
+        else:
+            X_clanker = X_train[:, clanker_cols]
+    except Exception:
+        import numpy as np
+        X_clanker = np.array(X_train)[:, clanker_cols]
     try:
         model = Pipeline([
             ("scaler", StandardScaler()),
