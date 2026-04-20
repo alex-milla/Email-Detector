@@ -1199,6 +1199,33 @@ def clanker_status():
         }
     return jsonify(resp)
 
+@app.route("/api/clanker/validate", methods=["GET"])
+@login_required
+@admin_required
+def clanker_validate():
+    """Diagnóstico: intenta parsear clanker_rules.yaml y devuelve el resultado."""
+    import yaml
+    rules_path = os.path.join(os.path.dirname(__file__), "..", "config", "clanker_rules.yaml")
+    result = {
+        "file_exists": os.path.exists(rules_path),
+        "file_path": rules_path,
+        "file_size": os.path.getsize(rules_path) if os.path.exists(rules_path) else 0,
+    }
+    if not os.path.exists(rules_path):
+        return jsonify({"valid": False, **result, "error": "Fichero no encontrado"})
+    try:
+        with open(rules_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        result["valid"] = True
+        result["yaml_type"] = type(data).__name__
+        result["has_meta"] = isinstance(data, dict) and "meta" in data
+        result["has_rules"] = isinstance(data, dict) and "rules" in data
+        result["rules_count"] = len(data.get("rules", [])) if isinstance(data, dict) else 0
+        result["meta_version"] = data.get("meta", {}).get("version", "?") if isinstance(data, dict) else "?"
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"valid": False, **result, "error": str(e)})
+
 @app.route("/api/clanker/set_url", methods=["POST"])
 @login_required
 @admin_required

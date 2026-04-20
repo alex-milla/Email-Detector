@@ -1,7 +1,7 @@
 {
-  "version": "1.2.31",
+  "version": "1.2.32",
   "release_date": "2026-04-19",
-  "changelog": "1.2.31 — Fix Anti-Clanker: corrige comillas simples en YAML (CLK-020, CLK-022) que rompian parseo. Mejora cache de reglas para no persistir errores. Añade debug info en /api/clanker/status.",
+  "changelog": "1.2.32 — Fix entrenamiento CSV: normaliza columnas clanker cuando hay emails sin HTML. Añade endpoint /api/clanker/validate para diagnostico YAML.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.31.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.32.zip"
 }

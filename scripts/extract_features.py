@@ -339,12 +339,19 @@ def batch_extract(input_dir, output_csv, label=None):
 
     if all_features:
         os.makedirs(os.path.dirname(output_csv) or ".", exist_ok=True)
-        keys = all_features[0].keys()
+        # Normalizar: todas las filas deben tener exactamente las mismas columnas
+        all_keys = set()
+        for feat in all_features:
+            all_keys.update(feat.keys())
+        all_keys = sorted(all_keys)
+        for feat in all_features:
+            for k in all_keys:
+                feat.setdefault(k, 0)
         with open(output_csv, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=keys)
+            writer = csv.DictWriter(f, fieldnames=all_keys)
             writer.writeheader()
             writer.writerows(all_features)
-        print(f"\nCSV generado: {output_csv} ({len(all_features)} filas)")
+        print(f"\nCSV generado: {output_csv} ({len(all_features)} filas, {len(all_keys)} columnas)")
 
 
 if __name__ == "__main__":
