@@ -1,9 +1,8 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Usuarios — Email Malware Detector</title>
+{% extends "layout.html" %}
+
+{% block title %}Usuarios — Email Malware Detector{% endblock %}
+
+{% block styles %}
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg-body); color:var(--text-primary); min-height:100vh; }
@@ -53,25 +52,9 @@
         .toast.success { background:var(--success); color:white; }
         .toast.error   { background:var(--danger); color:white; }
     </style>
-</head>
-<body>
-<nav>
-    <div class="nav-inner">
-        <div class="nav-brand">🛡️ Email <span>Malware</span> Detector</div>
-                <a href="/" class="nav-link ">📊 Dashboard</a>
-        <a href="/training" class="nav-link ">🧠 Entrenamiento</a>
-        {% if user.role == 'admin' %}
-        <a href="/users" class="nav-link active">👥 Usuarios</a>
-        {% endif %}
-        <a href="/settings" class="nav-link ">⚙️ Mi configuración</a>
-        {% if user.role == 'admin' %}<a href="/update" class="nav-link ">🔄 Actualizaciones</a>{% endif %}
-        <div class="nav-right">
-            <span class="nav-user">{{ user.username }}</span>
-            <a href="/logout" class="nav-logout">Cerrar sesión</a>
-        </div>
-    </div>
-</nav>
+{% endblock %}
 
+{% block content %}
 <div class="container">
     <div class="section">
         <h2>👥 Gestión de Usuarios</h2>
@@ -132,7 +115,9 @@
 </div>
 
 <div class="toast" id="toast"></div>
+{% endblock %}
 
+{% block scripts %}
 <script>
     function showToast(msg, type='success') {
         const t = document.getElementById('toast');
@@ -162,14 +147,38 @@
     }
 
     async function changePassword(id, username) {
-        const pwd = prompt(`Nueva contraseña para "${username}" (mínimo 6 caracteres):`);
-        if (!pwd) return;
-        const r    = await fetch(`/api/users/${id}/password`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password: pwd}) });
-        const data = await r.json();
-        if (data.success) showToast('Contraseña actualizada');
-        else showToast(data.error, 'error');
+        const inputId = `pwd-input-${id}`;
+        const existing = document.getElementById(inputId);
+        if (existing) {
+            const pwd = existing.value;
+            if (!pwd || pwd.length < 6) {
+                showToast('Mínimo 6 caracteres', 'error');
+                return;
+            }
+            const r = await fetch(`/api/users/${id}/password`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({password: pwd})
+            });
+            const data = await r.json();
+            if (data.success) {
+                showToast('Contraseña actualizada');
+                existing.parentElement.remove();
+            } else {
+                showToast(data.error, 'error');
+            }
+            return;
+        }
+        const row = document.querySelector(`#row-${id} td:last-child`);
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'display:flex;gap:6px;margin-top:6px;align-items:center;';
+        wrapper.innerHTML = `
+            <input type="password" id="${inputId}" placeholder="Nueva contraseña" style="padding:5px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg-body);color:var(--text-primary);font-size:0.85em;">
+            <button class="btn btn-sm btn-primary" onclick="changePassword(${id}, '${username.replace(/'/g, "\\'")}')">Guardar</button>
+            <button class="btn btn-sm btn-secondary" onclick="this.parentElement.remove()">Cancelar</button>
+        `;
+        row.appendChild(wrapper);
+        document.getElementById(inputId).focus();
     }
 </script>
-<script src="/static/theme.js"></script>
-</body>
-</html>
+{% endblock %}

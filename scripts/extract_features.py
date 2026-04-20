@@ -110,14 +110,27 @@ def get_attachment_risk(filename):
     return risk_map.get(ext, 2)
 
 
+# Límites de seguridad contra DoS por archivos enormes
+MAX_EML_SIZE_BYTES = 50 * 1024 * 1024      # 50 MB total por .eml
+MAX_ATTACHMENT_SIZE_BYTES = 25 * 1024 * 1024  # 25 MB por adjunto
+
+
 def get_attachment_hashes(part):
     """
     Calcula los hashes de un adjunto (para enviar a VirusTotal).
-    Devuelve MD5, SHA1 y SHA256.
+    Devuelve MD5, SHA1 y SHA256. Omite adjuntos que excedan el tamaño máximo.
     """
     payload = part.get_payload(decode=True)
     if not payload:
         return {}
+    if len(payload) > MAX_ATTACHMENT_SIZE_BYTES:
+        return {
+            "md5": "", "sha1": "", "sha256": "",
+            "size": len(payload),
+            "entropy": 0.0,
+            "skipped": True,
+            "reason": f"Adjunto excede {MAX_ATTACHMENT_SIZE_BYTES // (1024*1024)} MB",
+        }
     return {
         "md5":     hashlib.md5(payload).hexdigest(),
         "sha1":    hashlib.sha1(payload).hexdigest(),
@@ -132,6 +145,13 @@ def extract_features_from_eml(eml_path):
     FUNCIÓN PRINCIPAL: lee un archivo .eml y devuelve un diccionario
     con todas las features numéricas que necesita el modelo.
     """
+    file_size = os.path.getsize(eml_path)
+    if file_size > MAX_EML_SIZE_BYTES:
+        raise ValueError(
+            f"Archivo .eml demasiado grande ({file_size / (1024*1024):.1f} MB). "
+            f"Máximo permitido: {MAX_EML_SIZE_BYTES // (1024*1024)} MB."
+        )
+
     with open(eml_path, "rb") as f:
         msg = email.message_from_binary_file(f, policy=policy.default)
 
@@ -141,10 +161,16 @@ def extract_features_from_eml(eml_path):
     to_header   = msg.get("To", "")      or ""
 
     # ── Extraer cuerpo (texto y HTML por separado) ──
+    MAX_BODY_CHARS = 500_000  # ~1 MB de texto, suficiente para análisis
+    MAX_BODY_PART_BYTES = 2 * 1024 * 1024  # 2 MB por parte; si es mayor, omitimos
     body_text = ""
     body_html = ""
     for part in msg.walk():
         content_type = part.get_content_type()
+        # Evitar cargar partes enormes en memoria antes de decodificar
+        payload = part.get_payload(decode=True)
+        if payload and len(payload) > MAX_BODY_PART_BYTES:
+            continue
         try:
             if content_type == "text/plain":
                 body_text += (part.get_content() or "")
@@ -152,6 +178,11 @@ def extract_features_from_eml(eml_path):
                 body_html += (part.get_content() or "")
         except Exception:
             pass
+        # Truncar temprano si ya superamos el límite
+        if len(body_text) > MAX_BODY_CHARS:
+            body_text = body_text[:MAX_BODY_CHARS]
+        if len(body_html) > MAX_BODY_CHARS:
+            body_html = body_html[:MAX_BODY_CHARS]
 
     full_text = body_text if body_text else body_html
 

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Email Malware Detector{% endblock %}</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg-body,#0f172a); color:var(--text-primary,#e2e8f0); min-height:100vh; }
+        .container { max-width:1200px; margin:0 auto; padding:20px; }
+        nav { background:var(--bg-nav,#1e293b); border-bottom:2px solid var(--border-nav,#3b82f6); }
+        nav .nav-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; }
+        nav .nav-brand { padding:16px 24px; font-size:1.1em; font-weight:700; border-right:1px solid var(--border,#334155); }
+        nav .nav-brand span { color:#3b82f6; }
+        nav a.nav-link { padding:18px 22px; color:var(--text-muted,#94a3b8); text-decoration:none; font-weight:500; border-bottom:3px solid transparent; transition:all 0.2s; }
+        nav a.nav-link:hover { color:var(--text-primary,#e2e8f0); background:var(--bg-hover,rgba(59,130,246,0.08)); }
+        nav a.nav-link.active { color:#3b82f6; border-bottom-color:#3b82f6; }
+        .nav-right { margin-left:auto; padding:0 20px; display:flex; align-items:center; gap:12px; }
+        .nav-user  { color:var(--text-faint,#64748b); font-size:0.9em; }
+        nav a.nav-logout { color:var(--danger,#ef4444); text-decoration:none; font-size:0.9em; }
+    </style>
+    {% block styles %}{% endblock %}
+</head>
+<body>
+<nav>
+    <div class="nav-inner">
+        <div class="nav-brand">🛡️ Email <span>Malware</span> Detector</div>
+        <a href="/" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">📊 Dashboard</a>
+        <a href="/training" class="nav-link {% if active_page == 'training' %}active{% endif %}">🧠 Entrenamiento</a>
+        {% if user.role == 'admin' %}
+        <a href="/users" class="nav-link {% if active_page == 'users' %}active{% endif %}">👥 Usuarios</a>
+        {% endif %}
+        <a href="/settings" class="nav-link {% if active_page == 'settings' %}active{% endif %}">⚙️ Mi configuración</a>
+        {% if user.role == 'admin' %}
+        <a href="/update" class="nav-link {% if active_page == 'update' %}active{% endif %}">🔄 Actualizaciones</a>
+        {% endif %}
+        <div class="nav-right">
+            <span class="nav-user">{{ user.username }}</span>
+            <a href="/logout" class="nav-logout">Cerrar sesión</a>
+        </div>
+    </div>
+</nav>
+
+{% block content %}{% endblock %}
+
+<script src="/static/theme.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

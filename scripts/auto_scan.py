@@ -15,6 +15,7 @@ from predict import predict_email
 
 RESULTS_DIR  = os.path.join(os.path.dirname(__file__), "..", "results")
 HISTORY_PATH = os.path.join(RESULTS_DIR, "history.json")
+HISTORY_MAX_ENTRIES = 1000
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
 
@@ -26,6 +27,9 @@ def load_history():
 
 
 def save_history(history):
+    # Rotar si excede el límite: guardar solo las últimas N entradas
+    if len(history) > HISTORY_MAX_ENTRIES:
+        history = history[-HISTORY_MAX_ENTRIES:]
     with open(HISTORY_PATH, "w") as f:
         json.dump(history, f, indent=2, default=str)
 

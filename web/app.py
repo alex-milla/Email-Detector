@@ -30,7 +30,7 @@ from predict import predict_email
 from mailbox_connector import download_emails
 from auth import (
     init_db, authenticate, create_user, delete_user,
-    get_all_users, change_password,
+    get_all_users, change_password, get_db,
     get_mail_config, save_mail_config, get_all_mail_configs
 )
 from settings_manager import (
@@ -137,12 +137,6 @@ def upload_too_large(e):
 # ══════════════════════════════════════════════════
 #  HISTORIAL EN SQLITE (por usuario)
 # ══════════════════════════════════════════════════
-
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
 
 
 def normalize_result(result):

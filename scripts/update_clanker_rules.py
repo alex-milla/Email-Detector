@@ -97,8 +97,25 @@ def _backup_current():
         backup = f"{RULES_FILE}.bak_{ts}"
         shutil.copy2(RULES_FILE, backup)
         logger.info("Backup creado: %s", backup)
+        _cleanup_old_backups()
         return backup
     return None
+
+
+def _cleanup_old_backups(max_keep=10):
+    """Elimina backups antiguos dejando solo los últimos N."""
+    backup_dir = os.path.dirname(RULES_FILE)
+    backups = sorted(
+        [f for f in os.listdir(backup_dir) if f.startswith("clanker_rules.yaml.bak_")],
+        key=lambda x: os.path.getctime(os.path.join(backup_dir, x))
+    )
+    for old in backups[:-max_keep]:
+        old_path = os.path.join(backup_dir, old)
+        try:
+            os.remove(old_path)
+            logger.info("Backup antiguo eliminado: %s", old)
+        except Exception as e:
+            logger.warning("No se pudo eliminar backup %s: %s", old, e)
 
 
 # ── Lógica principal ──────────────────────────────────────────────────────────

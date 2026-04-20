@@ -1,9 +1,8 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Actualizaciones — Email Malware Detector</title>
+{% extends "layout.html" %}
+
+{% block title %}Actualizaciones — Email Malware Detector{% endblock %}
+
+{% block styles %}
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg-body,var(--bg-body)); color:var(--text-primary,var(--text-primary)); min-height:100vh; }
@@ -78,28 +77,9 @@
 
         @media(max-width:600px) { .version-grid { grid-template-columns:1fr; } }
     </style>
-</head>
-<body>
+{% endblock %}
 
-<nav>
-    <div class="nav-inner">
-        <div class="nav-brand">🛡️ Email <span>Malware</span> Detector</div>
-        <a href="/" class="nav-link">📊 Dashboard</a>
-        <a href="/training" class="nav-link">🧠 Entrenamiento</a>
-        {% if user.role == 'admin' %}
-        <a href="/users" class="nav-link">👥 Usuarios</a>
-        {% endif %}
-        <a href="/settings" class="nav-link">⚙️ Mi configuración</a>
-        {% if user.role == 'admin' %}
-        <a href="/update" class="nav-link active">🔄 Actualizaciones</a>
-        {% endif %}
-        <div class="nav-right">
-            <span class="nav-user">{{ user.username }}</span>
-            <a href="/logout" class="nav-logout">Cerrar sesión</a>
-        </div>
-    </div>
-</nav>
-
+{% block content %}
 <div class="container">
     <div class="page-header">
         <h1>🔄 Actualizaciones del sistema</h1>
@@ -168,7 +148,9 @@
 </div>
 
 <div class="toast" id="toast"></div>
+{% endblock %}
 
+{% block scripts %}
 <script>
 // ── Estado ─────────────────────────────────────────────────────────────────
 let _updateInfo  = null;   // resultado de check_for_updates
@@ -402,6 +384,4 @@ document.addEventListener("DOMContentLoaded", () => {
     }).catch(() => {});
 });
 </script>
-<script src="/static/theme.js"></script>
-</body>
-</html>
+{% endblock %}

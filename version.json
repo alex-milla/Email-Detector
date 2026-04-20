@@ -1,7 +1,7 @@
 {
-  "version": "1.2.17",
+  "version": "1.2.18",
   "release_date": "2026-04-19",
-  "changelog": "1.2.17 — Validación pre-release automatizada (validate_release.py) y generador de releases seguro (bump_version.py). Previene errores de sintaxis, imports rotos y NameError en producción.",
+  "changelog": "1.2.18 — Robustez anti-DoS: límite de 2 MB por parte de body en extract_features, fix datetime.utcnow() deprecado en mailbox_connector, eliminado get_db() duplicado de app.py (usa auth.py con PRAGMA foreign_keys), rotación history.json y limpieza de backups ya activas.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.17.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.18.zip"
 }

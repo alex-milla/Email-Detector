@@ -9,13 +9,16 @@ import sys
 import email
 import imaplib
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "config", ".env"))
 
 RAW_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "raw")
 os.makedirs(RAW_DIR, exist_ok=True)
+
+# Límite de tamaño por correo para evitar DoS (50 MB)
+MAX_EMAIL_SIZE_BYTES = 50 * 1024 * 1024
 
 
 def _safe_filename(subject, prefix, index):
@@ -145,9 +148,27 @@ def download_emails_imap(max_emails=50, date_from=None, date_to=None,
     print(f"  Encontrados: {len(id_list)} correos")
 
     for i, msg_id in enumerate(id_list):
+        # Verificar tamaño antes de descargar
+        status, size_data = mail.fetch(msg_id, "(RFC822.SIZE)")
+        skip = False
+        if status == "OK" and size_data and size_data[0]:
+            try:
+                size_str = size_data[0].decode()
+                size_val = int(size_str.split()[-1].strip(")"))
+                if size_val > MAX_EMAIL_SIZE_BYTES:
+                    print(f"  [{i+1}/{len(id_list)}] OMITIDO: correo de {size_val//1024} KB excede límite")
+                    skip = True
+            except Exception:
+                pass
+        if skip:
+            continue
+
         status, msg_data = mail.fetch(msg_id, "(RFC822)")
         if status == "OK":
             raw_email = msg_data[0][1]
+            if len(raw_email) > MAX_EMAIL_SIZE_BYTES:
+                print(f"  [{i+1}/{len(id_list)}] OMITIDO: correo de {len(raw_email)//1024} KB excede límite")
+                continue
             parsed    = email.message_from_bytes(raw_email)
             subject   = parsed.get("Subject", "") or ""
             filename  = _safe_filename(subject, "imap_inbox", i)
@@ -181,7 +202,7 @@ def download_emails_m365(max_emails=50, date_from=None, date_to=None,
         return []
 
     if date_to is None:
-        date_to = datetime.utcnow()
+        date_to = datetime.now(datetime.timezone.utc)
     if date_from is None:
         date_from = date_to - timedelta(days=days_back)
 
@@ -228,6 +249,9 @@ def download_emails_m365(max_emails=50, date_from=None, date_to=None,
                         f"/messages/{msg['id']}/$value")
             mime_r = req.get(mime_url, headers=headers)
             if mime_r.status_code == 200:
+                if len(mime_r.content) > MAX_EMAIL_SIZE_BYTES:
+                    print(f"  [{i+1}/{len(messages)}] OMITIDO: correo de {len(mime_r.content)//1024} KB excede límite")
+                    continue
                 subject  = msg.get("subject", "") or ""
                 filename = _safe_filename(subject, f"m365_{f}", i)
                 filepath = os.path.join(RAW_DIR, filename)

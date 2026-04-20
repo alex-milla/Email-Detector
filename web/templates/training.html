@@ -1,9 +1,8 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Entrenamiento — Email Malware Detector</title>
+{% extends "layout.html" %}
+
+{% block title %}Entrenamiento — Email Malware Detector{% endblock %}
+
+{% block styles %}
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg-body,#0f172a); color:var(--text-primary,#e2e8f0); min-height:100vh; }
@@ -112,24 +111,9 @@
         .model-card.disabled-card{opacity:0.42;filter:grayscale(55%);}
         .model-card.disabled-card .mc-auc{color:var(--text-faint,#475569);}
     </style>
-</head>
-<body>
+{% endblock %}
 
-<nav>
-    <div class="nav-inner">
-        <div class="nav-brand">🛡️ Email <span>Malware</span> Detector</div>
-        <a href="/" class="nav-link">📊 Dashboard</a>
-        <a href="/training" class="nav-link active">🧠 Entrenamiento</a>
-        {% if user.role == 'admin' %}<a href="/users" class="nav-link">👥 Usuarios</a>{% endif %}
-        <a href="/settings" class="nav-link">⚙️ Mi configuración</a>
-        {% if user.role == 'admin' %}<a href="/update" class="nav-link">🔄 Actualizaciones</a>{% endif %}
-        <div class="nav-right">
-            <span class="nav-user">{{ user.username }}</span>
-            <a href="/logout" class="nav-logout">Cerrar sesión</a>
-        </div>
-    </div>
-</nav>
-
+{% block content %}
 <div class="container">
     <div class="page-header">
         <h1>🧠 Entrenamiento del Modelo</h1>
@@ -294,7 +278,9 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
 // ═══════════════════════════════════════
 //  FEEDBACK STATS
@@ -511,6 +497,4 @@ document.addEventListener('DOMContentLoaded',function(){
   } catch(e) {}
 })();
 </script>
-<script src="/static/theme.js"></script>
-</body>
-</html>
+{% endblock %}
