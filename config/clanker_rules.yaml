@@ -242,7 +242,7 @@ rules:
 
   - id: CLK-020
     category: hex_suffix
-    pattern: '\b(?:class|id)\s*=\s*["\'][^"\']*[a-zA-Z][0-9a-f]{6,8}["\']'
+    pattern: "\b(?:class|id)\s*=\s*[\"'][^\"']*[a-zA-Z][0-9a-f]{6,8}[\"']"
     target: html_body
     severity: medium
     confidence: medium
@@ -266,7 +266,7 @@ rules:
 
   - id: CLK-022
     category: placeholder_href
-    pattern: 'href\s*=\s*["\']#["\']'
+    pattern: "href\s*=\s*[\"']#[\"']"
     target: html_body
     severity: medium
     confidence: medium

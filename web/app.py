@@ -1181,14 +1181,23 @@ def clanker_status():
                     break
     except Exception:
         pass
-    return jsonify({
+    resp = {
         "enabled": True,
         "rules_version": meta.get("version", "?"),
         "rules_updated": meta.get("updated_at", "?"),
         "total_rules": len(rules),
         "active_rules": active,
         "rules_url": rules_url,
-    })
+    }
+    # Debug info cuando no hay reglas cargadas
+    if len(rules) == 0:
+        rules_path = os.path.join(os.path.dirname(__file__), "..", "config", "clanker_rules.yaml")
+        resp["debug"] = {
+            "rules_file_exists": os.path.exists(rules_path),
+            "rules_file_path": rules_path,
+            "rules_file_size": os.path.getsize(rules_path) if os.path.exists(rules_path) else 0,
+        }
+    return jsonify(resp)
 
 @app.route("/api/clanker/set_url", methods=["POST"])
 @login_required

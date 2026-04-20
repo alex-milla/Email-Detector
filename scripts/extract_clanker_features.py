@@ -53,7 +53,10 @@ def _load_rules() -> Dict:
                      len(data.get("rules", [])))
     except Exception as e:
         logger.error("Error cargando clanker_rules.yaml: %s", e)
-        _rules_cache = _rules_cache or {"meta": {}, "rules": []}
+        # No cachear errores: invalidar para reintentar en la siguiente llamada
+        _rules_cache = None
+        _rules_mtime = 0.0
+        return {"meta": {}, "rules": []}
     return _rules_cache
 
 
