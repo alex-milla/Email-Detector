@@ -1,7 +1,7 @@
 {
-  "version": "1.2.18",
+  "version": "1.2.19",
   "release_date": "2026-04-19",
-  "changelog": "1.2.18 — Robustez anti-DoS: límite de 2 MB por parte de body en extract_features, fix datetime.utcnow() deprecado en mailbox_connector, eliminado get_db() duplicado de app.py (usa auth.py con PRAGMA foreign_keys), rotación history.json y limpieza de backups ya activas.",
+  "changelog": "1.2.19 — UX y mantenibilidad: endpoint GET /api/settings/global para GPU toggle, active_page en navegación, limpieza de CSS duplicado nav en todos los templates (index, training, users, settings, update).",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.18.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.19.zip"
 }

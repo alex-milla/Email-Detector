@@ -436,7 +436,7 @@ def index():
     return render_template("index.html",
         total=total, malicious=malicious, benign=benign,
         model_exists=model_exists, model_meta=model_meta,
-        user=current_user())
+        user=current_user(), active_page='dashboard')
 
 
 @app.route("/training")
@@ -451,7 +451,7 @@ def training():
     return render_template("training.html",
         model_exists=model_exists, model_meta=model_meta,
         benign_count=benign_count, malicious_count=malicious_count,
-        user=current_user())
+        user=current_user(), active_page='training')
 
 
 @app.route("/users")
@@ -460,7 +460,7 @@ def users():
     return render_template("users.html",
         users=get_all_users(),
         mail_configs=get_all_mail_configs(),
-        user=current_user())
+        user=current_user(), active_page='users')
 
 
 @app.route("/settings")
@@ -470,7 +470,7 @@ def settings():
     return render_template("settings.html",
         config=get_mail_config(uid),
         global_cfg=read_global_env(),
-        user=current_user())
+        user=current_user(), active_page='settings')
 
 
 
@@ -784,6 +784,12 @@ def history_clear():
 def api_save_mail():
     save_mail_config(session["user_id"], request.get_json(silent=True) or {})
     return jsonify({"success": True})
+
+
+@app.route("/api/settings/global", methods=["GET"])
+@login_required
+def api_get_global():
+    return jsonify(read_global_env())
 
 
 @app.route("/api/settings/global", methods=["POST"])
@@ -1372,7 +1378,7 @@ def clanker_upload_rules():
 @app.route("/update")
 @admin_required
 def update_page():
-    return render_template("update.html", user=current_user())
+    return render_template("update.html", user=current_user(), active_page='update')
 
 
 @app.route("/api/update/check")
