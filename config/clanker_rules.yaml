@@ -1,6 +1,6 @@
 meta:
-  version: "1.0.0"
-  updated_at: "2025-01-01"
+  version: "1.1.0"
+  updated_at: "2026-04-19"
   author: "Email Malware Detector Project"
   description: "Reglas para detectar artefactos de LLMs en correos maliciosos"
   update_url: ""
@@ -185,4 +185,117 @@ rules:
     enabled: true
     description: "Comentario con instruccion de personalizacion al operador"
     added_date: "2025-01-01"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  #  Reglas v1.1.0 — Basadas en artículo "Forgetful Foes and Absentminded AIs"
+  #  Añadidas: 2026-04-19
+  # ═══════════════════════════════════════════════════════════════════════════════
+
+  - id: CLK-016
+    category: iterative_prompting
+    pattern: '<!--\s*(?:.*\b(?:as requested|removed as requested|exactly as requested|as you requested|per your request|as per your request|as asked)\b.*)'
+    target: html_comment
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Comentario HTML con frases 'as requested' — señal fuerte de prompting iterativo"
+    added_date: "2026-04-19"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-017
+    category: iterative_prompting
+    pattern: '<!--\s*(?:.*\b(?:Keeping exact same structure|exact same structure|UNCHANGED|no changes|no modifications|left unchanged|remains unchanged|same as before|as before)\b.*)'
+    target: html_comment
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Comentarios de 'sin cambios' — indicativo de re-prompting al LLM"
+    added_date: "2026-04-19"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-018
+    category: iterative_prompting
+    pattern: '<!--\s*(?:.*\b(?:Replace with your logo|Replace with official|Replace with your|Replace with actual|Replace with real|Replace here|Update with your|Update with actual)\b.*)'
+    target: html_comment
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Comentarios de 'Replace with...' en placeholders de imagen/logo"
+    added_date: "2026-04-19"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-019
+    category: iterative_prompting
+    pattern: '<!--\s*(?:.*\b(?:only the|just the|the following|this section|this line|this part)\b.*\b(?:is linked|is changed|is updated|is modified|is removed|is added|is unchanged)\b.*)'
+    target: html_comment
+    severity: medium
+    confidence: medium
+    fp_risk: low
+    enabled: true
+    description: "Comentarios descriptivos de cambios parciales ('only the X is linked')"
+    added_date: "2026-04-19"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-020
+    category: hex_suffix
+    pattern: '\b(?:class|id)\s*=\s*["\'][^"\']*[a-zA-Z][0-9a-f]{6,8}["\']'
+    target: html_body
+    severity: medium
+    confidence: medium
+    fp_risk: medium
+    enabled: true
+    description: "Clases o IDs CSS con sufijo hexadecimal de 6-8 caracteres (patron tipico de nombres generados por LLM)"
+    added_date: "2026-04-19"
+    source: "Microsoft AI vs AI campaign analysis"
+
+  - id: CLK-021
+    category: yellow_highlight
+    pattern: '#ffff00'
+    target: html_body
+    severity: medium
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Codigo de color hex #ffff00 exacto — copiado frecuentemente por LLMs desde screenshots de busqueda"
+    added_date: "2026-04-19"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-022
+    category: placeholder_href
+    pattern: 'href\s*=\s*["\']#["\']'
+    target: html_body
+    severity: medium
+    confidence: medium
+    fp_risk: medium
+    enabled: true
+    description: "Enlaces href='# placeholder sin sustituir"
+    added_date: "2026-04-19"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-023
+    category: docstring_comment
+    pattern: '<!--\s*(?:This section contains|The following code|The section below|This part contains|The content below|The area below|This block contains)\b'
+    target: html_comment
+    severity: low
+    confidence: medium
+    fp_risk: high
+    enabled: true
+    description: "Comentarios estilo docstring que describen secciones de HTML de forma generica"
+    added_date: "2026-04-19"
+    source: "Forgetful Foes and Absentminded AIs"
+
+  - id: CLK-024
+    category: overengineered_html
+    pattern: '<!--\s*(?:no footnote|no extra commentary|no additional text|no signature|no disclaimer|plain text only|exactly the requested content)\b'
+    target: html_comment
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Comentarios que declaran intencionalmente ausencia de elementos (señal de prompting directo al LLM)"
+    added_date: "2026-04-19"
     source: "Forgetful Foes and Absentminded AIs"

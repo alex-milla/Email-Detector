@@ -29,6 +29,13 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(__file__))
 from shannon_entropy import calculate_entropy, calculate_entropy_bytes
 
+# Importar Anti-Clanker (soft-fail si no está disponible)
+try:
+    from extract_clanker_features import extract_clanker_features
+    _CLANKER_FEATS_AVAILABLE = True
+except Exception:
+    _CLANKER_FEATS_AVAILABLE = False
+
 
 def extract_urls(text):
     """Encuentra todas las URLs en un texto."""
@@ -274,6 +281,14 @@ def extract_features_from_eml(eml_path):
         "attachment_name_entropy_max":     attachment_name_entropy_max,
         "attachment_content_entropy_max":  attachment_content_entropy_max,
     }
+
+    # ── Anti-Clanker features (integradas al vector de entrenamiento) ──
+    if _CLANKER_FEATS_AVAILABLE and body_html:
+        try:
+            clanker_feats = extract_clanker_features(body_html)
+            features.update(clanker_feats)
+        except Exception:
+            pass
 
     # Metadatos (no van al modelo, útiles para VirusTotal, Anti-Clanker y GUI)
     metadata = {

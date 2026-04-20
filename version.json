@@ -1,7 +1,7 @@
 {
-  "version": "1.2.29",
+  "version": "1.2.30",
   "release_date": "2026-04-19",
-  "changelog": "1.2.29 — Fix timeout descarga de correos: limita max_emails a 50 en backend y frontend, mensaje de error amigable ante timeout/proxy HTML.",
+  "changelog": "1.2.30 — Anti-Clanker v1.1.0: 9 reglas nuevas (iterative_prompting, hex_suffix, yellow_hex, placeholder_href, docstring_comment), análisis estructural DOM (profundidad, inline_style_ratio, div_vs_table, hex_suffix_count), integración completa con pipeline ML via extract_features.py.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.29.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.30.zip"
 }

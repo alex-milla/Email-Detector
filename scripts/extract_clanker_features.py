@@ -2,6 +2,9 @@
 
 Lee clanker_rules.yaml y genera un vector de features numérico a partir del
 HTML raw de un correo. Se integra con extract_features.py del ensemble.
+
+v1.1.0 — Añade análisis estructural del DOM y nuevas categorías de reglas
+basadas en "Forgetful Foes and Absentminded AIs".
 """
 import os
 import re
@@ -99,22 +102,73 @@ def _extract_zones(html_raw: str) -> Dict[str, str]:
     return zones
 
 
+# ── Análisis estructural del DOM ─────────────────────────────────────────────
+def _extract_dom_features(html_raw: str) -> Dict[str, Any]:
+    """
+    Extrae métricas estructurales del HTML sin dependencias externas.
+    Estas features capturan el 'over-engineering' típico de LLMs.
+    """
+    features: Dict[str, Any] = {
+        "clanker_dom_depth_max":      0,
+        "clanker_inline_style_ratio": 0.0,
+        "clanker_div_vs_table_ratio": 0.0,
+        "clanker_total_comments":     0,
+        "clanker_hex_suffix_count":   0,
+        "clanker_tag_count":          0,
+    }
+
+    if not html_raw:
+        return features
+
+    # 1. Profundidad máxima de anidación
+    depth = 0
+    max_depth = 0
+    for tag in re.finditer(r'<(/?)[a-zA-Z][^>]*>', html_raw):
+        tag_text = tag.group(0)
+        if tag.group(1) == '/':
+            depth = max(0, depth - 1)
+        elif not tag_text.endswith('/>') and not re.search(r'/\s*>$', tag_text):
+            # Apertura real (no self-closing)
+            depth += 1
+            max_depth = max(max_depth, depth)
+    features["clanker_dom_depth_max"] = max_depth
+
+    # 2. Ratio de elementos con style inline
+    all_open_tags = re.findall(r'<[a-zA-Z][^>]*>', html_raw)
+    styled_tags = re.findall(r'<[^>]*\bstyle\s*=\s*["\']', html_raw, re.IGNORECASE)
+    features["clanker_tag_count"] = len(all_open_tags)
+    if all_open_tags:
+        features["clanker_inline_style_ratio"] = round(
+            len(styled_tags) / len(all_open_tags), 4)
+
+    # 3. Ratio div vs table
+    div_count = len(re.findall(r'<div\b', html_raw, re.IGNORECASE))
+    table_count = len(re.findall(r'<table\b', html_raw, re.IGNORECASE))
+    if table_count > 0:
+        features["clanker_div_vs_table_ratio"] = round(div_count / table_count, 4)
+    else:
+        # Si no hay tables, un valor alto de divs puro también es señal de LLM moderno
+        features["clanker_div_vs_table_ratio"] = round(div_count, 4)
+
+    # 4. Total comentarios HTML
+    features["clanker_total_comments"] = len(re.findall(r'<!--', html_raw))
+
+    # 5. Hex suffixes en class/id (patrón Microsoft AI vs AI)
+    hex_suffixes = re.findall(
+        r'\b(?:class|id)\s*=\s*["\']([^"\']*[a-zA-Z][0-9a-f]{6,8})["\']',
+        html_raw, re.IGNORECASE)
+    features["clanker_hex_suffix_count"] = len(hex_suffixes)
+
+    return features
+
+
 # ── Feature extraction principal ─────────────────────────────────────────────
 def extract_clanker_features(html_raw: str) -> Dict[str, Any]:
     """
     Recibe el HTML raw de un correo y devuelve un diccionario de features
     compatible con el vector de features global del ensemble.
-
-    Features generadas:
-      clanker_total_matches        — total de reglas que hicieron match
-      clanker_weighted_score       — suma ponderada por severidad
-      clanker_score_<category>     — score por categoría
-      clanker_has_placeholder      — binario: algún placeholder detectado
-      clanker_has_yellow_highlight — binario: highlight amarillo detectado
-      clanker_has_localhost_url    — binario: URL localhost/ejemplo detectada
-      clanker_comment_ratio        — ratio comentarios sospechosos / total
-      clanker_unique_categories    — número de categorías distintas con match
     """
+    # Features base
     features: Dict[str, Any] = {
         "clanker_total_matches":        0,
         "clanker_weighted_score":       0.0,
@@ -128,12 +182,16 @@ def extract_clanker_features(html_raw: str) -> Dict[str, Any]:
     categories = [
         "conversational_comment", "placeholder", "visual_slop",
         "yellow_highlight", "localhost_url", "verbose_code_comment",
-        "overengineered_html",
+        "overengineered_html", "iterative_prompting", "hex_suffix",
+        "placeholder_href", "docstring_comment", "overengineered_html",
     ]
     for cat in categories:
         features[f"clanker_score_{cat}"] = 0.0
 
     if not html_raw:
+        # Aún devolvemos las features DOM (todas cero)
+        dom_feats = _extract_dom_features("")
+        features.update(dom_feats)
         return features
 
     rules = get_active_rules()
@@ -175,9 +233,29 @@ def extract_clanker_features(html_raw: str) -> Dict[str, Any]:
         suspicious_comments / total_comments, 4)
     features["clanker_unique_categories"] = len(matched_categories)
 
-    # Normalizar weighted_score al rango [0, 1] (cap en 10 reglas críticas)
+    # Normalizar weighted_score al rango [0, 1] (cap en 15 reglas críticas)
     features["clanker_weighted_score"] = round(
-        min(features["clanker_weighted_score"] / 10.0, 1.0), 4)
+        min(features["clanker_weighted_score"] / 15.0, 1.0), 4)
+
+    # ── Añadir features estructurales del DOM ──
+    dom_feats = _extract_dom_features(html_raw)
+    features.update(dom_feats)
+
+    # ── Bonus estructural al score ──
+    # Un HTML excesivamente limpio (muchos divs, mucho inline style, profundidad alta)
+    # es una señal adicional de over-engineering por LLM.
+    structural_boost = 0.0
+    if features["clanker_dom_depth_max"] >= 6:
+        structural_boost += 0.05
+    if features["clanker_inline_style_ratio"] >= 0.7:
+        structural_boost += 0.05
+    if features["clanker_div_vs_table_ratio"] >= 5 and features["clanker_tag_count"] >= 20:
+        structural_boost += 0.05
+    if features["clanker_hex_suffix_count"] >= 2:
+        structural_boost += 0.10
+
+    features["clanker_weighted_score"] = round(
+        min(features["clanker_weighted_score"] + structural_boost, 1.0), 4)
 
     return features
 
@@ -207,8 +285,11 @@ if __name__ == "__main__":
     if not test_html:
         test_html = """
         <!-- Sure! Here is the email you requested. Remember to replace [Your Name] -->
+        <!-- Styles removed as requested -->
         <html><body>
-        <p style="background-color: yellow;">Hello [Customer],</p>
+        <div style="background-color: yellow;">
+          <p class="contentTextf43e08">Hello [Customer],</p>
+        </div>
         <a href="http://localhost:8080/track">Click here</a>
         <!-- End of footer section -->
         </body></html>
