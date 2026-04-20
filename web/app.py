@@ -765,8 +765,16 @@ def history_clear():
 @app.route("/api/settings/mail", methods=["POST"])
 @login_required
 def api_save_mail():
-    save_mail_config(session["user_id"], request.get_json(silent=True) or {})
-    return jsonify({"success": True})
+    data = request.get_json(silent=True) or {}
+    if not data:
+        return jsonify({"success": False, "error": "Payload vacío o inválido"}), 400
+    try:
+        ok = save_mail_config(session["user_id"], data)
+        if not ok:
+            return jsonify({"success": False, "error": "No hay campos válidos para guardar"}), 400
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/api/settings/global", methods=["GET"])
@@ -778,9 +786,15 @@ def api_get_global():
 @app.route("/api/settings/global", methods=["POST"])
 @admin_required
 def api_save_global():
-    write_global_env(request.get_json(silent=True) or {})
-    load_dotenv(os.path.join(PROJECT_DIR, "config", ".env"), override=True)
-    return jsonify({"success": True})
+    data = request.get_json(silent=True) or {}
+    if not data:
+        return jsonify({"success": False, "error": "Payload vacío o inválido"}), 400
+    try:
+        write_global_env(data)
+        load_dotenv(os.path.join(PROJECT_DIR, "config", ".env"), override=True)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/api/settings/test", methods=["POST"])

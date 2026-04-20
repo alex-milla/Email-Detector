@@ -301,7 +301,8 @@ def get_mail_config(user_id):
 
 
 def save_mail_config(user_id, data: dict):
-    """Guarda o actualiza la configuración de correo de un usuario."""
+    """Guarda o actualiza la configuración de correo de un usuario.
+    Devuelve True si se guardó, False si no había campos válidos."""
     allowed = {
         "imap_server", "imap_port", "imap_user", "imap_password",
         "ms365_client_id", "ms365_client_secret",
@@ -311,25 +312,25 @@ def save_mail_config(user_id, data: dict):
     }
     filtered = {k: v for k, v in data.items() if k in allowed}
     if not filtered:
-        return
+        return False
 
     conn = get_db()
-    # Upsert: construimos el UPDATE de forma segura sin f-strings dinámicas
-    # usando una lista de columnas permitidas mapeadas a placeholders
-    now = datetime.now().isoformat()
-    conn.execute(
-        "INSERT OR IGNORE INTO mail_config (user_id, updated_at) VALUES (?, ?)",
-        (user_id, now)
-    )
-    # Actualizar solo las columnas presentes en el payload
-    set_clause = ", ".join(f"{k} = ?" for k in filtered.keys())
-    values = list(filtered.values()) + [user_id]
-    conn.execute(
-        f"UPDATE mail_config SET {set_clause}, updated_at = ? WHERE user_id = ?",
-        values + [now, user_id]
-    )
-    conn.commit()
-    conn.close()
+    try:
+        now = datetime.now().isoformat()
+        conn.execute(
+            "INSERT OR IGNORE INTO mail_config (user_id, updated_at) VALUES (?, ?)",
+            (user_id, now)
+        )
+        set_clause = ", ".join(f"{k} = ?" for k in filtered.keys())
+        values = list(filtered.values()) + [user_id]
+        conn.execute(
+            f"UPDATE mail_config SET {set_clause}, updated_at = ? WHERE user_id = ?",
+            values + [now, user_id]
+        )
+        conn.commit()
+        return True
+    finally:
+        conn.close()
 
 
 def get_all_mail_configs():

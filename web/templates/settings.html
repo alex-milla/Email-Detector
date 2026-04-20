@@ -95,7 +95,7 @@
                 <option value="m365"  {% if config.default_provider == 'm365'  %}selected{% endif %}>🏢 Microsoft 365</option>
                 <option value="gmail" {% if config.default_provider == 'gmail' %}selected{% endif %}>📧 Gmail</option>
             </select>
-            <button class="btn btn-primary" onclick="saveAll()">Guardar</button>
+            <button type="button" class="btn btn-primary" onclick="saveAll()">Guardar</button>
         </div>
     </div>
 
@@ -132,8 +132,8 @@
             </div>
         </div>
         <div class="card-footer">
-            <button class="btn btn-primary" onclick="saveAll()">💾 Guardar</button>
-            <button class="btn btn-secondary" onclick="testConn('imap')">🧪 Probar conexión</button>
+            <button type="button" class="btn btn-primary" onclick="saveAll()">💾 Guardar</button>
+            <button type="button" class="btn btn-secondary" onclick="testConn('imap')">🧪 Probar conexión</button>
             <div class="test-result" id="test-imap"></div>
         </div>
     </div>
@@ -168,8 +168,8 @@
             </div>
         </div>
         <div class="card-footer">
-            <button class="btn btn-primary" onclick="saveAll()">💾 Guardar</button>
-            <button class="btn btn-secondary" onclick="testConn('m365')">🧪 Probar conexión</button>
+            <button type="button" class="btn btn-primary" onclick="saveAll()">💾 Guardar</button>
+            <button type="button" class="btn btn-secondary" onclick="testConn('m365')">🧪 Probar conexión</button>
             <a href="https://portal.azure.com" target="_blank" class="btn btn-secondary">🔗 Azure Portal</a>
             <div class="test-result" id="test-m365"></div>
         </div>
@@ -197,7 +197,7 @@
             </div>
         </div>
         <div class="card-footer">
-            <button class="btn btn-primary" onclick="saveAll()">💾 Guardar</button>
+            <button type="button" class="btn btn-primary" onclick="saveAll()">💾 Guardar</button>
             <a href="https://console.cloud.google.com" target="_blank" class="btn btn-secondary">🔗 Google Cloud Console</a>
         </div>
     </div>
@@ -221,8 +221,8 @@
             </div>
         </div>
         <div class="card-footer">
-            <button class="btn btn-primary" onclick="saveGlobal()">💾 Guardar API Key</button>
-            <button class="btn btn-secondary" onclick="testConn('virustotal')">🧪 Probar</button>
+            <button type="button" class="btn btn-primary" onclick="saveGlobal()">💾 Guardar API Key</button>
+            <button type="button" class="btn btn-secondary" onclick="testConn('virustotal')">🧪 Probar</button>
             <div class="test-result" id="test-vt"></div>
         </div>
     </div>
@@ -248,7 +248,7 @@
             Solo tiene efecto con GPU NVIDIA y CUDA instalado. Requiere re-entrenar para aplicar.
         </p>
         <div class="card-footer">
-            <button class="btn btn-primary" onclick="saveGpuSetting()">💾 Guardar</button>
+            <button type="button" class="btn btn-primary" onclick="saveGpuSetting()">💾 Guardar</button>
             <div class="test-result" id="gpu-save-result"></div>
         </div>
     </div>
@@ -349,7 +349,7 @@
     {% endif %}
 
     <div class="save-bar">
-        <button class="btn btn-primary" style="padding:11px 28px" onclick="saveAll()">💾 Guardar toda mi configuración</button>
+        <button type="button" class="btn btn-primary" style="padding:11px 28px" onclick="saveAll()">💾 Guardar toda mi configuración</button>
     </div>
 </div>
 
@@ -396,25 +396,47 @@
     }
 
     async function saveAll() {
-        const r   = await fetch('/api/settings/mail', {
-            method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify(collectAll())
-        });
-        const res = await r.json();
-        if (res.success) showToast('✓ Configuración guardada');
-        else showToast('Error al guardar', 'error');
+        try {
+            const r = await fetch('/api/settings/mail', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(collectAll())
+            });
+            if (!r.ok) {
+                const text = await r.text();
+                showToast('Error del servidor (' + r.status + '): ' + text.slice(0, 200), 'error');
+                console.error('saveAll HTTP error', r.status, text);
+                return;
+            }
+            const res = await r.json();
+            if (res.success) showToast('✓ Configuración guardada');
+            else showToast('Error al guardar: ' + (res.error || ''), 'error');
+        } catch (e) {
+            showToast('Error de red o parsing: ' + e.message, 'error');
+            console.error('saveAll exception', e);
+        }
     }
 
     async function saveGlobal() {
         const apiKey = document.getElementById('vt-apikey')?.value.trim();
         if (!apiKey) return;
-        const r   = await fetch('/api/settings/global', {
-            method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ VIRUSTOTAL_API_KEY: apiKey })
-        });
-        const res = await r.json();
-        if (res.success) showToast('✓ API Key de VirusTotal guardada');
-        else showToast('Error al guardar', 'error');
+        try {
+            const r = await fetch('/api/settings/global', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ VIRUSTOTAL_API_KEY: apiKey })
+            });
+            if (!r.ok) {
+                const text = await r.text();
+                showToast('Error del servidor (' + r.status + '): ' + text.slice(0, 200), 'error');
+                console.error('saveGlobal HTTP error', r.status, text);
+                return;
+            }
+            const res = await r.json();
+            if (res.success) showToast('✓ API Key de VirusTotal guardada');
+            else showToast('Error al guardar: ' + (res.error || ''), 'error');
+        } catch (e) {
+            showToast('Error de red o parsing: ' + e.message, 'error');
+            console.error('saveGlobal exception', e);
+        }
     }
 
     async function testConn(provider) {

@@ -1,7 +1,7 @@
 {
-  "version": "1.2.26",
+  "version": "1.2.27",
   "release_date": "2026-04-19",
-  "changelog": "1.2.26 — Mejora UX IMAP: mensajes de error específicos para Gmail App Password + enlace informativo debajo del campo de contraseña.",
+  "changelog": "1.2.27 — Fix robustez guardado de configuración: manejo de errores en backend (api_save_mail, save_mail_config) y frontend (saveAll/saveGlobal), mensajes de error visibles ante fallos de BD o red.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.26.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.27.zip"
 }
