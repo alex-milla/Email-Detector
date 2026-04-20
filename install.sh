@@ -133,9 +133,6 @@ else
     info "Instalación existente detectada en $INSTALL_DIR"
 fi
 
-printf "  ${B}Instalar ClamAV? [S/n]:${N} "
-read DO_CLAMAV; DO_CLAMAV="${DO_CLAMAV:-S}"
-
 # HTTPS siempre activo — única opción soportada
 DO_HTTPS="S"
 
@@ -154,7 +151,7 @@ echo ""
 echo "  ─────────────────────────────────────────────────────"
 echo "  Directorio : $INSTALL_DIR"
 echo "  Puerto     : $WEB_PORT"
-echo "  ClamAV     : $DO_CLAMAV   |   HTTPS: activado (obligatorio)"
+echo "  HTTPS      : activado (obligatorio)"
 echo "  ─────────────────────────────────────────────────────"
 printf "  Continuar? [S/n] "; read CONFIRM
 case "$CONFIRM" in [Nn]*) echo "Cancelado."; exit 0;; esac
@@ -166,23 +163,6 @@ echo ""
 step "1/6" "Instalando dependencias del sistema"
 apt-get update -qq
 apt-get install -y -qq python3 python3-pip python3-venv git curl wget cron
-case "$DO_CLAMAV" in [Ss]*)
-    apt-get install -y -qq clamav clamav-daemon
-    ok "ClamAV instalado"
-
-    # Añadir emaildetector al grupo clamav y fijar permisos del log
-    usermod -aG clamav "$SVC_USER" 2>/dev/null || true
-    touch /var/log/clamav/freshclam.log 2>/dev/null || true
-    chown clamav:clamav /var/log/clamav/freshclam.log 2>/dev/null || true
-    chmod 664 /var/log/clamav/freshclam.log 2>/dev/null || true
-    ok "permisos freshclam.log configurados para $SVC_USER"
-
-    # Asegurarse de que los servicios ClamAV están activos
-    systemctl enable clamav-daemon clamav-freshclam 2>/dev/null || true
-    systemctl restart clamav-freshclam 2>/dev/null || systemctl start clamav-freshclam 2>/dev/null || true
-    systemctl restart clamav-daemon    2>/dev/null || systemctl start clamav-daemon    2>/dev/null || true
-    ok "servicios ClamAV activos"
-;; esac
 ok "$(python3 --version)"
 
 # ─────────────────────────────────────────────────────────────
@@ -435,20 +415,14 @@ EOF
     systemctl daemon-reload
     # Reglas sudo para el usuario de servicio:
     #   - systemctl restart/start/stop email-detector (updater y svc_restart)
-    #   - freshclam (actualización de firmas ClamAV desde la UI)
     SUDOERS_FILE="/etc/sudoers.d/email-detector"
     # Resolver ruta real de systemctl (puede ser /bin o /usr/bin según distro)
     SYSTEMCTL_BIN="$(command -v systemctl)"
-    FRESHCLAM_BIN="$(command -v freshclam || echo /usr/bin/freshclam)"
     cat > "$SUDOERS_FILE" << SUDOEOF
 # Email Malware Detector — permisos sudo mínimos
 $SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN restart email-detector
 $SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN start email-detector
 $SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN stop email-detector
-$SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN stop clamav-freshclam
-$SVC_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN start clamav-freshclam
-$SVC_USER ALL=(root) NOPASSWD: $FRESHCLAM_BIN --quiet
-$SVC_USER ALL=(root) NOPASSWD: $FRESHCLAM_BIN --quiet --log=/dev/null
 SUDOEOF
     chmod 440 "$SUDOERS_FILE"
     visudo -cf "$SUDOERS_FILE" && ok "reglas sudo configuradas ($SUDOERS_FILE)" || warn "error en sudoers — revisa $SUDOERS_FILE"
@@ -504,11 +478,9 @@ echo ""
 echo "  Servicios del sistema:"
 echo "    systemctl status email-detector          # Aplicación principal"
 echo "    systemctl status email-detector-redirect # Redirector HTTP→HTTPS"
-echo "    systemctl status clamav-daemon           # Escáner de adjuntos"
-echo "    systemctl status clamav-freshclam        # Actualizador de firmas"
 echo ""
 printf "  ${Y}Si algo no funciona tras la instalación:${N}\n"
-printf "  ${Y}  sudo systemctl restart email-detector clamav-daemon clamav-freshclam${N}\n"
+printf "  ${Y}  sudo systemctl restart email-detector${N}\n"
 echo ""
 printf "  ${Y}HTTPS con cert autofirmado: acepta la excepción en tu navegador.${N}\n"
 printf "  ${Y}Para Let's Encrypt: sustituye config/ssl/cert.pem y config/ssl/key.pem${N}\n"

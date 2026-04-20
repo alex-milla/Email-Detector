@@ -1,7 +1,7 @@
 {
-  "version": "1.2.24",
+  "version": "1.2.25",
   "release_date": "2026-04-19",
-  "changelog": "1.2.24 — Hotfix ClamAV: elimina --log=/dev/null que causa 'libfreshclam init failed'. Añade detección de lock, permisos e inicialización con mensajes explicativos.",
+  "changelog": "1.2.25 — Eliminado complemento ClamAV por completo. El motor de detección (ensemble ML 10 modelos + Anti-Clanker + VirusTotal) no lo requiere. Limpieza de código, templates, scripts de deploy/install y documentación.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.24.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.25.zip"
 }

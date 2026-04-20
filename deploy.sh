@@ -117,9 +117,6 @@ else
     info "Instalación existente detectada en $INSTALL_DIR"
 fi
 
-printf "  ${B}Instalar ClamAV? [S/n]:${N} "
-read DO_CLAMAV; DO_CLAMAV="${DO_CLAMAV:-S}"
-
 printf "  ${B}Habilitar HTTPS (cert autofirmado)? [s/N]:${N} "
 read DO_HTTPS; DO_HTTPS="${DO_HTTPS:-N}"
 
@@ -141,7 +138,7 @@ echo "  Directorio : $INSTALL_DIR"
 echo "  Puerto     : $WEB_PORT"
 echo "  systemd    : $INSTALL_SVC"
 echo "  cron       : $INSTALL_CRON"
-echo "  ClamAV     : $DO_CLAMAV   |   HTTPS: $DO_HTTPS"
+echo "  HTTPS      : $DO_HTTPS"
 echo "  ─────────────────────────────────────────────────────"
 printf "  Continuar? [S/n] "; read CONFIRM
 case "$CONFIRM" in [Nn]*) echo "Cancelado."; exit 0;; esac
@@ -157,24 +154,12 @@ install_pkgs() {
         apt-get)
             apt-get update -qq
             apt-get install -y -qq python3 python3-pip python3-venv git curl wget cron openssl
-            case "$DO_CLAMAV" in [Ss]*)
-                apt-get install -y -qq clamav clamav-daemon
-                ok "ClamAV instalado"
-            ;; esac
             ;;
         dnf|yum)
             $PKG_MANAGER install -y python3 python3-pip python3-virtualenv git curl wget cronie openssl
-            case "$DO_CLAMAV" in [Ss]*)
-                $PKG_MANAGER install -y clamav clamav-scanner
-                ok "ClamAV instalado"
-            ;; esac
             ;;
         pacman)
             pacman -Sy --noconfirm python python-pip python-virtualenv git curl wget cronie openssl
-            case "$DO_CLAMAV" in [Ss]*)
-                pacman -Sy --noconfirm clamav
-                ok "ClamAV instalado"
-            ;; esac
             ;;
         *)
             warn "No se detectó gestor de paquetes conocido."

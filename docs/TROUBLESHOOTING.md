@@ -7,7 +7,6 @@
 - [El servicio no arranca](#el-servicio-no-arranca)
 - [Puerto 5000 ocupado](#puerto-5000-ocupado)
 - [xgboost/lightgbm/catboost fallan al instalar](#xgboostlightgbmcatboost-fallan-al-instalar)
-- [ClamAV no responde](#clamav-no-responde)
 - [El modelo no predice (Anti-Clanker)](#el-modelo-no-predice-anti-clanker)
 - [Cómo actualizar sin perder datos](#cómo-actualizar-sin-perder-datos)
 
@@ -85,22 +84,6 @@
   sudo apt-get install -y build-essential cmake libopenmpi-dev
   ```
 - En LXC sin `build-essential`, omítelas. El script continúa automáticamente.
-
----
-
-## ClamAV no responde
-
-**Síntoma**: Los análisis de adjuntos tardan eternamente o dan timeout.
-
-**Solución**:
-- Verifica que el daemon está corriendo:
-  ```bash
-  sudo systemctl status clamav-daemon
-  ```
-- En modo standalone (sin systemd), ClamAV no se gestiona automáticamente. Arráncalo manualmente:
-  ```bash
-  clamd
-  ```
 
 ---
 

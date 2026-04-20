@@ -357,23 +357,6 @@ def admin_required(f):
 # ══════════════════════════════════════════════════
 
 
-# ── ClamAV integration ──────────────────────────────────────────────────────
-import sys as _sys
-_sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
-try:
-    from clamav_scanner import (
-        is_available as clamav_available,
-        get_version  as clamav_version,
-        get_db_info  as clamav_db_info,
-        scan_file    as clamav_scan_file,
-        scan_email_attachments,
-        update_signatures as clamav_update,
-    )
-    CLAMAV_ENABLED = True
-except ImportError:
-    CLAMAV_ENABLED = False
-# ─────────────────────────────────────────────────────────────────────────────
-
 
 # ── Anti-Clanker integration ─────────────────────────────────────────────────
 import sys as _sys_ck
@@ -1108,49 +1091,6 @@ def api_models_toggle_post():
     return jsonify({"ok": True, "name": name, "enabled": enabled, "disabled": list(disabled)})
 
 
-
-@app.route("/api/clamav/status", methods=["GET"])
-@login_required
-def clamav_status():
-    if not CLAMAV_ENABLED: return jsonify({"enabled":False,"error":"pyclamd no instalado"}),503
-    info = clamav_db_info()
-    return jsonify({"enabled":True,"available":clamav_available(),
-                    "version":info.get("version"),"updated_at":info.get("updated_at")})
-
-@app.route("/api/clamav/update", methods=["POST"])
-@login_required
-@admin_required
-def clamav_update_db():
-    if not CLAMAV_ENABLED: return jsonify({"success":False,"error":"pyclamd no instalado"}),503
-    result = clamav_update()
-    return jsonify(result), 200 if result["success"] else 500
-
-@app.route("/api/clamav/scan", methods=["POST"])
-@login_required
-def clamav_scan_manual():
-    if not CLAMAV_ENABLED: return jsonify({"success":False,"error":"ClamAV no habilitado"}),503
-    if not clamav_available():
-        return jsonify({"success":False,"error":"clamd no disponible"}),503
-    if "file" in request.files:
-        uploaded = request.files["file"]
-        import tempfile
-        suffix = os.path.splitext(uploaded.filename or "file")[1] or ".bin"
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            uploaded.save(tmp.name); tmp_path = tmp.name
-        try:
-            result = clamav_scan_file(tmp_path)
-            result["filename"] = uploaded.filename
-        finally:
-            try: os.unlink(tmp_path)
-            except: pass
-        return jsonify({"success":True,"results":[result]})
-    data = request.get_json(silent=True) or {}
-    return jsonify({"success":False,"error":"Se requiere 'file' o 'email_id'"}),400
-
-@app.route("/api/clamav/results/<int:email_id>", methods=["GET"])
-@login_required
-def clamav_results_for_email(email_id):
-    return jsonify({"email_id":email_id,"scanned":False,"results":[]})
 
 @app.route("/api/user/role", methods=["GET"])
 @login_required

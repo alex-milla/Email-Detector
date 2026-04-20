@@ -250,41 +250,6 @@
         </div>
     </div>
 
-    <!-- ClamAV -->
-    <div class="card" id="clamav-card">
-        <div class="card-header">
-            <div class="card-header-left">
-                <h2>🛡️ ClamAV — Análisis de Adjuntos</h2>
-            </div>
-            <span class="badge-status info" id="clamav-badge">Comprobando...</span>
-        </div>
-        <div class="info-grid">
-            <div class="info-item">
-                <small>Motor</small>
-                <strong id="clamav-version">—</strong>
-            </div>
-            <div class="info-item">
-                <small>Firmas actualizadas</small>
-                <strong id="clamav-updated">—</strong>
-            </div>
-        </div>
-        <hr class="divider">
-        <p style="color:var(--text-muted,#94a3b8);font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Escanear archivo manualmente</p>
-        <div class="input-row" style="margin-bottom:12px;">
-            <input type="file" id="clamav-file-input" style="flex:1;background:var(--bg-input-alt,#0a1020);color:var(--text-primary,#e2e8f0);border:1px solid var(--border-input,#2d3f55);border-radius:7px;padding:8px 10px;">
-            <button class="btn btn-secondary" onclick="clamavScanFile()">🔍 Analizar</button>
-        </div>
-        <div class="test-result" id="clamav-scan-result"></div>
-        <div id="clamav-admin-section">
-            <hr class="divider">
-            <p style="color:var(--text-muted,#94a3b8);font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Base de datos de firmas</p>
-            <p style="color:var(--text-faint,#64748b);font-size:0.83em;margin-bottom:12px;">Se actualiza automáticamente cada día a las 08:00.</p>
-            <div class="card-footer" style="margin-top:0;">
-                <button class="btn btn-warning btn-sm" onclick="clamavUpdateDB()">🔄 Actualizar ahora</button>
-                <div class="test-result" id="clamav-update-result"></div>
-            </div>
-        </div>
-    </div>
 
     <!-- Anti-Clanker -->
     <div class="card" id="clanker-panel">
@@ -517,64 +482,6 @@
                 else showResult('gpu-save-result', 'error', 'Error al guardar');
             }).catch(() => showResult('gpu-save-result', 'error', 'Error de conexión'));
         };
-    })();
-
-    // ── ClamAV ───────────────────────────────────────────────────────────────
-    async function clamavLoadStatus() {
-        try {
-            const r = await fetch('/api/clamav/status');
-            const d = await r.json();
-            const badge = document.getElementById('clamav-badge');
-            if (!d.enabled) {
-                badge.textContent = 'No instalado';
-                badge.className = 'badge-status missing';
-                return;
-            }
-            badge.textContent = d.available ? 'Activo' : 'Daemon caído';
-            badge.className = d.available ? 'badge-status ok' : 'badge-status warn';
-            document.getElementById('clamav-version').textContent = d.version || '—';
-            document.getElementById('clamav-updated').textContent = d.updated_at || 'Desconocido';
-        } catch(e) {
-            document.getElementById('clamav-card').style.display = 'none';
-        }
-    }
-
-    async function clamavScanFile() {
-        const input = document.getElementById('clamav-file-input');
-        if (!input.files.length) { alert('Selecciona un archivo primero'); return; }
-        showResult('clamav-scan-result', 'loading', '⏳ Analizando...');
-        const fd = new FormData();
-        fd.append('file', input.files[0]);
-        try {
-            const r = await fetch('/api/clamav/scan', {method:'POST', body:fd});
-            const d = await r.json();
-            if (!d.success) { showResult('clamav-scan-result', 'error', '✗ Error: ' + d.error); return; }
-            const res = d.results && d.results[0];
-            if (!res) { showResult('clamav-scan-result', 'info', 'Sin resultado.'); return; }
-            if (res.infected) showResult('clamav-scan-result', 'error', '⚠ AMENAZA: ' + (res.threat || 'Malware'));
-            else if (res.error) showResult('clamav-scan-result', 'warning', 'Error de análisis: ' + res.error);
-            else showResult('clamav-scan-result', 'ok', '✓ Archivo limpio');
-        } catch(e) { showResult('clamav-scan-result', 'error', 'Error: ' + e); }
-    }
-
-    async function clamavUpdateDB() {
-        showResult('clamav-update-result', 'loading', '⏳ Actualizando...');
-        try {
-            const r = await fetch('/api/clamav/update', {method:'POST'});
-            const d = await r.json();
-            if (d.success) { showResult('clamav-update-result', 'ok', '✓ Actualizado correctamente'); clamavLoadStatus(); }
-            else showResult('clamav-update-result', 'warning', d.output || d.error || 'Error');
-        } catch(e) { showResult('clamav-update-result', 'error', 'Error: ' + e); }
-    }
-
-    (async function() {
-        try {
-            const r = await fetch('/api/user/role');
-            const d = await r.json();
-            const s = document.getElementById('clamav-admin-section');
-            if (s) s.style.display = (d.role === 'admin') ? '' : 'none';
-        } catch(e) {}
-        clamavLoadStatus();
     })();
 
     // ── Anti-Clanker ─────────────────────────────────────────────────────────

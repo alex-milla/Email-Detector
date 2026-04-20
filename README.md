@@ -1,12 +1,12 @@
 # Email Malware Detector
 
-Herramienta de detección de correos maliciosos mediante modelos de aprendizaje automático. Incluye interfaz web, conexión IMAP/OAuth2, análisis con ClamAV, integración con VirusTotal y un detector de correos generados por IA (Anti-Clanker).
+Herramienta de detección de correos maliciosos mediante modelos de aprendizaje automático. Incluye interfaz web, conexión IMAP/OAuth2, integración con VirusTotal y un detector de correos generados por IA (Anti-Clanker).
 
 ## Características
 
 - **10 modelos de análisis** en ensemble (XGBoost, LightGBM, CatBoost y otros)
 - Conexión a **Gmail vía IMAP** (App Password o OAuth2) y **Microsoft 365**
-- Análisis de adjuntos con **ClamAV**
+- Análisis de adjuntos con múltiples modelos ML en ensemble
 - Consulta opcional a **VirusTotal API**
 - **Modelo 10 — Anti-Clanker**: detecta correos generados por LLMs mediante reglas YAML actualizables
 - Sistema **multiusuario**: admins y usuarios limitados
@@ -57,7 +57,7 @@ email-detector/
 │   ├── train_model.py      # Entrenamiento de modelos
 │   ├── mailbox_connector.py# Conexión IMAP / OAuth2
 │   ├── virustotal.py       # Integración VirusTotal
-│   ├── clamav_scanner.py   # Integración ClamAV
+│   ├── predict.py            # Ensemble de 10 modelos ML + Anti-Clanker
 │   ├── extract_clanker_features.py  # Features Anti-Clanker
 │   ├── update_clanker_rules.py      # Auto-actualización de reglas
 │   ├── auto_scan.py        # Escaneo automático (cron)
@@ -154,7 +154,7 @@ Consulta [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) para problemas comun
 - Dependencias que fallan
 - Puerto ocupado
 - xgboost/lightgbm/catboost no compilan
-- ClamAV no responde
+- VirusTotal API key inválida
 
 ## Desarrollo y Releases
 
