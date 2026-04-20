@@ -155,43 +155,50 @@ def update_signatures():
             if "lock" not in l.lower() and "log file" not in l.lower()
         ).strip() or "Actualizado correctamente"
 
+    def _try(cmd):
+        """Ejecuta freshclam y devuelve (ok, result_dict)."""
+        try:
+            proc = subprocess.run(
+                cmd + ["--quiet"],
+                capture_output=True, text=True, timeout=25
+            )
+            err = (proc.stderr or "").lower()
+            if proc.returncode == 0:
+                return True, {"success": True, "output": _clean(proc.stderr),
+                              "updated_at": _local_now().isoformat()}
+            if "password" in err or "a password is required" in err:
+                return True, {"success": False,
+                              "output": "El usuario del servicio no tiene permisos sudo para freshclam. "
+                                        "ClamAV se actualiza automáticamente cada día a las 08:00. "
+                                        "Para forzar una actualización manual, ejecuta 'sudo freshclam' "
+                                        "directamente en el servidor."}
+            if "permission" in err or "denied" in err or "can't create" in err:
+                return False, None  # reintentar con otro método
+            if "lock" in err or "already locked" in err:
+                return True, {"success": False,
+                              "output": "El daemon clamav-freshclam está actualizando las firmas en segundo plano. "
+                                        "Espera unos minutos o reinicia el servicio con: sudo systemctl restart clamav-freshclam"}
+            if "initialization error" in err or "libfreshclam init failed" in err:
+                return True, {"success": False,
+                              "output": "Error de inicialización de libfreshclam. "
+                                        "Normalmente esto ocurre cuando el daemon clamav-freshclam ya está gestionando la actualización. "
+                                        "ClamAV se actualiza automáticamente cada día a las 08:00."}
+            return True, {"success": False, "output": _clean(proc.stderr)}
+        except FileNotFoundError:
+            return True, {"success": False, "output": "freshclam no encontrado"}
+        except subprocess.TimeoutExpired:
+            return True, {"success": False,
+                          "output": "Timeout (25s). El daemon freshclam puede estar ocupado o la red es lenta. "
+                                    "Intenta de nuevo en unos minutos."}
+        except Exception as e:
+            return True, {"success": False, "output": f"Error inesperado: {e}"}
+
     # 1. Intentar sin sudo (usuario puede pertenecer al grupo clamav)
-    try:
-        proc = subprocess.run(
-            ["freshclam", "--quiet", "--log=/dev/null"],
-            capture_output=True, text=True, timeout=25
-        )
-        if proc.returncode == 0:
-            return {"success": True, "output": _clean(proc.stderr),
-                    "updated_at": _local_now().isoformat()}
-        err = (proc.stderr or "").lower()
-        if "permission" in err or "denied" in err or "can't create" in err:
-            pass  # fallback a sudo
-        else:
-            return {"success": False, "output": _clean(proc.stderr)}
-    except FileNotFoundError:
-        return {"success": False, "output": "freshclam no encontrado"}
+    ok, result = _try(["freshclam"])
+    if ok:
+        return result
 
     # 2. Intentar con sudo -n (requiere configuración en /etc/sudoers)
-    try:
-        proc = subprocess.run(
-            ["sudo", "-n", "freshclam", "--quiet", "--log=/dev/null"],
-            capture_output=True, text=True, timeout=25
-        )
-        if proc.returncode == 0:
-            return {"success": True, "output": _clean(proc.stderr),
-                    "updated_at": _local_now().isoformat()}
-        err = (proc.stderr or "").lower()
-        if "password" in err or "a password is required" in err:
-            return {"success": False,
-                    "output": "El usuario del servicio no tiene permisos sudo para freshclam. "
-                              "ClamAV se actualiza automáticamente cada día a las 08:00. "
-                              "Para forzar una actualización manual, ejecuta 'sudo freshclam' "
-                              "directamente en el servidor."}
-        return {"success": False, "output": _clean(proc.stderr)}
-    except subprocess.TimeoutExpired:
-        return {"success": False,
-                "output": "Timeout (25s). El daemon freshclam puede estar ocupado o la red es lenta. "
-                          "Intenta de nuevo en unos minutos."}
-    except Exception as e:
-        return {"success": False, "output": f"Error inesperado: {e}"}
+    ok, result = _try(["sudo", "-n", "freshclam"])
+    return result if ok else {"success": False, "output": "No se pudo ejecutar freshclam. "
+                                                     "ClamAV se actualiza automáticamente cada día a las 08:00."}

@@ -1,7 +1,7 @@
 {
-  "version": "1.2.23",
+  "version": "1.2.24",
   "release_date": "2026-04-19",
-  "changelog": "1.2.23 — Hotfix ClamAV: update_signatures intenta freshclam sin sudo primero, y si falla por permisos muestra un mensaje explicativo en lugar de 'sudo: a password is required'.",
+  "changelog": "1.2.24 — Hotfix ClamAV: elimina --log=/dev/null que causa 'libfreshclam init failed'. Añade detección de lock, permisos e inicialización con mensajes explicativos.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.23.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.24.zip"
 }
