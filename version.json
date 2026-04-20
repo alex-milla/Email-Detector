@@ -1,7 +1,7 @@
 {
-  "version": "1.2.35",
+  "version": "1.2.36",
   "release_date": "2026-04-19",
-  "changelog": "1.2.35 — Fix colores de badges resultado: ahora usan prediction (BENIGNO=verde, MALICIOSO=rojo) en tabla historial, tarjetas y modal de detalle.",
+  "changelog": "1.2.36 — Fix definitivo colores badges: theme.js ya no fuerza !important sobre .risk-badge, permitiendo que .pred-benigno/.pred-malicioso muestren verde/rojo correctamente.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.35.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.36.zip"
 }

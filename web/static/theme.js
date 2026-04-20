@@ -394,7 +394,7 @@
       }
       .upload-zone p { color: var(--text-muted) !important; }
       /* risk badges */
-      .risk-badge { background: var(--border) !important; color: var(--text-primary) !important; }
+      .risk-badge { background: var(--border); color: var(--text-primary); }
       /* table rows */
       tr { background: transparent !important; }
       /* inline style overrides for JS-generated content */
