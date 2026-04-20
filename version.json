@@ -1,7 +1,7 @@
 {
-  "version": "1.2.19",
+  "version": "1.2.20",
   "release_date": "2026-04-19",
-  "changelog": "1.2.19 — UX y mantenibilidad: endpoint GET /api/settings/global para GPU toggle, active_page en navegación, limpieza de CSS duplicado nav en todos los templates (index, training, users, settings, update).",
+  "changelog": "1.2.20 — Hotfix: _validate_script_path ahora acepta scripts propiedad del usuario actual (además de root). Corrige 'El script no pasó la validación de seguridad' en download_dataset.sh y retrain.sh en despliegues no-root.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.19.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.20.zip"
 }

@@ -963,9 +963,13 @@ def _validate_script_path(script_path: str, allowed_dir: str) -> tuple:
         relax = os.environ.get("EMAIL_DETECTOR_RELAX_SCRIPT_CHECK", "").lower() in (
             "1", "true", "yes",
         )
-        if not relax:
-            if st.st_uid != 0:
-                return False, f"El script no pertenece a root (uid={st.st_uid})"
+        if not relax and hasattr(os, 'getuid'):
+            current_uid = os.getuid()
+            if st.st_uid != 0 and st.st_uid != current_uid:
+                return False, (
+                    f"El script no pertenece a root ni al usuario actual "
+                    f"(owner={st.st_uid}, current={current_uid})"
+                )
             if st.st_mode & 0o022:
                 return False, "El script es escribible por grupo u otros (permisos inseguros)"
 
