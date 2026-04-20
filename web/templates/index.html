@@ -32,14 +32,16 @@
         .result-card.alto    { border-left-color:#f97316; }
         .result-card.medio   { border-left-color:var(--warning); }
         .result-card.bajo    { border-left-color:var(--success); }
-        .result-card.minimo  { border-left-color:#6b7280; }
+        .result-card.minimo  { border-left-color:#86efac; }
 
         .risk-badge { display:inline-block; padding:3px 12px; border-radius:12px; font-size:0.82em; font-weight:700; background:var(--border); }
-        .risk-badge.risk-CRITICO { background:rgba(239,68,68,0.2); color:var(--danger); }
-        .risk-badge.risk-ALTO    { background:rgba(249,115,22,0.2); color:#f97316; }
-        .risk-badge.risk-MEDIO   { background:rgba(234,179,8,0.2);  color:var(--warning); }
-        .risk-badge.risk-BAJO    { background:rgba(34,197,94,0.2);  color:var(--success); }
-        .risk-badge.risk-MINIMO  { background:rgba(107,114,128,0.2);color:#6b7280; }
+        /* Escala de riesgo: verde → naranja (sospechoso) → rojo */
+        .risk-badge.risk-MINIMO  { background:rgba(34,197,94,0.15);  color:#16a34a; }
+        .risk-badge.risk-BAJO    { background:rgba(74,222,128,0.15); color:#22c55e; }
+        .risk-badge.risk-MEDIO   { background:rgba(251,146,60,0.15); color:#f97316; }
+        .risk-badge.risk-ALTO    { background:rgba(249,115,22,0.2);  color:#ea580c; }
+        .risk-badge.risk-CRITICO { background:rgba(239,68,68,0.2);   color:#dc2626; }
+        /* Predicción */
         .risk-badge.pred-benigno    { background:rgba(34,197,94,0.2); color:var(--success); }
         .risk-badge.pred-malicioso  { background:rgba(239,68,68,0.2); color:var(--danger); }
 
@@ -207,7 +209,7 @@ function nl(s) {
 }
 const ew = v => Math.min(((parseFloat(v)||0)/8)*100,100).toFixed(1);
 const ec = v => (parseFloat(v)||0)>5.5?'#ef4444':(parseFloat(v)||0)>4.5?'#eab308':'#22c55e';
-const colorMap = {CRITICO:'#ef4444',ALTO:'#f97316',MEDIO:'#eab308',BAJO:'#22c55e',MINIMO:'#6b7280'};
+const colorMap = {CRITICO:'#ef4444',ALTO:'#f97316',MEDIO:'#f97316',BAJO:'#22c55e',MINIMO:'#22c55e'};
 const lcMap    = {CRITICO:'critico',ALTO:'alto',MEDIO:'medio',BAJO:'bajo',MINIMO:'minimo'};
 
 async function loadHistory(page) {
@@ -327,7 +329,7 @@ function renderModal(r) {
                 <div style="color:var(--text-faint);font-size:0.83em">Analizado por: ${escapeHtml(r.analyzed_by)||'-'}</div>
             </div>
             <div style="text-align:right">
-                <div style="background:${rc};color:white;padding:5px 14px;border-radius:20px;font-weight:700">${escapeHtml(r.prediction)||'-'}</div>
+                <span class="risk-badge ${r.prediction==='MALICIOSO'?'pred-malicioso':'pred-benigno'}">${escapeHtml(r.prediction)||'-'}</span>
                 <div style="color:${rc};font-weight:600;margin-top:5px">${escapeHtml(r.risk_level)||'-'} — ${r.risk_score||0}%</div>
                 <div style="color:var(--text-faint);font-size:0.8em;margin-top:3px">Modelo: ${escapeHtml(r.model_used)||'-'}</div>
             </div>

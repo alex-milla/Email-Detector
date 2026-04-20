@@ -1,7 +1,7 @@
 {
-  "version": "1.2.36",
+  "version": "1.2.37",
   "release_date": "2026-04-19",
-  "changelog": "1.2.36 — Fix definitivo colores badges: theme.js ya no fuerza !important sobre .risk-badge, permitiendo que .pred-benigno/.pred-malicioso muestren verde/rojo correctamente.",
+  "changelog": "1.2.37 — Fix colores badges modal + escala coherente: BENIGNO=verde, MEDIO=naranja(sospechoso), MALICIOSO=rojo. Modal ahora usa pred-benigno/pred-malicioso como tabla y tarjetas. MINIMO deja de ser gris.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.36.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.37.zip"
 }
