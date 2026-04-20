@@ -150,7 +150,7 @@ def update_signatures():
     try:
         proc = subprocess.run(
             ["sudo", "-n", "freshclam", "--quiet", "--log=/dev/null"],
-            capture_output=True, text=True, timeout=300
+            capture_output=True, text=True, timeout=25
         )
         output = (proc.stdout or proc.stderr or "Sin salida").strip()
         # Filtrar el aviso de lock del log si aparece en stderr — no es un error real
@@ -161,6 +161,10 @@ def update_signatures():
         result = {"success": proc.returncode == 0,
                   "output": output,
                   "updated_at": _local_now().isoformat()}
-    except subprocess.TimeoutExpired: result = {"success": False, "output": "Timeout"}
-    except FileNotFoundError:         result = {"success": False, "output": "freshclam no encontrado"}
+    except subprocess.TimeoutExpired:
+        result = {"success": False, "output": "Timeout (25s). El daemon freshclam puede estar ocupado o la red es lenta. Intenta de nuevo en unos minutos o ejecuta 'sudo freshclam' manualmente en el servidor."}
+    except FileNotFoundError:
+        result = {"success": False, "output": "freshclam no encontrado"}
+    except Exception as e:
+        result = {"success": False, "output": f"Error inesperado: {e}"}
     return result
