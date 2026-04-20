@@ -61,6 +61,18 @@ def test_imap(server, port, user, password):
         mail.logout()
         return True, "Conexión IMAP correcta ✓"
     except imaplib.IMAP4.error as e:
+        err = str(e).lower()
+        if "application-specific password required" in err or "app password" in err:
+            return False, (
+                "Gmail requiere una App Password (no tu contraseña normal).\n"
+                "1. Activa 2FA en Google: myaccount.google.com/signinoptions/two-step-verification\n"
+                "2. Genera App Password: myaccount.google.com/apppasswords (app 'Correo')\n"
+                "3. Pega la contraseña de 16 caracteres aquí."
+            )
+        if "authentication failed" in err:
+            return False, "Usuario o contraseña incorrectos. Si usas Gmail, asegúrate de usar una App Password."
+        if "web login required" in err:
+            return False, "Google bloqueó el acceso. Revisa si recibiste un email de 'Intento de inicio de sesión bloqueado' y permite el acceso."
         return False, f"Error de autenticación: {e}"
     except Exception as e:
         return False, f"Error de conexión: {e}"

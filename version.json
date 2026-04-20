@@ -1,7 +1,7 @@
 {
-  "version": "1.2.25",
+  "version": "1.2.26",
   "release_date": "2026-04-19",
-  "changelog": "1.2.25 — Eliminado complemento ClamAV por completo. El motor de detección (ensemble ML 10 modelos + Anti-Clanker + VirusTotal) no lo requiere. Limpieza de código, templates, scripts de deploy/install y documentación.",
+  "changelog": "1.2.26 — Mejora UX IMAP: mensajes de error específicos para Gmail App Password + enlace informativo debajo del campo de contraseña.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.25.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.26.zip"
 }
