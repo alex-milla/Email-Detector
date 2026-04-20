@@ -362,7 +362,7 @@ function renderModal(r) {
     </div>`;
 
     // URLs — sanitizadas para prevenir XSS
-    const urls = r.urls || [];
+    const urls = (r.metadata && r.metadata.urls_found) || r.urls || [];
     if (urls.length > 0) {
         html += `<div class="detail-section"><h4>🔗 URLs detectadas (${urls.length})</h4><ul class="url-list">`;
         urls.slice(0,10).forEach(u => {
