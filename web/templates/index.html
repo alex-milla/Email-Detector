@@ -459,22 +459,52 @@ async function analyzeFiles() {
     if (!selectedFiles.length) return;
     const spinner    = document.getElementById('analyzeSpinner');
     const resultsDiv = document.getElementById('results');
+    const useVT      = document.getElementById('useVT').checked;
     spinner.style.display = 'block';
     analyzeBtn.disabled   = true;
     resultsDiv.innerHTML  = '';
-    const formData = new FormData();
-    selectedFiles.forEach(f => formData.append('files', f));
-    formData.append('use_virustotal', document.getElementById('useVT').checked);
-    try {
-        const r    = await fetch('/analyze', {method:'POST', body:formData});
-        const data = await r.json();
-        (data.results||[]).forEach(r => { resultsDiv.innerHTML += renderCard(r); });
-        updateStats();
-    } catch(err) {
-        resultsDiv.innerHTML = `<div class="result-card" style="border-left-color:#ef4444">Error: ${err.message}</div>`;
+
+    // Procesar en lotes de 3 en paralelo para no saturar el proxy
+    const CONCURRENCY = 3;
+    const queue = [...selectedFiles];
+    let processed = 0;
+
+    async function processOne(file) {
+        const formData = new FormData();
+        formData.append('files', file);
+        formData.append('use_virustotal', useVT);
+        try {
+            const r = await fetch('/analyze', {method:'POST', body:formData});
+            if (!r.ok) {
+                const text = await r.text();
+                throw new Error(`HTTP ${r.status}: ${text.slice(0,100)}`);
+            }
+            const data = await r.json();
+            (data.results||[]).forEach(res => {
+                resultsDiv.innerHTML += renderCard(res);
+            });
+        } catch(err) {
+            resultsDiv.innerHTML += renderCard({
+                error: err.message,
+                file: file.name,
+                prediction: 'ERROR',
+                risk_level: '-',
+                risk_score: 0
+            });
+        }
+        processed++;
+        analyzeBtn.textContent = `Analizando... ${processed}/${selectedFiles.length}`;
     }
+
+    while (queue.length > 0) {
+        const batch = queue.splice(0, CONCURRENCY);
+        await Promise.all(batch.map(f => processOne(f)));
+    }
+
+    updateStats();
     spinner.style.display = 'none';
     analyzeBtn.disabled   = false;
+    analyzeBtn.textContent = `Analizar ${selectedFiles.length} archivo(s)`;
 }
 
 function renderCard(r) {

@@ -1,7 +1,7 @@
 {
-  "version": "1.2.38",
+  "version": "1.2.39",
   "release_date": "2026-04-19",
-  "changelog": "1.2.38 — Fix modal: ahora muestra correctamente las URLs detectadas en los emails (buscaba r.urls en lugar de r.metadata.urls_found).",
+  "changelog": "1.2.39 — Fix upload masivo de archivos: frontend envia lotes de 3 en paralelo con progreso. Errorhandlers 500/502/504 devuelven JSON en lugar de HTML.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.38.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.39.zip"
 }

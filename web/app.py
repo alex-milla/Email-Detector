@@ -134,6 +134,22 @@ def upload_too_large(e):
     }), 413
 
 
+@app.errorhandler(500)
+def internal_error(e):
+    app.logger.error("Error 500: %s", e)
+    return jsonify({"error": "Error interno del servidor. Revisa los logs."}), 500
+
+
+@app.errorhandler(502)
+def bad_gateway(e):
+    return jsonify({"error": "El servidor intermedio no respondió. Intenta con menos archivos."}), 502
+
+
+@app.errorhandler(504)
+def gateway_timeout(e):
+    return jsonify({"error": "El servidor tardó demasiado. Intenta subir menos archivos a la vez."}), 504
+
+
 # ══════════════════════════════════════════════════
 #  HISTORIAL EN SQLITE (por usuario)
 # ══════════════════════════════════════════════════
