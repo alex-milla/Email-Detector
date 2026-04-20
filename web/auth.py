@@ -322,7 +322,7 @@ def save_mail_config(user_id, data: dict):
             (user_id, now)
         )
         set_clause = ", ".join(f"{k} = ?" for k in filtered.keys())
-        values = list(filtered.values()) + [user_id]
+        values = list(filtered.values())
         conn.execute(
             f"UPDATE mail_config SET {set_clause}, updated_at = ? WHERE user_id = ?",
             values + [now, user_id]

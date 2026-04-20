@@ -1,7 +1,7 @@
 {
-  "version": "1.2.27",
+  "version": "1.2.28",
   "release_date": "2026-04-19",
-  "changelog": "1.2.27 — Fix robustez guardado de configuración: manejo de errores en backend (api_save_mail, save_mail_config) y frontend (saveAll/saveGlobal), mensajes de error visibles ante fallos de BD o red.",
+  "changelog": "1.2.28 — Fix crítico: corrige desajuste de parámetros SQL en save_mail_config (bindings 13 vs 14) que impedía guardar configuración de correo.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.27.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.28.zip"
 }
