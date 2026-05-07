@@ -379,6 +379,85 @@ function renderModal(r) {
         html += `</ul></div>`;
     }
 
+    // ─────────────────────────────────────────────────────────
+    // 📱 Códigos QR detectados (NUEVO en v2.0)
+    // ─────────────────────────────────────────────────────────
+    const qrCodes = (r.metadata && r.metadata.qr_codes_found) || [];
+    if (qrCodes.length > 0) {
+        html += `<div class="detail-section">
+            <h4>📱 Códigos QR detectados (${qrCodes.length})</h4>`;
+
+        qrCodes.forEach((qr, idx) => {
+            const res = qr.resolution || {};
+            const chain = res.chain || [qr.raw_payload];
+            const final = res.final || qr.raw_payload;
+            const isUrl = qr.is_url;
+            const inline = qr.is_inline ? '📎 inline' : '📎 adjunto';
+            const shortener = res.is_shortener ? '🔗 acortador' : '';
+            const jsRedir = res.used_js ? '⚡ JS redirect' : '';
+            const metaRedir = res.used_meta_refresh ? '🔄 meta-refresh' : '';
+            const tags = [inline, shortener, jsRedir, metaRedir].filter(Boolean).join(' · ');
+
+            html += `<div style="margin-top:10px;padding:10px;border-radius:8px;
+                                  background:var(--bg-body);border-left:3px solid #f59e0b">
+                <div style="font-size:0.82em;color:var(--text-faint);margin-bottom:4px">
+                    QR #${idx+1} en ${escapeHtml(qr.source_filename)} · ${tags}
+                </div>`;
+
+            if (isUrl) {
+                html += `<div style="font-size:0.85em;margin-bottom:3px">
+                    <strong>Original:</strong>
+                    <code style="word-break:break-all">${escapeHtml(qr.raw_payload)}</code>
+                </div>`;
+
+                if (chain.length > 2) {
+                    html += `<div style="font-size:0.8em;color:var(--text-muted);margin:4px 0">
+                        <strong>Cadena (${chain.length-1} saltos):</strong><br>`;
+                    chain.forEach((u, i) => {
+                        const arrow = i < chain.length - 1 ? ' ↓' : '';
+                        html += `<div style="margin-left:8px">
+                            ${i+1}. <code style="word-break:break-all;font-size:0.95em">${escapeHtml(u)}</code>${arrow}
+                        </div>`;
+                    });
+                    html += `</div>`;
+                }
+
+                html += `<div style="font-size:0.88em;margin-top:4px">
+                    <strong style="color:#ef4444">Final:</strong>
+                    <a href="${escapeHtml(final)}" target="_blank" rel="noopener noreferrer"
+                       style="word-break:break-all;color:#f59e0b">
+                       ${escapeHtml(final)}
+                    </a>
+                </div>`;
+
+                const vtMatch = (vt.urls || []).find(x => x.url === final);
+                if (vtMatch) {
+                    const mal = vtMatch.malicious || 0;
+                    const susp = vtMatch.suspicious || 0;
+                    if (mal > 0 || susp > 0) {
+                        html += `<div style="margin-top:5px;padding:5px 8px;border-radius:5px;
+                                              background:rgba(239,68,68,0.1);font-size:0.83em;color:#ef4444">
+                            ⚠️ VirusTotal: ${mal} maliciosa · ${susp} sospechosa (de ${vtMatch.total||0})
+                        </div>`;
+                    } else if (vtMatch.found) {
+                        html += `<div style="margin-top:5px;padding:5px 8px;border-radius:5px;
+                                              background:rgba(34,197,94,0.1);font-size:0.83em;color:#22c55e">
+                            ✅ VirusTotal: limpia (${vtMatch.total||0} motores)
+                        </div>`;
+                    }
+                }
+            } else {
+                html += `<div style="font-size:0.85em">
+                    <strong>Contenido (no-URL):</strong>
+                    <code style="word-break:break-all">${escapeHtml(qr.raw_payload.slice(0, 200))}</code>
+                    ${qr.raw_payload.length > 200 ? '<em>(truncado)</em>' : ''}
+                </div>`;
+            }
+            html += `</div>`;
+        });
+        html += `</div>`;
+    }
+
     // VirusTotal
     if (vt && Object.keys(vt).length > 0) {
         const ok = !vts.malicious_files && !vts.malicious_urls;
