@@ -41,3 +41,6 @@ Pillow                    # manipulación de imágenes
 beautifulsoup4            # parsing de meta-refresh
 playwright                # detección de redirecciones JS (~300 MB con chromium)
 
+# --- Monitorización (Fase 5) ---
+prometheus-client          # métricas /metrics para Prometheus
+

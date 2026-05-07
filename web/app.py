@@ -166,6 +166,7 @@ from web.routes.settings_routes import register_routes as register_settings
 from web.routes.model_routes import register_routes as register_model
 from web.routes.clanker_routes import register_routes as register_clanker
 from web.routes.update_routes import register_routes as register_update
+from web.routes.monitoring_routes import register_routes as register_monitoring
 
 register_auth(app)
 register_analysis(app)
@@ -173,6 +174,7 @@ register_settings(app)
 register_model(app)
 register_clanker(app)
 register_update(app)
+register_monitoring(app)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
