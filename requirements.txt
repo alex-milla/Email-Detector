@@ -34,3 +34,10 @@ python-dotenv
 pyyaml
 packaging
 
+# --- Detección de QR (v2.0) ---
+pyzbar                    # decoder primario de QR (requiere libzbar0 del sistema)
+opencv-python-headless    # decoder fallback de QR (~60 MB, sin GUI)
+Pillow                    # manipulación de imágenes
+beautifulsoup4            # parsing de meta-refresh
+playwright                # detección de redirecciones JS (~300 MB con chromium)
+
