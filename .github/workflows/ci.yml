@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libzbar0
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install flake8 pytest pytest-cov
+          pip install -r requirements.txt
+
+      - name: Lint with flake8
+        run: |
+          flake8 scripts/ web/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Validate shell scripts
+        run: |
+          bash -n deploy.sh
+          bash -n install.sh
+          bash -n scripts/backup.sh
+          bash -n scripts/retrain.sh
+          bash -n download_dataset.sh
+
+      - name: Test train_model.py import safety
+        run: |
+          python -c "
+import sys, os
+os.chdir('.')
+sys.path.insert(0, 'scripts')
+import train_model
+print('OK: train_model importa sin ejecutar side-effects')
+"
+
+      - name: Test predict.py import safety
+        run: |
+          python -c "
+import sys, os
+os.chdir('.')
+sys.path.insert(0, 'scripts')
+import predict
+print('OK: predict importa sin ejecutar side-effects')
+"
+
+      - name: Run tests with pytest
+        env:
+          PYTHONPATH: scripts:web
+          SECRET_KEY: test-secret-key-for-ci
+        run: |
+          pytest tests/ -v --cov=scripts --cov=web --cov-report=term-missing --cov-fail-under=10

@@ -126,6 +126,18 @@ _save_training_state(_training_state)
 init_db()
 
 
+@app.route("/health")
+def health():
+    model_meta = get_model_meta()
+    return jsonify({
+        "status": "ok",
+        "version": "2.0.0",
+        "model_trained": os.path.exists(os.path.join(MODELS_DIR, "email_classifier.joblib")),
+        "models_count": len(model_meta.get("models_available", [])),
+        "timestamp": datetime.now().isoformat(),
+    })
+
+
 # ── Handler para uploads que superan MAX_CONTENT_LENGTH (HIGH-05) ─────────────
 @app.errorhandler(413)
 def upload_too_large(e):

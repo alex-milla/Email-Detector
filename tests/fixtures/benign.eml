@@ -1,0 +1,16 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Reunión de equipo - Confirmación
+Date: Mon, 06 May 2026 10:00:00 +0200
+Message-ID: <unique-message-id-123@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+
+Hola equipo,
+
+Os confirmo la reunión de mañana a las 10:00 en la sala principal.
+
+Por favor, confirmad asistencia.
+
+Saludos,
+Juan

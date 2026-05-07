@@ -1,0 +1,18 @@
+From: support-urgent@banco-seguridad-verify.com
+To: victim@gmail.com
+Subject: URGENTE: Su cuenta ha sido suspendida
+Date: Mon, 06 May 2026 08:00:00 +0200
+Message-ID: <phish001@mailer.phishing.com>
+MIME-Version: 1.0
+Content-Type: text/html; charset="utf-8"
+
+<html>
+<body>
+<p>Estimado cliente,</p>
+<p>Su cuenta ha sido <b>suspendida</b> debido a actividad sospechosa.</p>
+<p>Haga clic en el siguiente enlace para verificar su identidad en las próximas 24 horas:</p>
+<p><a href="http://malicious-login.evil.tk/verify">http://banco-seguridad.com/verificar</a></p>
+<p>Si no actúa inmediatamente, su cuenta será cancelada.</p>
+<p>Atentamente,<br>Departamento de Seguridad</p>
+</body>
+</html>
