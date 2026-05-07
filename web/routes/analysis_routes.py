@@ -2,9 +2,12 @@ import os
 import sys
 import json
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from flask import request, jsonify, session
+import csv as csv_module
+import io
+
+from flask import request, jsonify, session, Response
 from werkzeug.utils import secure_filename
 
 from web.services.decorators import login_required
@@ -284,3 +287,58 @@ def register_routes(app):
         conn.commit()
         conn.close()
         return jsonify({"success": True, "virustotal": vt_results})
+
+    @app.route("/api/stats/trend")
+    @login_required
+    def stats_trend():
+        uid = session["user_id"]
+        history = get_history(uid)
+        today = datetime.now().date()
+        daily = {}
+        for i in range(30):
+            day = today - timedelta(days=i)
+            daily[day.isoformat()] = {"malicious": 0, "benign": 0}
+        for item in history:
+            ts = item.get("timestamp", "")
+            day = ts[:10] if ts else ""
+            if day in daily:
+                pred = item.get("prediction", "")
+                if pred == "MALICIOSO":
+                    daily[day]["malicious"] += 1
+                elif pred == "BENIGNO":
+                    daily[day]["benign"] += 1
+        labels = sorted(daily.keys())
+        return jsonify({
+            "labels": labels,
+            "malicious": [daily[d]["malicious"] for d in labels],
+            "benign": [daily[d]["benign"] for d in labels],
+        })
+
+    @app.route("/api/export/csv")
+    @login_required
+    def export_csv():
+        uid = session["user_id"]
+        history = get_history(uid)
+        output = io.StringIO()
+        writer = csv_module.writer(output)
+        writer.writerow(["fecha", "archivo", "asunto", "remitente", "prediccion",
+                         "riesgo", "nivel", "confianza", "urls", "adjuntos"])
+        for item in history:
+            writer.writerow([
+                item.get("timestamp", ""),
+                item.get("file", ""),
+                item.get("subject", ""),
+                item.get("from", ""),
+                item.get("prediction", ""),
+                item.get("risk_score", ""),
+                item.get("risk_level", ""),
+                item.get("ml_confidence", ""),
+                len(item.get("metadata", {}).get("urls_found", [])),
+                len(item.get("metadata", {}).get("attachments", [])),
+            ])
+        output.seek(0)
+        return Response(
+            output.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=email_detector_export.csv"}
+        )

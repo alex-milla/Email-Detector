@@ -277,7 +277,7 @@ def download_emails(provider="imap", max_emails=50, days_back=7,
 
     if provider == "m365":
         return download_emails_m365(max_emails, date_from, date_to, folder, days_back)
-    elif provider == "imap":
+    elif provider in ("imap", "gmail"):
         return download_emails_imap(max_emails, date_from, date_to, folder, days_back)
     else:
         print(f"ERROR: Proveedor desconocido: {provider}")
