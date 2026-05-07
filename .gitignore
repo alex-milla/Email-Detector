@@ -1,1 +1,16 @@
 .cursor/
+.opencode/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+*.db
+*.joblib
+results/
+logs/
+data/raw/
+data/samples/
+data/labeled/
+config/ssl/
+config/first-login.txt
+
