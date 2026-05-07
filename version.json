@@ -1,7 +1,7 @@
 {
-  "version": "2.1.0",
+  "version": "2.1.1",
   "release_date": "2026-05-07",
-  "changelog": "2.1.0 — Refactor completo del proyecto en 6 fases: tests automatizados, Docker opcional, pipeline ETL, feature importance, calibración, umbral dinámico, modularización de app.py, Gmail OAuth2, export CSV, Chart.js, CSRF, password policy, auditoría, notificaciones Slack/Telegram/email, drift monitoring, Prometheus metrics, SIEM webhook, 2FA/TOTP, CLI tool, plugin system y POP3.",
+  "changelog": "2.1.1 — Informe-resumen de amenazas con IoCs, análisis mejorado de cabeceras SPF/DKIM/DMARC/ARC, paleta de colores pastel, modal de informe descargable en JSON.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.1.0.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.1.1.zip"
 }
