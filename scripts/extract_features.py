@@ -297,6 +297,52 @@ def extract_features_from_eml(eml_path):
     # ── Análisis de códigos QR (NUEVO en v2.0) ──
     qr_codes = _scan_email_for_qr_codes(msg)
 
+    # Computar features derivadas de QR
+    qr_count = len(qr_codes)
+    qr_url_codes = [q for q in qr_codes if q.get("is_url")]
+    qr_url_count = len(qr_url_codes)
+    qr_in_inline_image = 1 if any(q.get("is_inline") for q in qr_codes) else 0
+
+    qr_redirect_chain_max = 0
+    qr_uses_shortener = 0
+    qr_uses_js_redirect = 0
+    qr_final_urls = []
+    qr_domain_mismatch = 0
+    qr_url_length_max = 0
+
+    for q in qr_url_codes:
+        res = q.get("resolution") or {}
+        hop_count = res.get("hop_count", 0)
+        qr_redirect_chain_max = max(qr_redirect_chain_max, hop_count)
+
+        if res.get("is_shortener"):
+            qr_uses_shortener = 1
+        if res.get("used_js"):
+            qr_uses_js_redirect = 1
+
+        final = res.get("final") or q["raw_payload"]
+        qr_final_urls.append(final)
+        qr_url_length_max = max(qr_url_length_max, len(final))
+
+        # Detectar mismatch entre dominio inicial y final
+        try:
+            d_orig  = urlparse(q["raw_payload"]).netloc.lower().split(":")[0]
+            d_final = urlparse(final).netloc.lower().split(":")[0]
+            if d_orig and d_final and d_orig != d_final:
+                qr_domain_mismatch = 1
+        except Exception:
+            pass
+
+    qr_url_entropies = [calculate_entropy(u) for u in qr_final_urls] or [0.0]
+    qr_final_url_entropy_max = max(qr_url_entropies)
+
+    # Añadir las URLs finales del QR a la lista global de URLs.
+    # Esto hace que VirusTotal en predict.py las consulte automáticamente,
+    # y que el modelo las cuente en url_count y demás.
+    for u in qr_final_urls:
+        if u and u not in urls:
+            urls.append(u)
+
     # ── Cabeceras de autenticación (SPF, DKIM, DMARC) ──
     auth_results = (msg.get("Authentication-Results", "") or "").lower()
     spf_pass  = 1 if "spf=pass"  in auth_results else 0
@@ -362,6 +408,16 @@ def extract_features_from_eml(eml_path):
         "url_entropy_avg":                 round(url_entropy_avg, 4),
         "attachment_name_entropy_max":     attachment_name_entropy_max,
         "attachment_content_entropy_max":  attachment_content_entropy_max,
+        # ── NUEVO en v2.0: features de QR ──
+        "qr_count":                   qr_count,
+        "qr_url_count":               qr_url_count,
+        "qr_in_inline_image":         qr_in_inline_image,
+        "qr_redirect_chain_max":      qr_redirect_chain_max,
+        "qr_uses_shortener":          qr_uses_shortener,
+        "qr_uses_js_redirect":        qr_uses_js_redirect,
+        "qr_final_url_entropy_max":   round(qr_final_url_entropy_max, 4),
+        "qr_domain_mismatch":         qr_domain_mismatch,
+        "qr_url_length_max":          qr_url_length_max,
     }
 
     # ── Anti-Clanker features (integradas al vector de entrenamiento) ──
