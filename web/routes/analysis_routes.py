@@ -3,6 +3,7 @@ import sys
 import json
 import shutil
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 
 import csv as csv_module
 import io
@@ -313,6 +314,64 @@ def register_routes(app):
             "malicious": [daily[d]["malicious"] for d in labels],
             "benign": [daily[d]["benign"] for d in labels],
         })
+
+    @app.route("/api/report/<int:db_id>")
+    @login_required
+    def email_report(db_id):
+        item = get_history_item(session["user_id"], db_id)
+        if not item:
+            return jsonify({"error": "No encontrado"}), 404
+
+        md = item.get("metadata", {})
+        feats = item.get("features", {})
+        vt = item.get("virustotal", {})
+        auth = md.get("auth_results", [])
+
+        urls = md.get("urls_found", [])
+        attachments = md.get("attachments", [])
+        att_hashes = md.get("attachment_hashes", [])
+        qr_codes = md.get("qr_codes_found", [])
+
+        iocs = {
+            "urls": urls,
+            "attachment_hashes": [
+                {"filename": h.get("filename", ""), "sha256": h.get("sha256", ""),
+                 "md5": h.get("md5", ""), "size": h.get("size", 0)}
+                for h in att_hashes if h.get("sha256")
+            ],
+            "qr_payloads": [q.get("raw_payload", "") for q in qr_codes],
+            "domains": list(set(urlparse(u).netloc for u in urls if u.startswith("http"))),
+        }
+
+        report = {
+            "file": item.get("file", ""),
+            "subject": item.get("subject", ""),
+            "from": item.get("from", ""),
+            "timestamp": item.get("timestamp", ""),
+            "prediction": item.get("prediction", ""),
+            "risk_score": item.get("risk_score", 0),
+            "risk_level": item.get("risk_level", ""),
+            "ml_confidence": item.get("ml_confidence", 0),
+            "model": item.get("model_used", ""),
+            "authentication": {
+                "results": auth,
+                "spf_pass": feats.get("spf_pass", 0),
+                "dkim_pass": feats.get("dkim_pass", 0),
+                "dmarc_pass": feats.get("dmarc_pass", 0),
+                "arc_pass": feats.get("arc_pass", 0),
+            },
+            "indicators": iocs,
+            "virustotal": {
+                "malicious_files": vt.get("summary", {}).get("malicious_files", 0),
+                "malicious_urls": vt.get("summary", {}).get("malicious_urls", 0),
+                "total_checked": vt.get("summary", {}).get("total_checked", 0),
+            },
+            "entropy": item.get("entropy_analysis", {}),
+            "attachment_count": len(attachments),
+            "url_count": len(urls),
+            "qr_count": len(qr_codes),
+        }
+        return jsonify(report)
 
     @app.route("/api/export/csv")
     @login_required

@@ -343,11 +343,46 @@ def extract_features_from_eml(eml_path):
         if u and u not in urls:
             urls.append(u)
 
-    # ── Cabeceras de autenticación (SPF, DKIM, DMARC) ──
-    auth_results = (msg.get("Authentication-Results", "") or "").lower()
-    spf_pass  = 1 if "spf=pass"  in auth_results else 0
-    dkim_pass = 1 if "dkim=pass" in auth_results else 0
-    dmarc_pass = 1 if "dmarc=pass" in auth_results else 0
+    # ── Cabeceras de autenticación (SPF, DKIM, DMARC, ARC) ──
+    spf_pass = 0
+    dkim_pass = 0
+    dmarc_pass = 0
+    arc_pass = 0
+    auth_detail = []
+    raw_auth_headers = msg.get_all("Authentication-Results") or []
+    for hdr in raw_auth_headers:
+        hdr_lower = hdr.lower()
+        parts = hdr_lower.split(";")
+        server = parts[0].strip() if parts else ""
+        for part in parts[1:]:
+            part = part.strip()
+            if part.startswith("spf="):
+                val = part.split("=", 1)[1].split()[0].strip()
+                if val == "pass":
+                    spf_pass = 1
+                auth_detail.append({"method": "spf", "result": val, "server": server})
+            elif part.startswith("dkim="):
+                val = part.split("=", 1)[1].split()[0].strip()
+                if val == "pass":
+                    dkim_pass = 1
+                auth_detail.append({"method": "dkim", "result": val, "server": server})
+            elif part.startswith("dmarc="):
+                val = part.split("=", 1)[1].split()[0].strip()
+                if val == "pass":
+                    dmarc_pass = 1
+                auth_detail.append({"method": "dmarc", "result": val, "server": server})
+            elif part.startswith("arc="):
+                val = part.split("=", 1)[1].split()[0].strip()
+                if val == "pass":
+                    arc_pass = 1
+                auth_detail.append({"method": "arc", "result": val, "server": server})
+    # ARC también puede venir en cabeceras específicas ARC-Seal, ARC-Message
+    arc_seal = msg.get("ARC-Seal", "") or ""
+    arc_msg = msg.get("ARC-Message", "") or ""
+    arc_auth = msg.get("ARC-Authentication-Results", "") or ""
+    has_arc_headers = 1 if (arc_seal or arc_msg or arc_auth) else 0
+    if has_arc_headers and "cv=pass" in arc_seal.lower():
+        arc_pass = 1
 
     # ── Anomalías en cabeceras ──
     header_anomalies  = 0
@@ -392,6 +427,7 @@ def extract_features_from_eml(eml_path):
         "num_special_chars":    count_special_chars(subject + " " + full_text),
         "has_attachment":       has_attachment,
         "attachment_ext_risk":  attachment_ext_risk,
+        "arc_pass":             arc_pass,
         "subject_length":       len(subject),
         "body_length":          len(full_text),
         "spf_pass":             spf_pass,
@@ -437,8 +473,9 @@ def extract_features_from_eml(eml_path):
         "urls_found":        urls,
         "attachments":       attachments,
         "attachment_hashes": attachment_hashes,
-        "body_html":         body_html,
-        "qr_codes_found":    qr_codes,
+        "body_html":          body_html,
+        "qr_codes_found":     qr_codes,
+        "auth_results":       auth_detail,
     }
 
     return features, metadata

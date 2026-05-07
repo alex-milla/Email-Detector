@@ -6,22 +6,22 @@
     <title>Login — Email Malware Detector</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Segoe UI',system-ui,sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; display:flex; align-items:center; justify-content:center; }
-        .card { background:#1e293b; border-radius:16px; padding:40px; width:100%; max-width:400px; border:1px solid #334155; box-shadow:0 25px 50px rgba(0,0,0,0.5); }
+        body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg-body,#1a1a2e); color:var(--text-primary,#e8e8f0); min-height:100vh; display:flex; align-items:center; justify-content:center; }
+        .card { background:var(--bg-card,#1e2a45); border-radius:16px; padding:40px; width:100%; max-width:400px; border:1px solid var(--border,#2d3f55); box-shadow:0 25px 50px var(--shadow,rgba(0,0,0,0.4)); }
         .logo { text-align:center; margin-bottom:32px; }
         .logo h1 { font-size:1.6em; }
-        .logo h1 span { color:#3b82f6; }
-        .logo p { color:#64748b; margin-top:6px; font-size:0.9em; }
+        .logo h1 span { color:var(--accent,#7c83db); }
+        .logo p { color:var(--text-faint,#718096); margin-top:6px; font-size:0.9em; }
         .form-group { margin-bottom:20px; }
-        label { display:block; color:#94a3b8; font-size:0.85em; margin-bottom:6px; font-weight:500; }
+        label { display:block; color:var(--text-muted,#a0aec0); font-size:0.85em; margin-bottom:6px; font-weight:500; }
         input[type=text], input[type=password] {
-            width:100%; padding:12px 16px; background:#0f172a; border:1px solid #334155;
-            border-radius:8px; color:#e2e8f0; font-size:1em; transition:border-color 0.2s;
+            width:100%; padding:12px 16px; background:var(--bg-input-alt,#161b2b); border:1px solid var(--border-input,#1f3348);
+            border-radius:8px; color:var(--text-primary,#e8e8f0); font-size:1em; transition:border-color 0.2s;
         }
-        input:focus { outline:none; border-color:#3b82f6; }
-        .btn { width:100%; padding:13px; background:#3b82f6; color:white; border:none; border-radius:8px; font-size:1em; font-weight:600; cursor:pointer; transition:background 0.2s; margin-top:8px; }
-        .btn:hover { background:#2563eb; }
-        .error { background:rgba(239,68,68,0.1); border:1px solid #ef4444; border-radius:8px; padding:12px 16px; color:#fca5a5; font-size:0.9em; margin-bottom:20px; }
+        input:focus { outline:none; border-color:var(--accent,#7c83db); }
+        .btn { width:100%; padding:13px; background:var(--accent,#7c83db); color:white; border:none; border-radius:8px; font-size:1em; font-weight:600; cursor:pointer; transition:background 0.2s; margin-top:8px; }
+        .btn:hover { background:var(--accent-hover,#6b73d0); }
+        .error { background:rgba(235,87,87,0.1); border:1px solid var(--danger,#eb5757); border-radius:8px; padding:12px 16px; color:#f5a3a3; font-size:0.9em; margin-bottom:20px; }
     </style>
 </head>
 <body>

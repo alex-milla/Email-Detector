@@ -6,17 +6,17 @@
     <title>{% block title %}Email Malware Detector{% endblock %}</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg-body,#0f172a); color:var(--text-primary,#e2e8f0); min-height:100vh; }
+        body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg-body,#1a1a2e); color:var(--text-primary,#e8e8f0); min-height:100vh; }
         .container { max-width:1200px; margin:0 auto; padding:20px; }
 
         /* ── Navegación ── */
-        nav { background:var(--bg-nav,#1e293b); border-bottom:2px solid var(--border-nav,#3b82f6); }
+        nav { background:var(--bg-nav,#16213e); border-bottom:2px solid var(--border-nav,#7c83db); }
         nav .nav-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; }
-        nav .nav-brand { padding:16px 24px; font-size:1.1em; font-weight:700; border-right:1px solid var(--border,#334155); }
-        nav .nav-brand span { color:#3b82f6; }
-        nav a.nav-link { padding:18px 22px; color:var(--text-muted,#94a3b8); text-decoration:none; font-weight:500; border-bottom:3px solid transparent; transition:all 0.2s; }
-        nav a.nav-link:hover { color:var(--text-primary,#e2e8f0); background:var(--bg-hover,rgba(59,130,246,0.08)); }
-        nav a.nav-link.active { color:#3b82f6; border-bottom-color:#3b82f6; }
+        nav .nav-brand { padding:16px 24px; font-size:1.1em; font-weight:700; border-right:1px solid var(--border,#2d3f55); }
+        nav .nav-brand span { color:var(--accent,#7c83db); }
+        nav a.nav-link { padding:18px 22px; color:var(--text-muted,#a0aec0); text-decoration:none; font-weight:500; border-bottom:3px solid transparent; transition:all 0.2s; }
+        nav a.nav-link:hover { color:var(--text-primary,#e8e8f0); background:var(--bg-hover,rgba(124,131,219,0.08)); }
+        nav a.nav-link.active { color:var(--accent,#7c83db); border-bottom-color:var(--accent,#7c83db); }
         .nav-right { margin-left:auto; padding:0 20px; display:flex; align-items:center; gap:12px; }
         .nav-user  { color:var(--text-faint,#64748b); font-size:0.9em; }
         nav a.nav-logout { color:var(--danger,#ef4444); text-decoration:none; font-size:0.9em; }
@@ -37,8 +37,8 @@
         /* ── Botones ── */
         .btn { padding:10px 20px; border:none; border-radius:8px; cursor:pointer; font-size:0.9em; font-weight:600; transition:all 0.2s; display:inline-flex; align-items:center; gap:6px; text-decoration:none; }
         .btn:disabled { opacity:0.5; cursor:not-allowed; }
-        .btn-primary   { background:#3b82f6; color:white; }
-        .btn-primary:hover:not(:disabled) { background:#2563eb; }
+        .btn-primary   { background:var(--accent,#7c83db); color:white; }
+        .btn-primary:hover:not(:disabled) { background:var(--accent-hover,#6b73d0); }
         .btn-secondary { background:var(--bg-inner,#1a2535); color:var(--text-muted,#94a3b8); border:1px solid var(--border-input,#2d3f55); }
         .btn-secondary:hover:not(:disabled) { background:var(--bg-card,#243044); color:var(--text-primary,#e2e8f0); }
         .btn-danger  { background:transparent; color:var(--danger,#ef4444); border:1px solid var(--danger,#ef4444); }

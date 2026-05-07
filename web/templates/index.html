@@ -205,6 +205,17 @@
         <div class="modal-body" id="modalBody"></div>
     </div>
 </div>
+
+<!-- Modal de informe -->
+<div class="modal-overlay" id="reportModal" onclick="if(event.target===this)closeReport()">
+    <div class="modal" style="max-width:720px">
+        <div class="modal-header">
+            <h3>📋 Informe de amenaza</h3>
+            <button class="modal-close" onclick="closeReport()">✕</button>
+        </div>
+        <div class="modal-body" id="reportBody"></div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -362,6 +373,34 @@ function renderModal(r) {
         `}
     </div>`;
 
+    // Autenticación (SPF, DKIM, DMARC, ARC)
+    const auth = r.metadata && r.metadata.auth_results;
+    if (auth && auth.length > 0) {
+        const authBadge = (method, result) => {
+            const cls = result === 'pass' ? 'pred-benigno' : (result === 'fail' ? 'pred-malicioso' : 'risk-MEDIO');
+            const icon = result === 'pass' ? '✅' : (result === 'fail' ? '❌' : '⚠️');
+            return `<span class="risk-badge ${cls}" style="margin:2px">${icon} ${method.toUpperCase()}=${result}</span>`;
+        };
+        let authHtml = '';
+        const seen = new Set();
+        auth.forEach(a => {
+            const key = a.method + a.result;
+            if (seen.has(key)) return;
+            seen.add(key);
+            authHtml += authBadge(a.method, a.result) + ' ';
+        });
+        const ft = r.features || {};
+        if (ft.arc_pass !== undefined) {
+            authHtml += authBadge('ARC', ft.arc_pass ? 'pass' : 'none');
+        }
+        html += `<div class="detail-section">
+            <h4>🔐 Autenticación</h4>
+            <div style="padding:8px 12px;background:var(--bg-body);border-radius:8px;font-size:0.85em">
+                ${authHtml}
+            </div>
+        </div>`;
+    }
+
     // Entropía
     html += `<div class="detail-section">
         <h4>📊 Análisis de entropía</h4>
@@ -478,8 +517,10 @@ function renderModal(r) {
             <span style="color:${ok?'#22c55e':'#ef4444'}">${ok?'✅ Sin amenazas':`⚠️ ${vts.malicious_files||0} archivos + ${vts.malicious_urls||0} URLs maliciosas`}</span>
             — ${vts.total_checked||0} consultas
         </div>
-        <button class="btn btn-secondary" style="margin-top:8px;font-size:0.85em" onclick="recheckVT(${dbId}, this)">🔍 Volver a consultar VirusTotal</button>
-        </div>`;
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary" style="font-size:0.85em" onclick="recheckVT(${dbId}, this)">🔍 Volver a consultar VirusTotal</button>
+            <button class="btn btn-secondary" style="font-size:0.85em" onclick="showReport(${dbId})">📄 Ver informe</button>
+        </div></div>`;
     }
 
     document.getElementById('modalTitle').textContent = escapeHtml(r.filename) || 'Detalle';
@@ -507,6 +548,108 @@ async function doFeedback(dbId, label) {
             loadHistory(currentPage);
         }
     } catch(e) { console.error(e); }
+}
+
+async function showReport(dbId) {
+    try {
+        const r = await fetch(`/api/report/${dbId}`);
+        if (!r.ok) { alert('Error al generar el informe'); return; }
+        const data = await r.json();
+        renderReportModal(data);
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+function renderReportModal(r) {
+    const m = document.getElementById('reportModal');
+    const b = document.getElementById('reportBody');
+    const authIcon = v => v == 1 ? '✅' : '❌';
+    const authRows = (r.authentication && r.authentication.results || []).map(a =>
+        `<tr><td>${a.method.toUpperCase()}</td><td><span class="risk-badge ${a.result === 'pass' ? 'pred-benigno' : 'pred-malicioso'}">${a.result}</span></td><td style="font-size:0.82em;color:var(--text-muted)">${a.server || '-'}</td></tr>`
+    ).join('');
+    const iocUrls = (r.indicators && r.indicators.urls || []).map(u =>
+        `<li style="word-break:break-all;font-size:0.85em">${escapeHtml(u)}</li>`
+    ).join('');
+    const iocHashes = (r.indicators && r.indicators.attachment_hashes || []).map(h =>
+        `<li style="font-size:0.82em"><code>${h.sha256 ? h.sha256.slice(0,16)+'...' : '-'}</code> ${escapeHtml(h.filename)}</li>`
+    ).join('');
+    const iocDomains = (r.indicators && r.indicators.domains || []).map(d =>
+        `<li style="font-size:0.85em">${escapeHtml(d)}</li>`
+    ).join('');
+
+    b.innerHTML = `
+    <div style="margin-bottom:16px">
+        <div style="font-size:1.1em;font-weight:700">${escapeHtml(r.file)}</div>
+        <div style="color:var(--text-muted);font-size:0.85em">${escapeHtml(r.subject)}</div>
+        <div style="color:var(--text-faint);font-size:0.8em">De: ${escapeHtml(r.from)} · ${(r.timestamp||'').slice(0,10)}</div>
+        <div style="margin-top:8px">
+            <span class="risk-badge ${r.prediction === 'MALICIOSO' ? 'pred-malicioso' : 'pred-benigno'}">${r.prediction}</span>
+            <span class="risk-badge risk-${r.risk_level}">${r.risk_level} — ${r.risk_score}%</span>
+            <span style="color:var(--text-faint);font-size:0.82em;margin-left:8px">ML: ${r.ml_confidence}%</span>
+        </div>
+    </div>
+
+    <div class="detail-section">
+        <h4>🔐 Autenticación</h4>
+        <table style="font-size:0.85em;width:auto">
+            <tr><td><strong>SPF</strong></td><td>${authIcon(r.authentication.spf_pass)}</td></tr>
+            <tr><td><strong>DKIM</strong></td><td>${authIcon(r.authentication.dkim_pass)}</td></tr>
+            <tr><td><strong>DMARC</strong></td><td>${authIcon(r.authentication.dmarc_pass)}</td></tr>
+            <tr><td><strong>ARC</strong></td><td>${authIcon(r.authentication.arc_pass)}</td></tr>
+        </table>
+        ${authRows.length ? `<table class="rules-table" style="margin-top:8px"><tr><th>Método</th><th>Resultado</th><th>Servidor</th></tr>${authRows}</table>` : ''}
+    </div>
+
+    <div class="detail-section">
+        <h4>🔗 Indicadores (IoCs)</h4>
+        ${iocUrls.length ? `<p style="font-size:0.82em;color:var(--text-muted);margin-bottom:4px">URLs (${r.url_count}):</p><ul class="url-list">${iocUrls}</ul>` : '<p style="color:var(--text-faint)">Sin URLs</p>'}
+        ${iocHashes.length ? `<p style="font-size:0.82em;color:var(--text-muted);margin-top:8px;margin-bottom:4px">Hashes de adjuntos:</p><ul class="url-list">${iocHashes}</ul>` : ''}
+        ${iocDomains.length ? `<p style="font-size:0.82em;color:var(--text-muted);margin-top:8px;margin-bottom:4px">Dominios:</p><ul class="url-list">${iocDomains}</ul>` : ''}
+    </div>
+
+    <div class="detail-section">
+        <h4>🛡️ VirusTotal</h4>
+        <div style="padding:8px 12px;background:var(--bg-body);border-radius:8px;font-size:0.85em">
+            Archivos maliciosos: <strong>${r.virustotal.malicious_files}</strong> ·
+            URLs maliciosas: <strong>${r.virustotal.malicious_urls}</strong> ·
+            Consultas: ${r.virustotal.total_checked}
+        </div>
+    </div>
+
+    <div class="detail-section">
+        <h4>📊 ML & Riesgo</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.85em">
+            <div class="detail-item"><div class="label">Modelo</div><div class="value">${escapeHtml(r.model)}</div></div>
+            <div class="detail-item"><div class="label">Confianza ML</div><div class="value">${r.ml_confidence}%</div></div>
+            <div class="detail-item"><div class="label">Riesgo</div><div class="value">${r.risk_score}% (${r.risk_level})</div></div>
+            <div class="detail-item"><div class="label">Adjuntos</div><div class="value">${r.attachment_count}</div></div>
+            <div class="detail-item"><div class="label">URLs</div><div class="value">${r.url_count}</div></div>
+            <div class="detail-item"><div class="label">QRs</div><div class="value">${r.qr_count}</div></div>
+        </div>
+    </div>
+
+    <div style="margin-top:16px;display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="closeReport()">Cerrar</button>
+        <button class="btn btn-secondary btn-sm" onclick="downloadReportJSON(${currentDbId})">📥 Descargar JSON</button>
+    </div>`;
+    m.classList.add('open');
+}
+
+function closeReport() {
+    document.getElementById('reportModal').classList.remove('open');
+}
+
+async function downloadReportJSON(dbId) {
+    try {
+        const r = await fetch(`/api/report/${dbId}`);
+        const data = await r.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reporte_${(data.file || 'correo').replace(/\.eml$/,'')}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    } catch(e) { alert('Error: ' + e.message); }
 }
 
 async function recheckVT(dbId, btn) {
