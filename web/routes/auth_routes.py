@@ -8,6 +8,7 @@ from web.auth import (
 )
 from web.services.history_service import get_history_summary, get_model_meta
 from web.services.limiter import limiter
+from web.services.audit_service import log_admin_action
 
 import os
 
@@ -69,9 +70,10 @@ def register_routes(app):
         role = data.get("role", "user")
         if not username or not password:
             return jsonify({"success": False, "error": "Usuario y contraseña requeridos"}), 400
-        if len(password) < 6:
-            return jsonify({"success": False, "error": "Mínimo 6 caracteres"}), 400
         ok, msg = create_user(username, password, role)
+        if ok:
+            log_admin_action(session.get("user_id"), session.get("username"),
+                           "CREAR_USUARIO", f"username={username} role={role}")
         return jsonify({"success": ok, "error": msg if not ok else None})
 
     @app.route("/api/users/<int:user_id>", methods=["DELETE"])
@@ -80,6 +82,8 @@ def register_routes(app):
         if user_id == session["user_id"]:
             return jsonify({"success": False, "error": "No puedes eliminarte a ti mismo"}), 400
         delete_user(user_id)
+        log_admin_action(session.get("user_id"), session.get("username"),
+                       "ELIMINAR_USUARIO", f"user_id={user_id}")
         return jsonify({"success": True})
 
     @app.route("/api/users/<int:user_id>/password", methods=["POST"])
@@ -89,10 +93,10 @@ def register_routes(app):
             return jsonify({"success": False, "error": "Sin permisos"}), 403
         body = request.get_json(silent=True) or {}
         pwd = body.get("password", "")
-        if len(pwd) < 6:
-            return jsonify({"success": False, "error": "Mínimo 6 caracteres"}), 400
-        change_password(user_id, pwd)
-        return jsonify({"success": True})
+        ok, msg = change_password(user_id, pwd)
+        if not ok:
+            return jsonify({"success": False, "error": msg}), 400
+        return jsonify({"success": True, "message": msg})
 
     @app.route("/api/user/role", methods=["GET"])
     @login_required

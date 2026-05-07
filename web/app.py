@@ -177,6 +177,9 @@ register_update(app)
 
 
 from web.services.decorators import login_required, admin_required
+from web.services.csrf import inject_csrf
+
+inject_csrf(app)
 
 
 if __name__ == "__main__":

@@ -4,11 +4,27 @@ auth.py — Gestión de usuarios, sesiones y configuración de correo por usuari
 """
 
 import os
+import re
 import sqlite3
 import bcrypt
 from datetime import datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "users.db")
+
+MIN_PASSWORD_LENGTH = int(os.environ.get("PASSWORD_MIN_LENGTH", "8"))
+
+
+def validate_password(password):
+    errors = []
+    if len(password) < MIN_PASSWORD_LENGTH:
+        errors.append(f"Mínimo {MIN_PASSWORD_LENGTH} caracteres")
+    if not re.search(r'[A-Z]', password):
+        errors.append("Debe contener una mayúscula")
+    if not re.search(r'[a-z]', password):
+        errors.append("Debe contener una minúscula")
+    if not re.search(r'[0-9]', password):
+        errors.append("Debe contener un número")
+    return errors
 
 
 def _migrate_schema(conn):
@@ -197,6 +213,9 @@ def check_password(password, hashed):
 
 
 def create_user(username, password, role="user"):
+    pw_errors = validate_password(password)
+    if pw_errors:
+        return False, "; ".join(pw_errors)
     conn = get_db()
     try:
         cur = conn.execute(
@@ -204,7 +223,6 @@ def create_user(username, password, role="user"):
             (username, hash_password(password), role, datetime.now().isoformat())
         )
         user_id = cur.lastrowid
-        # Crear entrada vacía de mail_config para el nuevo usuario
         conn.execute(
             "INSERT OR IGNORE INTO mail_config (user_id, updated_at) VALUES (?, ?)",
             (user_id, datetime.now().isoformat())
@@ -258,6 +276,9 @@ def update_last_login(username):
 
 
 def change_password(user_id, new_password):
+    pw_errors = validate_password(new_password)
+    if pw_errors:
+        return False, "; ".join(pw_errors)
     conn = get_db()
     conn.execute(
         "UPDATE users SET password = ? WHERE id = ?",
@@ -265,6 +286,7 @@ def change_password(user_id, new_password):
     )
     conn.commit()
     conn.close()
+    return True, "Contraseña actualizada"
 
 
 def authenticate(username, password):

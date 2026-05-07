@@ -1,6 +1,7 @@
-from flask import render_template, request, jsonify
+from flask import render_template, request, jsonify, session
 
 from web.services.decorators import login_required, admin_required, current_user
+from web.services.audit_service import log_admin_action
 from updater import check_for_updates, get_update_state, start_update
 
 
@@ -28,6 +29,8 @@ def register_routes(app):
         ok, err = start_update(zip_url)
         if not ok:
             return jsonify({"started": False, "error": err}), 409
+        log_admin_action(session.get("user_id"), session.get("username"),
+                       "UPDATE", update_info.get("tag_name", "?"))
         return jsonify({"started": True, "message": "Actualización iniciada en background."})
 
     @app.route("/api/update/status")

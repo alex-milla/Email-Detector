@@ -12,6 +12,7 @@ from web.services.decorators import login_required, admin_required, current_user
 from web.services.history_service import get_model_meta
 from web.services.validation_service import validate_script_path
 from web.services.training_service import run_training, load_training_state
+from web.services.audit_service import log_admin_action
 
 
 def register_routes(app):
@@ -47,30 +48,9 @@ def register_routes(app):
         ok, reason = validate_script_path(script, PROJECT_DIR)
         if not ok:
             return jsonify({"error": "El script no pasó la validación de seguridad."}), 403
-        try:
-            result = subprocess.run(
-                [script], capture_output=True, text=True, timeout=600, cwd=PROJECT_DIR
-            )
-            return jsonify({
-                "success": result.returncode == 0,
-                "stdout": result.stdout[-3000:],
-                "stderr": result.stderr[-1000:],
-            })
-        except subprocess.TimeoutExpired:
-            return jsonify({"error": "Timeout"}), 504
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
 
-    @app.route("/model/full-retrain", methods=["POST"])
-    @admin_required
-    def full_retrain():
-        state = load_training_state()
-        if state.get("running"):
-            return jsonify({"error": "Ya hay un entrenamiento en curso"}), 409
-        script = os.path.join(PROJECT_DIR, "scripts", "retrain.sh")
-        ok, reason = validate_script_path(script, PROJECT_DIR)
-        if not ok:
-            return jsonify({"error": "El script de entrenamiento no pasó la validación de seguridad."}), 403
+        log_admin_action(session.get("user_id"), session.get("username"),
+                       "FULL_RETRAIN", "retrain.sh")
         t = threading.Thread(
             target=run_training, args=(["bash", script], PROJECT_DIR), daemon=True
         )
@@ -83,6 +63,9 @@ def register_routes(app):
         state = load_training_state()
         if state.get("running"):
             return jsonify({"error": "Ya hay un entrenamiento en curso"}), 409
+
+        log_admin_action(session.get("user_id"), session.get("username"),
+                       "RETRAIN", "train_model.py")
         python_bin = sys.executable
         cmd = [python_bin, os.path.join(PROJECT_DIR, "scripts", "train_model.py")]
         t = threading.Thread(
