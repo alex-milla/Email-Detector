@@ -1,6 +1,6 @@
 # Email Malware Detector
 
-Herramienta de detección de correos maliciosos mediante modelos de aprendizaje automático. Incluye interfaz web, conexión IMAP/OAuth2, integración con VirusTotal y un detector de correos generados por IA (Anti-Clanker).
+Herramienta de detección de correos maliciosos mediante modelos de aprendizaje automático. Incluye interfaz web, conexión IMAP/OAuth2, integración con VirusTotal, detección de códigos QR (quishing) y un detector de correos generados por IA (Anti-Clanker).
 
 ## Características
 
@@ -8,6 +8,7 @@ Herramienta de detección de correos maliciosos mediante modelos de aprendizaje 
 - Conexión a **Gmail vía IMAP** (App Password o OAuth2) y **Microsoft 365**
 - Análisis de adjuntos con múltiples modelos ML en ensemble
 - Consulta opcional a **VirusTotal API**
+- **Detección de QR (v2.0)**: escanea imágenes inline y adjuntas, resuelve redirecciones HTTP/meta/JS y alimenta 9 nuevas features ML
 - **Modelo 10 — Anti-Clanker**: detecta correos generados por LLMs mediante reglas YAML actualizables
 - Sistema **multiusuario**: admins y usuarios limitados
 - Re-entrenamiento con feedback manual o archivos `.eml`
@@ -52,14 +53,16 @@ email-detector/
 │   ├── settings_manager.py # Gestión de configuración
 │   └── templates/          # Plantillas HTML
 ├── scripts/
-│   ├── extract_features.py # Extracción de features de correos
+│   ├── extract_features.py # Extracción de features de correos (incluye QR)
 │   ├── predict.py          # Predicción con el ensemble
 │   ├── train_model.py      # Entrenamiento de modelos
 │   ├── mailbox_connector.py# Conexión IMAP / OAuth2
 │   ├── virustotal.py       # Integración VirusTotal
-│   ├── predict.py            # Ensemble de 10 modelos ML + Anti-Clanker
+│   ├── qr_decoder.py       # Decodificación de QR (pyzbar + OpenCV)
+│   ├── url_resolver.py     # Resolución de redirecciones HTTP/meta/JS
 │   ├── extract_clanker_features.py  # Features Anti-Clanker
 │   ├── update_clanker_rules.py      # Auto-actualización de reglas
+│   ├── generate_synthetic_qr_dataset.py  # Dataset sintético con QR
 │   ├── auto_scan.py        # Escaneo automático (cron)
 │   └── backup.sh           # Backup periódico
 └── config/
@@ -87,6 +90,7 @@ Variables principales:
 | `VIRUSTOTAL_API_KEY` | API de VirusTotal |
 | `USE_GPU` | `true` para habilitar GPU en Anti-Clanker |
 | `CLANKER_RULES_URL` | URL para auto-actualizar reglas Anti-Clanker |
+| `QR_USE_JS_RESOLVER` | `true` (default) para resolver redirecciones JS con Playwright; `false` para solo HTTP+meta |
 
 ## Actualización
 
@@ -99,6 +103,18 @@ git pull origin main
 ```
 
 `deploy.sh` es **idempotente**: no sobrescribe `.env`, `users.db`, modelos ni datos etiquetados.
+
+### Actualización a v2.0.0 (breaking change)
+
+La versión 2.0.0 añade **9 features de QR** al modelo. El modelo entrenado en v1.x **no es compatible**.
+
+Pasos obligatorios tras actualizar a v2.0.0:
+
+1. Instalar dependencias del sistema: `apt-get install -y libzbar0`
+2. Instalar dependencias Python: `pip install pyzbar opencv-python-headless Pillow beautifulsoup4 playwright`
+3. Instalar navegador Playwright: `python -m playwright install chromium --with-deps`
+4. **Reentrenar el modelo** con tu dataset etiquetado (ver sección *Reentrenamiento*)
+5. Reiniciar el servicio
 
 ## Actualización de reglas Anti-Clanker
 
@@ -138,6 +154,24 @@ nohup ./run.sh > logs/server.log 2>&1 &
 # Logs
 tail -f logs/access.log logs/error.log
 ```
+
+### Reentrenamiento del modelo
+
+Entrena un modelo nuevo con correos `.eml` etiquetados:
+
+```bash
+cd /opt/email-detector
+source venv/bin/activate
+
+# Extraer features
+python scripts/extract_features.py --batch /ruta/a/benignos --output data/processed/benign.csv --label 0
+python scripts/extract_features.py --batch /ruta/a/maliciosos --output data/processed/malicious.csv --label 1
+
+# Entrenar ensemble
+python scripts/train_model.py
+```
+
+El script lee automáticamente todos los CSVs de `data/processed/` y genera `models/email_classifier.joblib` junto con `model_metadata.json`.
 
 ### Actualizar reglas Anti-Clanker manualmente
 
