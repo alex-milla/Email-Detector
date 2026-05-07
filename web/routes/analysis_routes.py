@@ -56,7 +56,7 @@ def register_routes(app):
             try:
                 result = predict_email(filepath, use_virustotal=use_vt)
                 result["analyzed_by"] = session.get("username")
-                save_result(uid, result)
+                result["_db_id"] = save_result(uid, result)
                 results.append(result)
             except Exception as e:
                 results.append({"error": str(e), "file": safe_name})
@@ -113,13 +113,14 @@ def register_routes(app):
                 try:
                     result = predict_email(filepath, use_virustotal=use_vt)
                     result["analyzed_by"] = session.get("username")
-                    save_result(uid, result)
+                    db_id = save_result(uid, result)
                     results.append({
                         "file": result.get("file"),
                         "subject": result.get("subject", ""),
                         "prediction": result.get("prediction"),
                         "risk_level": result.get("risk_level"),
                         "risk_score": result.get("risk_score"),
+                        "_db_id": db_id,
                     })
                     analyzed += 1
                 except Exception:

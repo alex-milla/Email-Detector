@@ -34,7 +34,7 @@ def save_result(user_id, result):
     vt = result.get("virustotal") or {}
     vt_s = vt.get("summary") or {}
     conn = get_db()
-    conn.execute("""
+    cur = conn.execute("""
         INSERT INTO analysis_history
             (user_id, timestamp, filename, subject, from_addr,
              prediction, risk_score, risk_level, ml_prediction,
@@ -57,8 +57,10 @@ def save_result(user_id, result):
         vt_s.get("malicious_urls", 0),
         json.dumps(result, default=str),
     ))
+    db_id = cur.lastrowid
     conn.commit()
     conn.close()
+    return db_id
 
 
 def get_history(user_id, limit=200):

@@ -177,7 +177,7 @@
             <thead>
                 <tr>
                     <th>Fecha</th><th>Archivo</th><th>Asunto</th>
-                    <th>Resultado</th><th>Riesgo</th><th>Entropía</th><th>Feedback</th>
+                    <th>Resultado</th><th>Riesgo</th><th>Entropía</th><th>Feedback</th><th></th>
                 </tr>
             </thead>
             <tbody id="historyTable"></tbody>
@@ -273,6 +273,7 @@ function renderHistoryTable(items) {
             <td>${r.risk_score||0}%</td>
             <td>${r.body_entropy||'-'}</td>
             <td>${fb}</td>
+            <td><button class="btn btn-secondary btn-sm" style="font-size:0.75em;padding:3px 8px" onclick="event.stopPropagation();showReport(${r.id})">📄</button></td>
         </tr>`;
     }).join('');
 }
@@ -567,56 +568,60 @@ function renderReportModal(r) {
     const m = document.getElementById('reportModal');
     const b = document.getElementById('reportBody');
     const authIcon = v => v == 1 ? '✅' : '❌';
-    const authRows = (r.authentication && r.authentication.results || []).map(a =>
-        `<tr><td>${a.method.toUpperCase()}</td><td><span class="risk-badge ${a.result === 'pass' ? 'pred-benigno' : 'pred-malicioso'}">${a.result}</span></td><td style="font-size:0.82em;color:var(--text-muted)">${a.server || '-'}</td></tr>`
-    ).join('');
-    const iocUrls = (r.indicators && r.indicators.urls || []).map(u =>
-        `<li style="word-break:break-all;font-size:0.85em">${escapeHtml(u)}</li>`
-    ).join('');
-    const iocHashes = (r.indicators && r.indicators.attachment_hashes || []).map(h =>
-        `<li style="font-size:0.82em"><code>${h.sha256 ? h.sha256.slice(0,16)+'...' : '-'}</code> ${escapeHtml(h.filename)}</li>`
-    ).join('');
-    const iocDomains = (r.indicators && r.indicators.domains || []).map(d =>
-        `<li style="font-size:0.85em">${escapeHtml(d)}</li>`
-    ).join('');
+
+    const indent = (arr, fn) => arr && arr.length > 0 ? arr.map(fn).join('') : '<span style="color:var(--text-faint)">—</span>';
+    const iocSection = (title, items, fn) => items && items.length > 0
+        ? `<div style="margin-top:10px"><strong style="font-size:0.82em;color:var(--text-muted)">${title}:</strong>${indent(items, fn)}</div>`
+        : '';
+
+    const urlsHtml = iocSection('URLs', r.indicators && r.indicators.urls,
+        u => `<div style="word-break:break-all;font-size:0.82em;padding:3px 0;border-bottom:1px solid var(--border-alt)">🔗 ${escapeHtml(u)}</div>`);
+    const hashesHtml = iocSection('Hashes', r.indicators && r.indicators.attachment_hashes,
+        h => `<div style="font-size:0.8em;padding:2px 0"><code>${h.sha256 || '-'}</code> ${escapeHtml(h.filename)}</div>`);
+    const domainsHtml = iocSection('Dominios', r.indicators && r.indicators.domains,
+        d => `<div style="font-size:0.82em;padding:2px 0">🌐 ${escapeHtml(d)}</div>`);
 
     b.innerHTML = `
-    <div style="margin-bottom:16px">
-        <div style="font-size:1.1em;font-weight:700">${escapeHtml(r.file)}</div>
-        <div style="color:var(--text-muted);font-size:0.85em">${escapeHtml(r.subject)}</div>
-        <div style="color:var(--text-faint);font-size:0.8em">De: ${escapeHtml(r.from)} · ${(r.timestamp||'').slice(0,10)}</div>
-        <div style="margin-top:8px">
-            <span class="risk-badge ${r.prediction === 'MALICIOSO' ? 'pred-malicioso' : 'pred-benigno'}">${r.prediction}</span>
-            <span class="risk-badge risk-${r.risk_level}">${r.risk_level} — ${r.risk_score}%</span>
-            <span style="color:var(--text-faint);font-size:0.82em;margin-left:8px">ML: ${r.ml_confidence}%</span>
+    <div style="background:var(--bg-body);border-radius:10px;padding:14px;margin-bottom:16px;border-left:4px solid ${r.prediction === 'MALICIOSO' ? '#eb5757' : '#6fcf97'}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+            <div>
+                <div style="font-size:1em;font-weight:700">${escapeHtml(r.file)}</div>
+                <div style="color:var(--text-muted);font-size:0.85em;margin-top:2px">${escapeHtml(r.subject)}</div>
+                <div style="color:var(--text-faint);font-size:0.8em;margin-top:2px">De: ${escapeHtml(r.from)} · ${(r.timestamp||'').slice(0,10)}</div>
+            </div>
+            <div style="text-align:right">
+                <span class="risk-badge ${r.prediction === 'MALICIOSO' ? 'pred-malicioso' : 'pred-benigno'}">${r.prediction}</span><br>
+                <span class="risk-badge risk-${r.risk_level}">${r.risk_level} — ${r.risk_score}%</span>
+            </div>
         </div>
     </div>
 
-    <div class="detail-section">
-        <h4>🔐 Autenticación</h4>
-        <table style="font-size:0.85em;width:auto">
-            <tr><td><strong>SPF</strong></td><td>${authIcon(r.authentication.spf_pass)}</td></tr>
-            <tr><td><strong>DKIM</strong></td><td>${authIcon(r.authentication.dkim_pass)}</td></tr>
-            <tr><td><strong>DMARC</strong></td><td>${authIcon(r.authentication.dmarc_pass)}</td></tr>
-            <tr><td><strong>ARC</strong></td><td>${authIcon(r.authentication.arc_pass)}</td></tr>
-        </table>
-        ${authRows.length ? `<table class="rules-table" style="margin-top:8px"><tr><th>Método</th><th>Resultado</th><th>Servidor</th></tr>${authRows}</table>` : ''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div class="detail-section" style="margin:0">
+            <h4>🔐 Autenticación</h4>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:0.85em">
+                <span>SPF ${authIcon(r.authentication.spf_pass)}</span>
+                <span>DKIM ${authIcon(r.authentication.dkim_pass)}</span>
+                <span>DMARC ${authIcon(r.authentication.dmarc_pass)}</span>
+                <span>ARC ${authIcon(r.authentication.arc_pass)}</span>
+            </div>
+        </div>
+        <div class="detail-section" style="margin:0">
+            <h4>🛡️ VirusTotal</h4>
+            <div style="font-size:0.85em;padding:4px 0">
+                Archivos maliciosos: <strong>${r.virustotal.malicious_files}</strong><br>
+                URLs maliciosas: <strong>${r.virustotal.malicious_urls}</strong><br>
+                Consultas: ${r.virustotal.total_checked || 0}
+            </div>
+        </div>
     </div>
 
     <div class="detail-section">
         <h4>🔗 Indicadores (IoCs)</h4>
-        ${iocUrls.length ? `<p style="font-size:0.82em;color:var(--text-muted);margin-bottom:4px">URLs (${r.url_count}):</p><ul class="url-list">${iocUrls}</ul>` : '<p style="color:var(--text-faint)">Sin URLs</p>'}
-        ${iocHashes.length ? `<p style="font-size:0.82em;color:var(--text-muted);margin-top:8px;margin-bottom:4px">Hashes de adjuntos:</p><ul class="url-list">${iocHashes}</ul>` : ''}
-        ${iocDomains.length ? `<p style="font-size:0.82em;color:var(--text-muted);margin-top:8px;margin-bottom:4px">Dominios:</p><ul class="url-list">${iocDomains}</ul>` : ''}
-    </div>
-
-    <div class="detail-section">
-        <h4>🛡️ VirusTotal</h4>
-        <div style="padding:8px 12px;background:var(--bg-body);border-radius:8px;font-size:0.85em">
-            Archivos maliciosos: <strong>${r.virustotal.malicious_files}</strong> ·
-            URLs maliciosas: <strong>${r.virustotal.malicious_urls}</strong> ·
-            Consultas: ${r.virustotal.total_checked}
-        </div>
+        ${urlsHtml}
+        ${hashesHtml}
+        ${domainsHtml}
+        ${!urlsHtml && !hashesHtml && !domainsHtml ? '<span style="color:var(--text-faint);font-size:0.85em">Sin indicadores extraídos</span>' : ''}
     </div>
 
     <div class="detail-section">
@@ -631,9 +636,9 @@ function renderReportModal(r) {
         </div>
     </div>
 
-    <div style="margin-top:16px;display:flex;gap:8px">
-        <button class="btn btn-primary btn-sm" onclick="closeReport()">Cerrar</button>
-        <button class="btn btn-secondary btn-sm" onclick="downloadReportJSON(${currentDbId})">📥 Descargar JSON</button>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-secondary btn-sm" onclick="closeReport()">Cerrar</button>
+        <button class="btn btn-primary btn-sm" onclick="downloadReportJSON(${currentDbId})">📥 Descargar JSON</button>
     </div>`;
     m.classList.add('open');
 }
@@ -751,7 +756,9 @@ function renderCard(r) {
     const ea  = r.entropy_analysis||{};
     const lc  = lcMap[rl]||'';
     if (r._db_id) _store[r._db_id] = r;
-    const click = r._db_id ? `onclick="openDetail(${r._db_id})"` : '';
+    const dbId = r._db_id;
+    const click = dbId ? `onclick="openDetail(${dbId})"` : '';
+    const reportBtn = dbId ? `<button class="btn btn-secondary btn-sm" style="margin-left:8px;font-size:0.8em" onclick="event.stopPropagation();showReport(${dbId})">📄 Informe</button>` : '';
     return `<div class="result-card ${lc}" ${click}>
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
             <div><strong>${r.file||''}</strong><br><small style="color:var(--text-muted)">${r.subject||'-'}</small></div>
@@ -768,7 +775,10 @@ function renderCard(r) {
             <div><small style="color:var(--text-muted)">Adj: ${ea.attachment_content_entropy_max||0}</small>
                 <div class="entropy-bar"><div class="entropy-fill" style="width:${ew(ea.attachment_content_entropy_max||0)}%;background:${ec(ea.attachment_content_entropy_max||0)}"></div></div></div>
         </div>
-        <small style="color:var(--text-faint);margin-top:5px;display:block">🔍 Clic para ver detalle</small>
+        <div style="margin-top:6px;display:flex;align-items:center;gap:6px">
+            <small style="color:var(--text-faint)">🔍 Clic para ver detalle</small>
+            ${reportBtn}
+        </div>
     </div>`;
 }
 
