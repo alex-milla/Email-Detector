@@ -1,7 +1,7 @@
 {
-  "version": "1.2.39",
-  "release_date": "2026-04-19",
-  "changelog": "1.2.39 — Fix upload masivo de archivos: frontend envia lotes de 3 en paralelo con progreso. Errorhandlers 500/502/504 devuelven JSON en lugar de HTML.",
+  "version": "2.0.0",
+  "release_date": "2026-05-07",
+  "changelog": "2.0.0 — Detección de códigos QR en imágenes (inline y adjuntas). Decodificación con pyzbar/OpenCV, resolución de redirecciones HTTP/meta/JS, nuevas 9 features ML qr_*, frontend con cadena de redirects y veredicto VT por QR. Requiere reentrenamiento del modelo.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v1.2.39.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.0.0.zip"
 }
