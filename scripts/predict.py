@@ -224,8 +224,9 @@ def predict_email(eml_path, use_virustotal=True):
         "virustotal": vt_results,
         "features":   features,
         "metadata": {
-            "urls_found":  meta_eml.get("urls_found", []),
-            "attachments": meta_eml.get("attachments", []),
+            "urls_found":      meta_eml.get("urls_found", []),
+            "attachments":     meta_eml.get("attachments", []),
+            "qr_codes_found":  meta_eml.get("qr_codes_found", []),
         },
     }
     print(f"   Resultado: {final}  Riesgo: {level} ({risk:.1f}%)")
