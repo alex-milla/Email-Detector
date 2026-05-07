@@ -1,7 +1,7 @@
 {
-  "version": "2.0.0",
+  "version": "2.1.0",
   "release_date": "2026-05-07",
-  "changelog": "2.0.0 — Detección de códigos QR en imágenes (inline y adjuntas). Decodificación con pyzbar/OpenCV, resolución de redirecciones HTTP/meta/JS, nuevas 9 features ML qr_*, frontend con cadena de redirects y veredicto VT por QR. Requiere reentrenamiento del modelo.",
+  "changelog": "2.1.0 — Refactor completo del proyecto en 6 fases: tests automatizados, Docker opcional, pipeline ETL, feature importance, calibración, umbral dinámico, modularización de app.py, Gmail OAuth2, export CSV, Chart.js, CSRF, password policy, auditoría, notificaciones Slack/Telegram/email, drift monitoring, Prometheus metrics, SIEM webhook, 2FA/TOTP, CLI tool, plugin system y POP3.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.0.0.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.1.0.zip"
 }
