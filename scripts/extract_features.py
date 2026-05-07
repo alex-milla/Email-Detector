@@ -36,6 +36,29 @@ try:
 except Exception:
     _CLANKER_FEATS_AVAILABLE = False
 
+# ── Detección de QR (v2.0) — soft-fail si no están disponibles ──
+try:
+    from qr_decoder import decode_qr_from_bytes, is_available as qr_available
+    _QR_AVAILABLE = qr_available()
+except Exception:
+    _QR_AVAILABLE = False
+
+try:
+    from url_resolver import resolve_url, is_shortener
+    _RESOLVER_AVAILABLE = True
+except Exception:
+    _RESOLVER_AVAILABLE = False
+
+# Tipos MIME que escaneamos en busca de QR
+QR_SCAN_MIME_TYPES = {
+    "image/png", "image/jpeg", "image/jpg", "image/gif",
+    "image/bmp", "image/webp", "image/tiff",
+}
+
+# Configuración del análisis JS (más lento) — controlable vía env var
+import os as _os_qr
+QR_USE_JS = _os_qr.getenv("QR_USE_JS_RESOLVER", "true").lower() == "true"
+
 
 def extract_urls(text):
     """Encuentra todas las URLs en un texto."""
@@ -147,6 +170,62 @@ def get_attachment_hashes(part):
     }
 
 
+def _scan_email_for_qr_codes(msg):
+    """
+    Recorre TODAS las partes MIME del correo en busca de imágenes
+    (adjuntas o inline) y decodifica cualquier QR que contengan.
+
+    Devuelve lista de dicts con info por QR encontrado:
+        {
+            "source_filename": "factura.png" o "<inline cid:abc>",
+            "is_inline": bool,
+            "raw_payload": "https://bit.ly/3xyZ",
+            "is_url": bool,
+            "resolution": {...}  # solo si is_url y _RESOLVER_AVAILABLE
+        }
+    """
+    if not _QR_AVAILABLE:
+        return []
+
+    found = []
+    for part in msg.walk():
+        ctype = part.get_content_type()
+        if ctype not in QR_SCAN_MIME_TYPES:
+            continue
+
+        payload = part.get_payload(decode=True)
+        if not payload:
+            continue
+
+        # Identificar si es inline (Content-ID) o adjunto normal
+        cid = part.get("Content-ID", "")
+        disp = (part.get("Content-Disposition", "") or "").lower()
+        is_inline = bool(cid) or "inline" in disp
+        source = part.get_filename() or (f"<inline {cid}>" if cid else f"<{ctype}>")
+
+        # Decodificar QR(s)
+        qr_payloads = decode_qr_from_bytes(payload)
+        if not qr_payloads:
+            continue
+
+        for raw in qr_payloads:
+            entry = {
+                "source_filename": source,
+                "is_inline": is_inline,
+                "raw_payload": raw,
+                "is_url": raw.startswith(("http://", "https://")),
+            }
+            # Resolver redirecciones si es URL
+            if entry["is_url"] and _RESOLVER_AVAILABLE:
+                try:
+                    entry["resolution"] = resolve_url(raw, use_js=QR_USE_JS)
+                except Exception as e:
+                    entry["resolution"] = {"error": str(e)[:200], "final": raw}
+            found.append(entry)
+
+    return found
+
+
 def extract_features_from_eml(eml_path):
     """
     FUNCIÓN PRINCIPAL: lee un archivo .eml y devuelve un diccionario
@@ -214,6 +293,9 @@ def extract_features_from_eml(eml_path):
     attachment_ext_risk = max(
         (get_attachment_risk(fn) for fn in attachments), default=0
     )
+
+    # ── Análisis de códigos QR (NUEVO en v2.0) ──
+    qr_codes = _scan_email_for_qr_codes(msg)
 
     # ── Cabeceras de autenticación (SPF, DKIM, DMARC) ──
     auth_results = (msg.get("Authentication-Results", "") or "").lower()
@@ -300,6 +382,7 @@ def extract_features_from_eml(eml_path):
         "attachments":       attachments,
         "attachment_hashes": attachment_hashes,
         "body_html":         body_html,
+        "qr_codes_found":    qr_codes,
     }
 
     return features, metadata
