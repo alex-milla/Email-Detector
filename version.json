@@ -1,7 +1,7 @@
 {
-  "version": "2.1.1",
+  "version": "2.1.2",
   "release_date": "2026-05-07",
-  "changelog": "2.1.1 — Informe-resumen de amenazas con IoCs, análisis mejorado de cabeceras SPF/DKIM/DMARC/ARC, paleta de colores pastel, modal de informe descargable en JSON.",
+  "changelog": "2.1.2 — Informe-resumen con IoCs por correo, botón en cada ficha y en historial, análisis mejorado de cabeceras SPF/DKIM/DMARC/ARC, paleta de colores pastel, modal de informe descargable en JSON.",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.1.1.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.1.2.zip"
 }
