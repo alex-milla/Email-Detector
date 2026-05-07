@@ -519,9 +519,13 @@ function renderModal(r) {
         </div>
         <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
             <button class="btn btn-secondary" style="font-size:0.85em" onclick="recheckVT(${dbId}, this)">🔍 Volver a consultar VirusTotal</button>
-            <button class="btn btn-secondary" style="font-size:0.85em" onclick="showReport(${dbId})">📄 Ver informe</button>
         </div></div>`;
     }
+
+    // Informe
+    html += `<div class="detail-section" style="text-align:center">
+        <button class="btn btn-primary" style="font-size:0.9em;padding:10px 24px" onclick="showReport(${dbId})">📄 Ver informe completo</button>
+    </div>`;
 
     document.getElementById('modalTitle').textContent = escapeHtml(r.filename) || 'Detalle';
     document.getElementById('modalBody').innerHTML = html;
