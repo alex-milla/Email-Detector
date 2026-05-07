@@ -8,6 +8,7 @@ import os
 import sys
 import email
 import imaplib
+import poplib
 import time
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
@@ -265,6 +266,58 @@ def download_emails_m365(max_emails=50, date_from=None, date_to=None,
     return downloaded
 
 
+def download_emails_pop3(max_emails=50):
+    """Descarga correos por POP3."""
+    server   = os.getenv("POP3_SERVER", "")
+    port     = int(os.getenv("POP3_PORT", "995"))
+    user     = os.getenv("POP3_USER", "")
+    password = os.getenv("POP3_PASSWORD", "")
+
+    if not all([server, user, password]):
+        print("ERROR: Faltan variables POP3 en config/.env")
+        return []
+
+    print(f"Conectando a POP3 {server}:{port}...")
+    downloaded = []
+
+    try:
+        if port == 995:
+            mail = poplib.POP3_SSL(server, port)
+        else:
+            mail = poplib.POP3(server, port)
+        mail.user(user)
+        mail.pass_(password)
+
+        count = len(mail.list()[1])
+        to_fetch = min(count, max_emails)
+        print(f"  Correos en buzón: {count}, descargando: {to_fetch}")
+
+        for i in range(count, count - to_fetch, -1):
+            try:
+                raw_lines = mail.retr(i)[1]
+                raw_email = b"\n".join(raw_lines)
+                if len(raw_email) > 50 * 1024 * 1024:
+                    print(f"  [{count-i+1}/{to_fetch}] OMITIDO: correo demasiado grande")
+                    continue
+                parsed = email.message_from_bytes(raw_email)
+                subject = parsed.get("Subject", "") or ""
+                filename = _safe_filename(subject, "pop3", i)
+                filepath = os.path.join(RAW_DIR, filename)
+                with open(filepath, "wb") as f:
+                    f.write(raw_email)
+                downloaded.append(filepath)
+                print(f"  [{count-i+1}/{to_fetch}] {filename[:70]}")
+            except Exception as e:
+                print(f"  [{count-i+1}/{to_fetch}] ERROR: {e}")
+
+        mail.quit()
+    except Exception as e:
+        print(f"ERROR POP3: {e}")
+
+    print(f"\nTotal descargados: {len(downloaded)}")
+    return downloaded
+
+
 def download_emails(provider="imap", max_emails=50, days_back=7,
                     folder="inbox", date_from=None, date_to=None):
     print(f"\n{'='*55}")
@@ -279,6 +332,8 @@ def download_emails(provider="imap", max_emails=50, days_back=7,
         return download_emails_m365(max_emails, date_from, date_to, folder, days_back)
     elif provider in ("imap", "gmail"):
         return download_emails_imap(max_emails, date_from, date_to, folder, days_back)
+    elif provider == "pop3":
+        return download_emails_pop3(max_emails)
     else:
         print(f"ERROR: Proveedor desconocido: {provider}")
         return []

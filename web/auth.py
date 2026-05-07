@@ -5,6 +5,7 @@ auth.py — Gestión de usuarios, sesiones y configuración de correo por usuari
 
 import os
 import re
+import base64
 import sqlite3
 import bcrypt
 from datetime import datetime
@@ -210,6 +211,71 @@ def hash_password(password):
 
 def check_password(password, hashed):
     return bcrypt.checkpw(password.encode(), hashed.encode())
+
+
+# ── TOTP / 2FA ──────────────────────────────────────────────────────────────
+try:
+    import pyotp
+    HAS_OTP = True
+except ImportError:
+    HAS_OTP = False
+
+
+def generate_totp_secret():
+    if not HAS_OTP:
+        return None
+    return pyotp.random_base32()
+
+
+def get_totp_uri(secret, username):
+    if not HAS_OTP:
+        return None
+    return pyotp.totp.TOTP(secret).provisioning_uri(name=username, issuer_name="EmailDetector")
+
+
+def verify_totp(user_id, code):
+    if not HAS_OTP:
+        return False
+    conn = get_db()
+    row = conn.execute("SELECT totp_secret FROM users WHERE id = ?", (user_id,)).fetchone()
+    conn.close()
+    if not row or not row["totp_secret"]:
+        return False
+    totp = pyotp.TOTP(row["totp_secret"])
+    return totp.verify(code, valid_window=1)
+
+
+def enable_totp(user_id, secret):
+    conn = get_db()
+    try:
+        conn.execute("ALTER TABLE users ADD COLUMN totp_secret TEXT")
+    except Exception:
+        pass
+    conn.execute("UPDATE users SET totp_secret = ? WHERE id = ?", (secret, user_id))
+    conn.commit()
+    conn.close()
+
+
+def disable_totp(user_id):
+    conn = get_db()
+    try:
+        conn.execute("ALTER TABLE users ADD COLUMN totp_secret TEXT")
+    except Exception:
+        pass
+    conn.execute("UPDATE users SET totp_secret = NULL WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+
+def is_totp_enabled(user_id):
+    conn = get_db()
+    row = conn.execute("SELECT totp_secret FROM users WHERE id = ?", (user_id,)).fetchone()
+    conn.close()
+    return bool(row and row["totp_secret"])
+
+
+def has_2fa():
+    return HAS_OTP
 
 
 def create_user(username, password, role="user"):

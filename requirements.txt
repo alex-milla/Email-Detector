@@ -44,3 +44,6 @@ playwright                # detección de redirecciones JS (~300 MB con chromium
 # --- Monitorización (Fase 5) ---
 prometheus-client          # métricas /metrics para Prometheus
 
+# --- Madurez (Fase 6) ---
+pyotp                      # 2FA/TOTP para cuentas admin
+

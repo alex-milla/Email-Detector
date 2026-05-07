@@ -7,7 +7,11 @@ from flask import request, jsonify, render_template, session
 from dotenv import load_dotenv
 
 from web.services.decorators import login_required, admin_required, current_user
-from web.auth import get_mail_config, save_mail_config, get_db
+from web.auth import (
+    get_mail_config, save_mail_config, get_db,
+    generate_totp_secret, get_totp_uri, verify_totp,
+    enable_totp, disable_totp, is_totp_enabled, has_2fa,
+)
 from settings_manager import read_global_env, write_global_env, test_imap, test_virustotal, test_m365
 
 
@@ -185,3 +189,37 @@ def register_routes(app):
             return jsonify({"success": False, "error": "Timeout generando el certificado."}), 500
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
+
+    # ── TOTP / 2FA ──────────────────────────────────────────────────────────
+
+    @app.route("/api/2fa/status")
+    @login_required
+    def api_2fa_status():
+        uid = session["user_id"]
+        return jsonify({
+            "available": has_2fa(),
+            "enabled": is_totp_enabled(uid),
+        })
+
+    @app.route("/api/2fa/setup", methods=["POST"])
+    @login_required
+    def api_2fa_setup():
+        if not has_2fa():
+            return jsonify({"error": "pyotp no instalado. pip install pyotp"}), 503
+        uid = session["user_id"]
+        code = (request.get_json(silent=True) or {}).get("code", "")
+        if code:
+            if verify_totp(uid, code):
+                return jsonify({"success": True, "message": "2FA activado"})
+            return jsonify({"success": False, "error": "Código inválido"}), 400
+        secret = generate_totp_secret()
+        uri = get_totp_uri(secret, session.get("username", "user"))
+        enable_totp(uid, secret)
+        return jsonify({"success": True, "secret": secret, "uri": uri, "qrcode": uri})
+
+    @app.route("/api/2fa/disable", methods=["POST"])
+    @admin_required
+    def api_2fa_disable():
+        uid = session["user_id"]
+        disable_totp(uid)
+        return jsonify({"success": True, "message": "2FA desactivado"})
