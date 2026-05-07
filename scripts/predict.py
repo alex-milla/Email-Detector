@@ -161,14 +161,12 @@ def predict_email(eml_path, use_virustotal=True):
     proba, individual = ensemble_predict(models_dict, features, model_meta)
     ml_pred = "MALICIOSO" if proba[1] >= threshold else "BENIGNO"
 
-    # ── Modelo 10: Anti-Clanker ─────────────────────────────────────────────
+    # ── Anti-Clanker (solo diagnóstico) ──────────────────────────────────────
+    # Las features clanker_* ya están integradas en el vector de features
+    # del ensemble. Este cálculo es solo para diagnóstico en la UI.
     clanker_result = _clanker_predict(meta_eml.get("body_html", ""))
-    clanker_boost = 0.0
-    if clanker_result.get("available"):
-        score = clanker_result.get("score", 0.0)
-        # Un score alto de clanker aumenta el riesgo (artefactos LLM detectados)
-        clanker_boost = score * 100 * clanker_result.get("weight", 0.15)
-        print(f"   Anti-Clanker: score={score:.3f} boost={clanker_boost:.1f}%")
+    if clanker_result.get("available") and clanker_result.get("score", 0) > 0:
+        print(f"   Anti-Clanker: score={clanker_result['score']:.3f}")
     # ─────────────────────────────────────────────────────────────────────────
 
     vt_results = None
@@ -186,10 +184,6 @@ def predict_email(eml_path, use_virustotal=True):
     risk  = proba[1] * 100
     if vt_alert:
         risk = max(risk, 90)
-    # Aplicar boost de Anti-Clanker
-    risk = min(risk + clanker_boost, 100.0)
-    if clanker_result.get("available") and clanker_result.get("score", 0) > 0.5:
-        final = "MALICIOSO"
 
     if   risk >= 80: level = "CRITICO"
     elif risk >= 60: level = "ALTO"

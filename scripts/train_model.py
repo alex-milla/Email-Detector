@@ -19,7 +19,9 @@ from sklearn.ensemble import (
     GradientBoostingClassifier, HistGradientBoostingClassifier,
     AdaBoostClassifier, BaggingClassifier,
 )
-from sklearn.metrics import confusion_matrix, roc_auc_score
+from sklearn.metrics import confusion_matrix, roc_auc_score, f1_score, precision_recall_curve
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.preprocessing import StandardScaler
 import joblib
 
 try:
@@ -101,6 +103,101 @@ def _train_clanker_model(X_train, y_train, feature_names):
         logging.getLogger(__name__).warning("Modelo 10 entrenamiento fallido: %s", e)
         return None, []
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+def _analyze_feature_importance(model, feature_names, X_test, y_test):
+    """Analiza importancia de features y detecta colinealidad."""
+    if not hasattr(model, "feature_importances_"):
+        return {}, []
+
+    importances = model.feature_importances_
+    ranked = sorted(zip(feature_names, importances), key=lambda x: -x[1])
+    total = sum(importances)
+
+    # Detectar features con importancia casi nula (<1% del total)
+    low_importance = [name for name, imp in ranked if imp / total < 0.01]
+    # Detectar features dominantes (>20% de la importancia total)
+    dominant = [name for name, imp in ranked if imp / total > 0.20]
+
+    # Detectar correlación alta entre features numéricas
+    high_corr_pairs = []
+    try:
+        X_df = pd.DataFrame(X_test, columns=feature_names)
+        corr_matrix = X_df.corr().abs()
+        upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
+        for col in upper.columns:
+            correlated = list(upper.index[upper[col] > 0.95])
+            for row in correlated:
+                high_corr_pairs.append((col, row, round(upper.loc[row, col], 4)))
+    except Exception:
+        pass
+
+    return {
+        "feature_importance": {name: round(imp, 4) for name, imp in ranked},
+        "low_importance_features": low_importance,
+        "dominant_features": dominant,
+        "high_correlation_pairs": high_corr_pairs[:10],
+    }, low_importance
+
+
+def _prune_features(X_train, X_test, feature_names, low_importance):
+    """Elimina features de baja importancia si hay suficientes muestras."""
+    if not low_importance or len(X_train) < 100:
+        return X_train, X_test, feature_names
+
+    keep_mask = [fn not in low_importance for fn in feature_names]
+    keep_names = [fn for fn in feature_names if fn not in low_importance]
+    print(f"  Podadas {len(low_importance)} features de baja importancia")
+
+    X_train_pruned = X_train[:, keep_mask] if hasattr(X_train, "shape") else X_train
+    X_test_pruned = X_test[:, keep_mask] if hasattr(X_test, "shape") else X_test
+
+    # Si después de podar solo queda 1 feature, revertir
+    if len(keep_names) < 2:
+        print("  Demasiadas features eliminadas, revirtiendo poda")
+        return X_train, X_test, feature_names
+
+    return X_train_pruned, X_test_pruned, keep_names
+
+
+def _find_optimal_threshold(model, X_val, y_val, metric="f1"):
+    """Encuentra el umbral óptimo según la métrica especificada."""
+    try:
+        y_proba = model.predict_proba(X_val)[:, 1]
+        precisions, recalls, thresholds = precision_recall_curve(y_val, y_proba)
+
+        if metric == "f2":
+            # F2 da más peso al recall (minimizar falsos negativos en malware)
+            scores = [ (1 + 4) * p * r / (4 * p + r + 1e-10)
+                      for p, r in zip(precisions[:-1], recalls[:-1]) ]
+        else:
+            # F1 estándar
+            scores = [ 2 * p * r / (p + r + 1e-10)
+                      for p, r in zip(precisions[:-1], recalls[:-1]) ]
+
+        best_idx = np.argmax(scores)
+        best_threshold = float(thresholds[best_idx]) if best_idx < len(thresholds) else 0.5
+        best_score = float(scores[best_idx])
+
+        if best_threshold < 0.1 or best_threshold > 0.9:
+            best_threshold = 0.5
+
+        print(f"  Umbral óptimo ({metric}): {best_threshold:.3f} (score: {best_score:.4f})")
+        return round(best_threshold, 4)
+    except Exception:
+        return 0.5
+
+
+def _wrap_calibrated(model, X_train, y_train):
+    """Envuelve un modelo en CalibratedClassifierCV si hay suficientes datos."""
+    try:
+        if len(np.unique(y_train)) < 2:
+            return model
+        calibrated = CalibratedClassifierCV(model, cv=3, method="sigmoid")
+        calibrated.fit(X_train, y_train)
+        return calibrated
+    except Exception:
+        return model
 
 
 def _compute_checksum(filepath):
@@ -199,6 +296,9 @@ def main():
         print(f"\n  -- {name} --")
         try:
             model.fit(X_train, y_train)
+            # Calibrar si hay suficientes datos
+            if len(X_train) >= 50:
+                model = _wrap_calibrated(model, X_train, y_train)
             y_proba = model.predict_proba(X_test)[:, 1]
             auc     = roc_auc_score(y_test, y_proba)
             cm      = confusion_matrix(y_test, model.predict(X_test))
@@ -210,6 +310,7 @@ def main():
                 "auc_cv_mean":      round(cv.mean(), 4),
                 "auc_cv_std":       round(cv.std(), 4),
                 "confusion_matrix": cm.tolist(),
+                "calibrated":       len(X_train) >= 50,
             }
             print(f"  AUC: {auc:.4f}  CV: {cv.mean():.4f}+/-{cv.std():.4f}")
             if auc > best_auc:
@@ -220,16 +321,44 @@ def main():
             results[name] = {"error": str(e)}
 
     print("=" * 60)
-    print(" PASO 4: Guardando")
+    print(" PASO 4: Analizando features")
     print("=" * 60)
-    best_model = models[best_model_name]
-    joblib.dump(best_model, os.path.join(MODEL_DIR, "email_classifier.joblib"))
+    best_model = models.get(best_model_name)
+    feat_analysis, low_imp = _analyze_feature_importance(best_model, feature_names, X_test, y_test)
 
+    X_train_pruned, X_test_pruned, f_names_pruned = _prune_features(
+        X_train.values if hasattr(X_train, "values") else X_train,
+        X_test.values if hasattr(X_test, "values") else X_test,
+        feature_names, low_imp)
+    if len(f_names_pruned) != len(feature_names):
+        feature_names = f_names_pruned
+        X_train = X_train_pruned
+        X_test = X_test_pruned
+        print(f"  Features finales: {len(feature_names)}")
+
+    print("=" * 60)
+    print(" PASO 5: Guardando")
+    print("=" * 60)
+
+    # Encontrar umbral óptimo si hay suficientes datos
+    optimal_threshold = 0.5
+    if len(X_train) >= 50 and best_model is not None:
+        optimal_threshold = _find_optimal_threshold(best_model, X_test, y_test, metric="f2")
+
+    # Guardar todos los modelos
     all_dir = os.path.join(MODEL_DIR, "all_models")
     os.makedirs(all_dir, exist_ok=True)
     for name, model in models.items():
         if "error" not in results.get(name, {}):
             joblib.dump(model, os.path.join(all_dir, f"{name}.joblib"))
+
+    # Re-entrenar mejor modelo con datos completos y calibrar
+    print(f"  Re-entrenando {best_model_name} con datos completos...")
+    final_model = models[best_model_name]
+    final_model.fit(X_balanced, y_balanced)
+    if len(X_balanced) >= 50:
+        final_model = _wrap_calibrated(final_model, X_balanced.values if hasattr(X_balanced, "values") else X_balanced, y_balanced.values if hasattr(y_balanced, "values") else y_balanced)
+    joblib.dump(final_model, os.path.join(MODEL_DIR, "email_classifier.joblib"))
 
     # Guardar modelo Anti-Clanker si se entrenó
     if clanker_model is not None:
@@ -251,17 +380,22 @@ def main():
 
     smote_applied = HAS_SMOTE and (ratio < 0.5 or ratio > 2.0)
     metadata = {
-        "best_model":       best_model_name,
-        "auc":              best_auc,
-        "feature_names":    feature_names,
-        "results":          results,
-        "threshold":        0.5,
-        "trained_at":       datetime.now().isoformat(),
-        "total_samples":    len(df),
-        "smote_applied":    smote_applied,
-        "gpu_used":         USE_GPU,
-        "models_available": [n for n in results if "error" not in results.get(n, {})],
-        "anti_clanker_trained": clanker_model is not None,
+        "best_model":              best_model_name,
+        "auc":                     best_auc,
+        "feature_names":           feature_names,
+        "results":                 results,
+        "threshold":               optimal_threshold,
+        "trained_at":              datetime.now().isoformat(),
+        "total_samples":           len(df),
+        "smote_applied":           smote_applied,
+        "gpu_used":                USE_GPU,
+        "models_available":        [n for n in results if "error" not in results.get(n, {})],
+        "anti_clanker_trained":    clanker_model is not None,
+        "feature_importance":      feat_analysis.get("feature_importance", {}),
+        "feature_pruning_applied": len(f_names_pruned) != len(low_imp) if low_imp else False,
+        "n_features_before_prune": len(feature_names) + len(low_imp) if low_imp else len(feature_names),
+        "n_features_after_prune":  len(feature_names),
+        "calibration_applied":     len(X_balanced) >= 50,
     }
     with open(os.path.join(MODEL_DIR, "model_metadata.json"), "w") as f:
         json.dump(metadata, f, indent=2)
