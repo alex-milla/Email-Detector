@@ -1,7 +1,7 @@
 {
-  "version": "2.1.4",
+  "version": "2.1.5",
   "release_date": "2026-09-18",
-  "changelog": "2.1.4 — Sprint 3: totp_secret y theme en schema de users, migracion para DBs existentes, ALTER TABLE perezosos eliminados",
+  "changelog": "2.1.5 — Sprint 3: Simplificar normalize_result con unicodedata (fix unicode escapes manuales)",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.1.4.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.1.5.zip"
 }

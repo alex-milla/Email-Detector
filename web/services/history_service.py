@@ -1,6 +1,7 @@
 import os
 import json
 import sqlite3
+import unicodedata
 from datetime import datetime
 
 PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
@@ -14,17 +15,19 @@ def get_db():
     return conn
 
 
+def _normalize_level(level: str) -> str:
+    if not level:
+        return ""
+    normalized = unicodedata.normalize("NFD", level)
+    ascii_only = normalized.encode("ascii", "ignore").decode("ascii")
+    return ascii_only.upper()
+
+
 def normalize_result(result):
     if not isinstance(result, dict):
         return result
-    level_map = {
-        "M\u00cdNIMO": "MINIMO", "MÍNIMO": "MINIMO", "MíNIMO": "MINIMO",
-        "CR\u00cdTICO": "CRITICO", "CRÍTICO": "CRITICO", "CRíTICO": "CRITICO",
-        "ALTO": "ALTO", "MEDIO": "MEDIO", "BAJO": "BAJO",
-        "MINIMO": "MINIMO", "CRITICO": "CRITICO",
-    }
     rl = result.get("risk_level", "")
-    result["risk_level"] = level_map.get(rl, rl.upper().replace("Í", "I").replace("Ó", "O"))
+    result["risk_level"] = _normalize_level(rl)
     return result
 
 
