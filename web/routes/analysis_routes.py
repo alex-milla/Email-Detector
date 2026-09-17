@@ -98,14 +98,12 @@ def register_routes(app):
             "gmail": {"GMAIL_CLIENT_ID": cfg["gmail_client_id"],
                        "GMAIL_CLIENT_SECRET": cfg["gmail_client_secret"]},
         }
-        backup = {}
-        for k, v in env_map.get(provider, {}).items():
-            backup[k] = os.environ.get(k, "")
-            os.environ[k] = v
+        provider_config = env_map.get(provider, {})
 
         try:
             downloaded = download_emails(provider, max_emails, days_back,
-                                           folder=folder, date_from=date_from, date_to=date_to)
+                                           folder=folder, date_from=date_from, date_to=date_to,
+                                           config=provider_config)
             results = []
             analyzed = 0
             errors = 0
@@ -135,9 +133,6 @@ def register_routes(app):
             })
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
-        finally:
-            for k, v in backup.items():
-                os.environ[k] = v
 
     @app.route("/history")
     @login_required

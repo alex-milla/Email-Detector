@@ -83,7 +83,7 @@ def _find_inbox_folder(mail):
 
 
 def download_emails_imap(max_emails=50, date_from=None, date_to=None,
-                         folder="inbox", days_back=7):
+                         folder="inbox", days_back=7, config=None):
     """
     Descarga correos por IMAP con rango de fechas.
     Siempre analiza únicamente la bandeja de entrada (INBOX).
@@ -93,12 +93,20 @@ def download_emails_imap(max_emails=50, date_from=None, date_to=None,
         date_to:   datetime o None (usa hoy si es None)
         folder:    ignorado — siempre se usa 'inbox'
         days_back: fallback si no hay date_from
+        config:    dict opcional con claves IMAP_SERVER/PORT/USER/PASSWORD
+                   (si es None, lee de os.getenv — compatibilidad CLI)
     """
     folder = "inbox"  # Fijo: solo se analiza la bandeja de entrada
-    server   = os.getenv("IMAP_SERVER", "")
-    port     = int(os.getenv("IMAP_PORT", "993"))
-    user     = os.getenv("IMAP_USER", "")
-    password = os.getenv("IMAP_PASSWORD", "")
+    if config:
+        server   = config.get("IMAP_SERVER", "")
+        port     = int(config.get("IMAP_PORT", "993"))
+        user     = config.get("IMAP_USER", "")
+        password = config.get("IMAP_PASSWORD", "")
+    else:
+        server   = os.getenv("IMAP_SERVER", "")
+        port     = int(os.getenv("IMAP_PORT", "993"))
+        user     = os.getenv("IMAP_USER", "")
+        password = os.getenv("IMAP_PASSWORD", "")
 
     if not all([server, user, password]):
         print("ERROR: Faltan variables IMAP en config/.env")
@@ -185,7 +193,7 @@ def download_emails_imap(max_emails=50, date_from=None, date_to=None,
 
 
 def download_emails_m365(max_emails=50, date_from=None, date_to=None,
-                         folder="inbox", days_back=7):
+                         folder="inbox", days_back=7, config=None):
     try:
         import msal
         import requests as req
@@ -193,10 +201,16 @@ def download_emails_m365(max_emails=50, date_from=None, date_to=None,
         print("ERROR: pip install msal requests")
         return []
 
-    client_id     = os.getenv("MS365_CLIENT_ID", "")
-    client_secret = os.getenv("MS365_CLIENT_SECRET", "")
-    tenant_id     = os.getenv("MS365_TENANT_ID", "")
-    user_email    = os.getenv("MS365_USER_EMAIL", "")
+    if config:
+        client_id     = config.get("MS365_CLIENT_ID", "")
+        client_secret = config.get("MS365_CLIENT_SECRET", "")
+        tenant_id     = config.get("MS365_TENANT_ID", "")
+        user_email    = config.get("MS365_USER_EMAIL", "")
+    else:
+        client_id     = os.getenv("MS365_CLIENT_ID", "")
+        client_secret = os.getenv("MS365_CLIENT_SECRET", "")
+        tenant_id     = os.getenv("MS365_TENANT_ID", "")
+        user_email    = os.getenv("MS365_USER_EMAIL", "")
 
     if not all([client_id, client_secret, tenant_id, user_email]):
         print("ERROR: Faltan variables M365")
@@ -266,12 +280,18 @@ def download_emails_m365(max_emails=50, date_from=None, date_to=None,
     return downloaded
 
 
-def download_emails_pop3(max_emails=50):
+def download_emails_pop3(max_emails=50, config=None):
     """Descarga correos por POP3."""
-    server   = os.getenv("POP3_SERVER", "")
-    port     = int(os.getenv("POP3_PORT", "995"))
-    user     = os.getenv("POP3_USER", "")
-    password = os.getenv("POP3_PASSWORD", "")
+    if config:
+        server   = config.get("POP3_SERVER", "")
+        port     = int(config.get("POP3_PORT", "995"))
+        user     = config.get("POP3_USER", "")
+        password = config.get("POP3_PASSWORD", "")
+    else:
+        server   = os.getenv("POP3_SERVER", "")
+        port     = int(os.getenv("POP3_PORT", "995"))
+        user     = os.getenv("POP3_USER", "")
+        password = os.getenv("POP3_PASSWORD", "")
 
     if not all([server, user, password]):
         print("ERROR: Faltan variables POP3 en config/.env")
@@ -319,7 +339,7 @@ def download_emails_pop3(max_emails=50):
 
 
 def download_emails(provider="imap", max_emails=50, days_back=7,
-                    folder="inbox", date_from=None, date_to=None):
+                    folder="inbox", date_from=None, date_to=None, config=None):
     print(f"\n{'='*55}")
     print(f" Descargando ({provider}) — carpeta: {folder}")
     if date_from:
@@ -329,11 +349,11 @@ def download_emails(provider="imap", max_emails=50, days_back=7,
     print(f"{'='*55}\n")
 
     if provider == "m365":
-        return download_emails_m365(max_emails, date_from, date_to, folder, days_back)
+        return download_emails_m365(max_emails, date_from, date_to, folder, days_back, config)
     elif provider in ("imap", "gmail"):
-        return download_emails_imap(max_emails, date_from, date_to, folder, days_back)
+        return download_emails_imap(max_emails, date_from, date_to, folder, days_back, config)
     elif provider == "pop3":
-        return download_emails_pop3(max_emails)
+        return download_emails_pop3(max_emails, config)
     else:
         print(f"ERROR: Proveedor desconocido: {provider}")
         return []
