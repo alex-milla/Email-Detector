@@ -5,7 +5,6 @@ app.py — Entry point. Importa y registra blueprints.
 
 import os
 import re
-import sys
 import json
 import sqlite3
 import subprocess
@@ -20,9 +19,6 @@ from flask import (
 )
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
-sys.path.insert(0, os.path.dirname(__file__))
 
 from predict import predict_email
 from mailbox_connector import download_emails
@@ -153,8 +149,6 @@ def gateway_timeout(e):
 
 
 # ── Anti-Clanker integration ─────────────────────────────────────────────────
-import sys as _sys_ck
-_sys_ck.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
 try:
     from extract_clanker_features import (
         extract_clanker_features,

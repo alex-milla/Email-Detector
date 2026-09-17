@@ -10,8 +10,6 @@ import yaml
 
 from web.services.decorators import login_required, admin_required
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts"))
-
 try:
     from extract_clanker_features import (
         extract_clanker_features,

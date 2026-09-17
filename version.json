@@ -1,8 +1,7 @@
 {
-  "version": "2.1.5",
+  "version": "2.1.6",
   "release_date": "2026-09-18",
-  "release_id": 391118464,
-  "changelog": "2.1.5 — Sprint 3: Simplificar normalize_result con unicodedata (fix unicode escapes manuales)",
+  "changelog": "2.1.6 — Sprint 3: Centralizar sys.path.insert en web/__init__.py, eliminar duplicados en app.py, analysis_routes.py, clanker_routes.py",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.1.5.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.1.6.zip"
 }

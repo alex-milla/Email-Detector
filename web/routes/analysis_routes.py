@@ -1,5 +1,4 @@
 import os
-import sys
 import json
 import shutil
 from datetime import datetime, timedelta
@@ -17,8 +16,6 @@ from web.services.history_service import (
     get_history_item, clear_history,
 )
 from web.services.validation_service import validate_eml_upload
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts"))
 
 from predict import predict_email
 from mailbox_connector import download_emails
@@ -261,8 +258,6 @@ def register_routes(app):
     @app.route("/analyze/virustotal/<int:db_id>", methods=["POST"])
     @login_required
     def analyze_virustotal(db_id):
-        import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts"))
         from virustotal import check_email_artifacts
 
         item = get_history_item(session["user_id"], db_id)
