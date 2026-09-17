@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-09-18  
 **Versión:** 2.1.5  
-**Último commit:** e9c1876 (fix: actualizar version.json con release_id 391118464)  
+**Último commit:** bf48536 (fix: corregir zip_url en version.json)  
 **Tag:** v2.1.5  
 **Release:** https://github.com/alex-milla/Email-Detector/releases/tag/v2.1.5 (ID: 391118464)  
 **Branch:** main
