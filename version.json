@@ -1,7 +1,8 @@
 {
   "version": "2.1.5",
   "release_date": "2026-09-18",
+  "release_id": 391118464,
   "changelog": "2.1.5 — Sprint 3: Simplificar normalize_result con unicodedata (fix unicode escapes manuales)",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.1.5.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/releases/download/v2.1.5/Email-Detector-v2.1.5.zip"
 }
