@@ -13,9 +13,7 @@ def generate_csrf_token():
 def validate_csrf_token():
     if request.method in ("GET", "HEAD", "OPTIONS", "TRACE"):
         return True
-    if request.is_json:
-        return True
-    token = request.form.get("_csrf_token")
+    token = request.form.get("_csrf_token") or request.headers.get("X-CSRF-Token", "")
     expected = session.get("_csrf_token")
     if not token or not expected:
         abort(400, "CSRF token faltante")
@@ -27,8 +25,6 @@ def validate_csrf_token():
 def inject_csrf(app):
     @app.before_request
     def _check_csrf():
-        if request.endpoint and request.endpoint != "login":
-            return
         validate_csrf_token()
 
     @app.context_processor

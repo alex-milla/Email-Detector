@@ -5,11 +5,19 @@ from datetime import datetime, timedelta
 
 from flask import request, jsonify, Response, session
 
-from web.services.decorators import login_required
+from web.services.decorators import login_required, admin_required
 from web.services.history_service import get_history
 
 PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
 MODELS_DIR = os.path.join(PROJECT_DIR, "models")
+
+
+def _get_version():
+    try:
+        with open(os.path.join(PROJECT_DIR, "VERSION")) as f:
+            return f.read().strip()
+    except Exception:
+        return "unknown"
 
 
 # ── Métricas Prometheus (soft import) ────────────────────────────────────────
@@ -32,6 +40,14 @@ def register_routes(app):
     def prometheus_metrics():
         if not HAS_PROMETHEUS:
             return jsonify({"error": "prometheus_client no instalado. pip install prometheus-client"}), 503
+        # Permitir acceso desde localhost sin token; externos necesitan METRICS_API_KEY
+        remote = request.remote_addr or ""
+        metrics_key = os.getenv("METRICS_API_KEY", "")
+        is_local = remote in ("127.0.0.1", "::1", "localhost")
+        if not is_local:
+            auth_header = request.headers.get("Authorization", "")
+            if not metrics_key or auth_header != f"Bearer {metrics_key}":
+                return jsonify({"error": "No autorizado"}), 401
         uid = request.args.get("user_id")
         if not uid:
             try:
@@ -59,7 +75,7 @@ def register_routes(app):
         return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
 
     @app.route("/api/webhook/siem", methods=["POST"])
-    @login_required
+    @admin_required
     def webhook_siem():
         """Endpoint para SIEM externo. Recibe consultas en JSON estandarizado."""
         data = request.get_json(silent=True) or {}
@@ -68,16 +84,14 @@ def register_routes(app):
         if action == "status":
             return jsonify({
                 "service": "email-malware-detector",
-                "version": "2.0.0",
+                "version": _get_version(),
                 "status": "ok",
                 "timestamp": datetime.now().isoformat(),
             })
 
         if action == "recent_alerts":
             limit = min(int(data.get("limit", 10)), 100)
-            uid = data.get("user_id")
-            if not uid:
-                return jsonify({"error": "user_id requerido"}), 400
+            uid = data.get("user_id") or session.get("user_id")
             history = get_history(uid)
             alerts = [h for h in history if h.get("prediction") == "MALICIOSO"]
             return jsonify({
@@ -123,16 +137,29 @@ def register_routes(app):
     @login_required
     def monitoring_status():
         """Dashboard de estado interno."""
-        uid = request.args.get("user_id") or session.get("user_id")
+        uid = session.get("user_id")
+        # Solo admin puede consultar el estado de otro usuario
+        requested_uid = request.args.get("user_id")
+        if requested_uid and session.get("user_role") == "admin":
+            try:
+                uid = int(requested_uid)
+            except (ValueError, TypeError):
+                pass
         if not uid:
             return jsonify({"error": "user_id requerido"}), 400
 
         history = get_history(uid)
         total = len(history)
         malicious = sum(1 for h in history if h.get("prediction") == "MALICIOSO")
-        recent_24h = sum(1 for h in history
-                         if h.get("timestamp", "")[:10] >=
-                         (datetime.now() - timedelta(hours=24)).strftime("%Y-%m-%dT%H"))
+        cutoff = datetime.now() - timedelta(hours=24)
+        recent_24h = 0
+        for h in history:
+            ts = h.get("timestamp", "")
+            try:
+                if datetime.fromisoformat(ts) >= cutoff:
+                    recent_24h += 1
+            except (ValueError, TypeError):
+                pass
 
         model_meta_path = os.path.join(MODELS_DIR, "model_metadata.json")
         meta = {}

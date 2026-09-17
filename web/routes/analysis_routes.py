@@ -254,11 +254,12 @@ def register_routes(app):
     @app.route("/feedback/stats")
     @login_required
     def feedback_stats():
+        uid = session["user_id"]
         from web.auth import get_db
         conn = get_db()
-        total = conn.execute("SELECT COUNT(*) FROM feedback").fetchone()[0]
-        benign = conn.execute("SELECT COUNT(*) FROM feedback WHERE corrected_label=0").fetchone()[0]
-        malicious = conn.execute("SELECT COUNT(*) FROM feedback WHERE corrected_label=1").fetchone()[0]
+        total = conn.execute("SELECT COUNT(*) FROM feedback WHERE user_id=?", (uid,)).fetchone()[0]
+        benign = conn.execute("SELECT COUNT(*) FROM feedback WHERE user_id=? AND corrected_label=0", (uid,)).fetchone()[0]
+        malicious = conn.execute("SELECT COUNT(*) FROM feedback WHERE user_id=? AND corrected_label=1", (uid,)).fetchone()[0]
         conn.close()
         return jsonify({"total": total, "benign": benign, "malicious": malicious})
 

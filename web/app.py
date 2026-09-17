@@ -101,12 +101,20 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 init_db()
 
 
+def _get_version():
+    try:
+        with open(os.path.join(os.path.dirname(__file__), "..", "VERSION")) as f:
+            return f.read().strip()
+    except Exception:
+        return "unknown"
+
+
 @app.route("/health")
 def health():
     model_meta = get_model_meta()
     return jsonify({
         "status": "ok",
-        "version": "2.0.0",
+        "version": _get_version(),
         "model_trained": os.path.exists(os.path.join(MODELS_DIR, "email_classifier.joblib")),
         "models_count": len(model_meta.get("models_available", [])),
         "timestamp": datetime.now().isoformat(),

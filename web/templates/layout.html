@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}Email Malware Detector{% endblock %}</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
@@ -113,6 +114,27 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="/static/theme.js"></script>
+<script>
+(function() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    if (!meta) return;
+    var token = meta.getAttribute('content');
+    var origFetch = window.fetch;
+    window.fetch = function(url, opts) {
+        opts = opts || {};
+        var method = (opts.method || 'GET').toUpperCase();
+        if (method !== 'GET') {
+            opts.headers = opts.headers || {};
+            if (opts.headers instanceof Headers) {
+                if (!opts.headers.has('X-CSRF-Token')) opts.headers.set('X-CSRF-Token', token);
+            } else {
+                if (!opts.headers['X-CSRF-Token']) opts.headers['X-CSRF-Token'] = token;
+            }
+        }
+        return origFetch(url, opts);
+    };
+})();
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
