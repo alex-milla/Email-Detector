@@ -1,10 +1,10 @@
 # Email Malware Detector - Checkpoint Sprint 3
 
 **Fecha:** 2026-09-18  
-**Versión:** 2.1.5 (sin release nueva)  
-**Último commit:** fe9898c (feat: simplificar normalize_result con unicodedata)  
-**Tag:** v2.1.4 (ultima tag publicada)  
-**Release:** https://github.com/alex-milla/Email-Detector/releases/tag/v2.1.4  
+**Versión:** 2.1.5  
+**Último commit:** e9c1876 (fix: actualizar version.json con release_id 391118464)  
+**Tag:** v2.1.5  
+**Release:** https://github.com/alex-milla/Email-Detector/releases/tag/v2.1.5 (ID: 391118464)  
 **Branch:** main
 
 ---
@@ -71,6 +71,14 @@ Proyecto en **versión 2.1.5** con Sprint 1, 2 y Sprint 3 (punto 3.1) completado
 ---
 
 ## 📦 Estado de Releases
+
+### Release v2.1.5
+- **URL:** https://github.com/alex-milla/Email-Detector/releases/tag/v2.1.5
+- **ID:** 391118464
+- **Fecha:** 2026-09-17T23:26:09Z
+- **Publicado:** Sí
+- **Draft:** No
+- **Pre-release:** No
 
 ### Release v2.1.4
 - **URL:** https://github.com/alex-milla/Email-Detector/releases/tag/v2.1.4
@@ -172,7 +180,7 @@ Proyecto en **versión 2.1.5** con Sprint 1, 2 y Sprint 3 (punto 3.1) completado
 | **Versión** | 2.1.5 (estable) |
 | **Commits nuevos** | 1 (feat Sprint 3 - punto 3.1) |
 | **Tags** | v2.1.3, v2.1.4 |
-| **Releases** | v2.1.3 (391110056), v2.1.4 (391114668) |
+| **Releases** | v2.1.3 (391110056), v2.1.4 (391114668), v2.1.5 (391118464) |
 | **Seguridad** | 8 fixes implementados |
 | **Bugs** | 4 fixes implementados |
 | **Calidad** | 1 mejora implementada |
@@ -182,7 +190,7 @@ Proyecto en **versión 2.1.5** con Sprint 1, 2 y Sprint 3 (punto 3.1) completado
 | **Líneas +** | 148 (total) |
 | **Líneas -** | 84 (total) |
 
-**Conclusión:** Sprint 1, 2 y Sprint 3 (3.1) completos (11 puntos). Sprint 3 restante: 3.2, 4.2 (2 puntos). Sprint 4: 3.3 (1 punto).
+**Conclusión:** Sprint 1, 2 y Sprint 3 (3.1) completos (11 puntos). Sprint 3 restante: 3.2, 4.2 (2 puntos). Sprint 4: 3.3 (1 punto). Release v2.1.5 publicada en GitHub (ID: 391118464).
 
 ---
 
