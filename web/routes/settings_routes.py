@@ -113,16 +113,9 @@ def register_routes(app):
                 "UPDATE users SET theme = ? WHERE id = ?", (theme, session["user_id"])
             )
             conn.commit()
-        except Exception:
-            try:
-                conn.execute("ALTER TABLE users ADD COLUMN theme TEXT DEFAULT 'dark'")
-                conn.execute(
-                    "UPDATE users SET theme = ? WHERE id = ?", (theme, session["user_id"])
-                )
-                conn.commit()
-            except Exception as e:
-                conn.close()
-                return jsonify({"error": str(e)}), 500
+        except Exception as e:
+            conn.close()
+            return jsonify({"error": str(e)}), 500
         finally:
             conn.close()
         session["user_theme"] = theme

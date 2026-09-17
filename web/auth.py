@@ -84,6 +84,17 @@ def _migrate_schema(conn):
             except sqlite3.OperationalError as e:
                 print(f"  [auth] Aviso migración feedback: {e}")
 
+    if "users" in tables:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(users)")}
+        if cols:
+            try:
+                if "totp_secret" not in cols:
+                    conn.execute("ALTER TABLE users ADD COLUMN totp_secret TEXT")
+                if "theme" not in cols:
+                    conn.execute("ALTER TABLE users ADD COLUMN theme TEXT DEFAULT 'dark'")
+            except sqlite3.OperationalError as e:
+                print(f"  [auth] Aviso migración users: {e}")
+
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -103,7 +114,9 @@ def init_db():
             password    TEXT NOT NULL,
             role        TEXT NOT NULL DEFAULT 'user',
             created_at  TEXT NOT NULL,
-            last_login  TEXT
+            last_login  TEXT,
+            totp_secret TEXT,
+            theme       TEXT DEFAULT 'dark'
         )
     """)
 
@@ -247,10 +260,6 @@ def verify_totp(user_id, code):
 
 def enable_totp(user_id, secret):
     conn = get_db()
-    try:
-        conn.execute("ALTER TABLE users ADD COLUMN totp_secret TEXT")
-    except Exception:
-        pass
     conn.execute("UPDATE users SET totp_secret = ? WHERE id = ?", (secret, user_id))
     conn.commit()
     conn.close()
@@ -258,10 +267,6 @@ def enable_totp(user_id, secret):
 
 def disable_totp(user_id):
     conn = get_db()
-    try:
-        conn.execute("ALTER TABLE users ADD COLUMN totp_secret TEXT")
-    except Exception:
-        pass
     conn.execute("UPDATE users SET totp_secret = NULL WHERE id = ?", (user_id,))
     conn.commit()
     conn.close()
