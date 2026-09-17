@@ -14,6 +14,9 @@ WORKDIR /opt/email-detector
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Playwright: instalar navegador Chromium para deteccion de redirecciones JS
+RUN python -m playwright install chromium --with-deps
+
 COPY . .
 
 RUN mkdir -p config/ssl data/raw data/samples data/processed data/labeled results logs tmp
