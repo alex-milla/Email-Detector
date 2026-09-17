@@ -4,9 +4,11 @@ predict.py — Ensemble de todos los modelos habilitados, ponderado por AUC.
 Lee DISABLED_MODELS de config/.env para excluir modelos.
 """
 
-import sys, os, json, argparse, hashlib
+import sys, os, json, argparse, hashlib, logging
 import numpy as np, joblib
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.dirname(__file__))
 from extract_features import extract_features_from_eml
@@ -73,7 +75,7 @@ def load_all_models(metadata):
     if os.path.isdir(ALL_MODELS_DIR):
         for name in available:
             if name in disabled:
-                print(f"   SKIP: {name} (deshabilitado)")
+                logger.info("SKIP: %s (deshabilitado)", name)
                 continue
             path = os.path.join(ALL_MODELS_DIR, f"{name}.joblib")
             if os.path.exists(path):
@@ -83,11 +85,11 @@ def load_all_models(metadata):
                     if expected:
                         actual = _compute_checksum(path)
                         if actual != expected:
-                            print(f"   WARN: {name}: checksum inválido (posible manipulación)")
+                            logger.warning("%s: checksum inválido (posible manipulación)", name)
                             continue
                     loaded[name] = joblib.load(path)
                 except Exception as e:
-                    print(f"   WARN: {name}: {e}")
+                    logger.warning("%s: %s", name, e)
     if not loaded and os.path.exists(MODEL_PATH):
         active = [n for n in available if n not in disabled]
         name   = active[0] if active else available[0]
@@ -135,13 +137,12 @@ def _clanker_predict(html_raw: str, weight: float = 0.15) -> dict:
             "weight": weight,
         }
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning("Anti-Clanker predict error: %s", e)
+        logger.warning("Anti-Clanker predict error: %s", e)
         return {"model": "anti_clanker", "score": 0.0, "available": False}
 
 
 def predict_email(eml_path, use_virustotal=True):
-    print(f"\n Analizando: {os.path.basename(eml_path)}")
+    logger.info("Analizando: %s", os.path.basename(eml_path))
     features, meta_eml = extract_features_from_eml(eml_path)
 
     if not os.path.exists(METADATA_PATH):
@@ -157,7 +158,7 @@ def predict_email(eml_path, use_virustotal=True):
     if n_models == 0:
         return {"error": "No hay modelos habilitados. Habilita al menos uno en /training."}
 
-    print(f"   Modelos activos: {n_models} ({', '.join(models_dict.keys())})")
+    logger.info("Modelos activos: %d (%s)", n_models, ", ".join(models_dict.keys()))
     proba, individual = ensemble_predict(models_dict, features, model_meta)
     ml_pred = "MALICIOSO" if proba[1] >= threshold else "BENIGNO"
 
@@ -166,7 +167,7 @@ def predict_email(eml_path, use_virustotal=True):
     # del ensemble. Este cálculo es solo para diagnóstico en la UI.
     clanker_result = _clanker_predict(meta_eml.get("body_html", ""))
     if clanker_result.get("available") and clanker_result.get("score", 0) > 0:
-        print(f"   Anti-Clanker: score={clanker_result['score']:.3f}")
+        logger.info("Anti-Clanker: score=%.3f", clanker_result["score"])
     # ─────────────────────────────────────────────────────────────────────────
 
     vt_results = None
@@ -223,7 +224,7 @@ def predict_email(eml_path, use_virustotal=True):
             "qr_codes_found":  meta_eml.get("qr_codes_found", []),
         },
     }
-    print(f"   Resultado: {final}  Riesgo: {level} ({risk:.1f}%)")
+    logger.info("Resultado: %s  Riesgo: %s (%.1f%%)", final, level, risk)
     return result
 
 

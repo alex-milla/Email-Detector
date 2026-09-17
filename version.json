@@ -1,7 +1,7 @@
 {
-  "version": "2.1.7",
+  "version": "2.1.8",
   "release_date": "2026-09-18",
-  "changelog": "2.1.7 — Sprint 3: Instalar Playwright Chromium en Dockerfile para deteccion de redirecciones JS",
+  "changelog": "2.1.8 — Sprint 4: Migrar print() a logging en predict.py, logger a nivel modulo",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.1.7.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.1.8.zip"
 }
