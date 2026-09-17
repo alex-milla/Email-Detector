@@ -1,7 +1,7 @@
 {
-  "version": "2.1.2",
-  "release_date": "2026-05-07",
-  "changelog": "2.1.2 — Informe-resumen con IoCs por correo, botón en cada ficha y en historial, análisis mejorado de cabeceras SPF/DKIM/DMARC/ARC, paleta de colores pastel, modal de informe descargable en JSON.",
+  "version": "2.1.3",
+  "release_date": "2026-09-18",
+  "changelog": "2.1.3 — Fix CSRF protection invertida, autenticar /metrics, restringir SIEM y monitoring a admin, fix version hardcoded, fix feedback_stats scoping, eliminar fallback SECRET_KEY, fix recent_24h, eliminar version: 3.9 deprecado",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.1.2.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.1.3.zip"
 }
