@@ -1,10 +1,10 @@
 # Email Malware Detector - Checkpoint Sprint 3 (3.2)
 
 **Fecha:** 2026-09-18  
-**Versión:** 2.1.6 (sin release)  
-**Último commit:** a383852 (refactor: centralizar sys.path.insert)  
-**Tag:** v2.1.5 (ultima publicada)  
-**Release:** https://github.com/alex-milla/Email-Detector/releases/tag/v2.1.5 (ID: 391118464)  
+**Versión:** 2.1.6  
+**Último commit:** 7d168c0 (fix: actualizar version.json con release_id 391122802)  
+**Tag:** v2.1.6  
+**Release:** https://github.com/alex-milla/Email-Detector/releases/tag/v2.1.6 (ID: 391122802)  
 **Branch:** main
 
 ---
@@ -91,13 +91,14 @@
 
 | Metrica | Valor |
 |---------|-------|
-| **Version** | 2.1.6 (sin release) |
-| **Commits nuevos** | 1 |
+| **Version** | 2.1.6 |
+| **Commits nuevos** | 2 |
 | **Archivos cambiados** | 6 |
 | **Lineas +** | 23 |
 | **Lineas -** | 18 |
 | **Tests** | 2/2 PASSED |
 | **Pendientes** | 4.2 (Playwright Dockerfile), 3.3 (print→logging) |
+| **Releases** | v2.1.3, v2.1.4, v2.1.5, v2.1.6 (391122802) |
 
 ---
 
