@@ -1,8 +1,7 @@
 {
-  "version": "2.3.4",
+  "version": "2.3.5",
   "release_date": "2026-09-18",
-  "release_id": 391474244,
-  "changelog": "2.3.4 - Entrenamiento: historial de entrenamientos, comparacion antes/despues y metricas detalladas (matriz de confusion, top features, evolucion del AUC)",
+  "changelog": "2.3.5 - ClickFix: motor de deteccion de copiar/pegar PowerShell ofuscado, desofuscado sin ejecutar (Base64/-enc, fromCharCode, atob, variables/arrays JS, [char]) y extraccion de la URL/dominio/IP original (C2), con escalada a MALICIOSO y consulta a VirusTotal",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.4.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.5.zip"
 }
