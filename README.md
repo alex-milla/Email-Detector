@@ -172,6 +172,9 @@ nohup ./run.sh > logs/server.log 2>&1 &
 tail -f logs/access.log logs/error.log
 ```
 
+`run.sh` (gunicorn) y el arranque directo `python web/app.py` escriben
+`logs/access.log` y `logs/error.log` con rotación (5 MB × 5).
+
 ### Reentrenamiento del modelo
 
 Entrena un modelo nuevo con correos `.eml` etiquetados:

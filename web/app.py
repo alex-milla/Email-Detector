@@ -203,6 +203,8 @@ def health_dependencies():
 
 
 if __name__ == "__main__":
+    from web.services.logging_setup import configure_standalone_logging
+    configure_standalone_logging(app, os.path.join(PROJECT_DIR, "logs"))
     host = os.getenv("WEB_HOST", "0.0.0.0")
     port = int(os.getenv("WEB_PORT", "5000"))
     print(f"\n{'='*50}\n Detector de Correos Maliciosos\n Accede en: http://{host}:{port}\n{'='*50}\n")
