@@ -3,5 +3,6 @@
   "release_date": "2026-09-18",
   "changelog": "2.3.9 - Sistema EDL: descarga y consulta local de listas externas de URLs, dominios e IPs maliciosas",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.9.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.9.zip",
+  "release_id": 391563059
 }
