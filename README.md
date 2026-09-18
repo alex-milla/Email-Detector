@@ -110,7 +110,15 @@ git pull origin main
 ./deploy.sh
 ```
 
-`deploy.sh` es **idempotente**: no sobrescribe `.env`, `users.db`, modelos ni datos etiquetados.
+`deploy.sh` es **idempotente**: no sobrescribe `.env`, `users.db`, modelos ni datos etiquetados, y **reinstala las dependencias dentro del `venv`** del proyecto.
+
+> **No uses el `pip` del sistema** (`pip install -r requirements.txt` a secas). En Debian/Ubuntu modernos falla con `externally-managed-environment` (PEP 668). Usa `./deploy.sh`, la actualización desde la GUI (`/update`) o el pip del entorno virtual:
+>
+> ```bash
+> cd ~/Email-Detector        # o /opt/email-detector
+> source venv/bin/activate
+> pip install -r requirements.txt
+> ```
 
 ### Actualización a v2.0.0 (breaking change)
 

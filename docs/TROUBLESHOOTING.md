@@ -4,6 +4,7 @@
 
 - [Despliegue falla en LXC sin privilegios](#despliegue-falla-en-lxc-sin-privilegios)
 - [No puedo instalar dependencias del sistema](#no-puedo-instalar-dependencias-del-sistema)
+- [externally-managed-environment (PEP 668) al instalar dependencias](#externally-managed-environment-pep-668-al-instalar-dependencias)
 - [El servicio no arranca](#el-servicio-no-arranca)
 - [Puerto 5000 ocupado](#puerto-5000-ocupado)
 - [xgboost/lightgbm/catboost fallan al instalar](#xgboostlightgbmcatboost-fallan-al-instalar)
@@ -39,6 +40,41 @@
   sudo apt-get install -y python3 python3-venv git curl wget openssl
   ```
 - Si no tienes `sudo` (LXC compartido), contacta al administrador del host.
+
+---
+
+## externally-managed-environment (PEP 668) al instalar dependencias
+
+**Síntoma**: al ejecutar `pip install -r requirements.txt` aparece:
+
+```
+error: externally-managed-environment
+× This environment is externally managed
+```
+
+**Causa**: Debian/Ubuntu 12+ marcan Python como gestionado por el sistema (PEP 668)
+y bloquean `pip` global. El proyecto usa un **entorno virtual** (`venv`), así que
+nunca hace falta instalar en el sistema.
+
+**Solución** (usa el `venv`):
+
+```bash
+cd ~/Email-Detector        # o /opt/email-detector
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+O simplemente ejecuta el instalador/actualizador, que ya instala las dependencias
+en el `venv` automáticamente:
+
+```bash
+./deploy.sh                # reinstala dependencias en venv (idempotente)
+```
+
+Las actualizaciones desde la GUI (**Configuración → Actualización**, `/update`)
+también instalan las dependencias en el `venv` antes de reiniciar.
+
+> No uses `--break-system-packages`: romperá el Python del sistema.
 
 ---
 

@@ -15,6 +15,7 @@ Responsabilidades:
 """
 
 import os
+import sys
 import json
 import shutil
 import subprocess
@@ -66,13 +67,34 @@ _CHECK_CACHE_TTL = 60  # segundos
 _check_cache: dict = {"result": None, "ts": 0.0}
 
 
-def _venv_pip_path() -> str:
-    """pip del venv del proyecto (Linux o Windows); fallback pip3."""
-    for rel in ("venv/bin/pip", os.path.join("venv", "Scripts", "pip.exe")):
+def _venv_python() -> str:
+    """Intérprete del venv del proyecto (Linux o Windows); fallback al actual."""
+    for rel in ("venv/bin/python", os.path.join("venv", "Scripts", "python.exe")):
         p = os.path.join(_BASE_DIR, rel)
         if os.path.isfile(p):
             return p
-    return "pip3"
+    return sys.executable
+
+
+def _install_requirements(req_file: str):
+    """Instala dependencias con el pip del venv (evita PEP 668).
+
+    Usa `venv/bin/python -m pip` en lugar de un pip global, de modo que nunca
+    cae en el error "externally-managed-environment" de Debian/Ubuntu.
+    Devuelve (ok: bool, error: str).
+    """
+    python_bin = _venv_python()
+    try:
+        result = subprocess.run(
+            [python_bin, "-m", "pip", "install", "-r", req_file,
+             "--quiet", "--disable-pip-version-check"],
+            capture_output=True, text=True, timeout=300
+        )
+    except Exception as e:
+        return False, str(e)
+    if result.returncode == 0:
+        return True, ""
+    return False, (result.stderr or result.stdout or "")[-500:]
 
 
 # Rutas permitidas dentro del ZIP (lista blanca)
@@ -597,16 +619,12 @@ def _run_update(zip_url: str):
         req_file = os.path.join(_BASE_DIR, "requirements.txt")
         req_included = any(dest == "requirements.txt" for _, dest in files_to_apply)
         if req_included and os.path.isfile(req_file):
-            _log("Instalando dependencias desde requirements.txt...")
-            pip_bin = _venv_pip_path()
-            pip_result = subprocess.run(
-                [pip_bin, "install", "-r", req_file, "--quiet"],
-                capture_output=True, text=True, timeout=300
-            )
-            if pip_result.returncode == 0:
+            _log(f"Instalando dependencias desde requirements.txt con {_venv_python()}...")
+            pip_ok, pip_err = _install_requirements(req_file)
+            if pip_ok:
                 _log("Dependencias instaladas correctamente.")
             else:
-                _log(f"AVISO: pip install completó con errores: {pip_result.stderr[-500:]}")
+                _log(f"AVISO: pip install completó con errores: {pip_err}")
                 # No abortamos — puede que las dependencias críticas ya estuvieran instaladas
 
         # 5. Reiniciar servicio
