@@ -1,6 +1,7 @@
 {
   "version": "2.3.3.2",
   "release_date": "2026-09-18",
+  "release_id": 391460001,
   "changelog": "2.3.3.2 - Corrige Dashboard y Entrenamiento cuando model_metadata.json queda corrupto (JSON invalido) y guarda la metadata de forma atomica",
   "min_version": "1.0.0",
   "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.3.2.zip"
