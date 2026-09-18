@@ -42,24 +42,10 @@ jobs:
           bash -n download_dataset.sh
 
       - name: Test train_model.py import safety
-        run: |
-          python -c "
-import sys, os
-os.chdir('.')
-sys.path.insert(0, 'scripts')
-import train_model
-print('OK: train_model importa sin ejecutar side-effects')
-"
+        run: python -c "import sys, os; os.chdir('.'); sys.path.insert(0, 'scripts'); import train_model; print('OK: train_model importa sin ejecutar side-effects')"
 
       - name: Test predict.py import safety
-        run: |
-          python -c "
-import sys, os
-os.chdir('.')
-sys.path.insert(0, 'scripts')
-import predict
-print('OK: predict importa sin ejecutar side-effects')
-"
+        run: python -c "import sys, os; os.chdir('.'); sys.path.insert(0, 'scripts'); import predict; print('OK: predict importa sin ejecutar side-effects')"
 
       - name: Run tests with pytest
         env:
