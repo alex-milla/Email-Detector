@@ -3,5 +3,6 @@
   "release_date": "2026-09-18",
   "changelog": "2.3.6 - Anti-Clanker: deteccion de contenido oculto y prompt injection (CSS oculto, atributos/metadatos, Unicode invisible/bidi) multi-idioma configurable por el admin, con escalada a MALICIOSO",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.6.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.6.zip",
+  "release_id": 391513020
 }
