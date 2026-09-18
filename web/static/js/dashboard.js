@@ -228,6 +228,9 @@
     // Contenido oculto / prompt injection
     html += renderHiddenSection(r.hidden_text || md.hidden_text);
 
+    // External Dynamic Lists (EDL)
+    html += renderEdlSection(r.edl);
+
     // VirusTotal
     if (vt && Object.keys(vt).length > 0) {
       var ok = !vts.malicious_files && !vts.malicious_urls;
@@ -279,6 +282,25 @@
         escapeHtml(e.reason || '') + (e.tag ? ' &lt;' + escapeHtml(e.tag) + '&gt;' : '') +
         '</div><pre class="header-value">' + escapeHtml(e.text || '') + '</pre></div>';
     });
+    html += '</div>';
+    return html;
+  }
+
+  function renderEdlSection(edl) {
+    if (!edl || !edl.count) return '';
+    var matches = edl.matches || [];
+    var icons = { url: '🔗', domain: '🌐', ip: '📡' };
+    var html = '<div class="detail-section"><h4>🛡️ Listas EDL — coincidencias' +
+      ' <span class="risk-badge pred-malicioso">' + edl.count + '</span></h4>' +
+      '<div class="alert alert-error">Indicadores del correo presentes en listas externas de amenazas.</div>';
+    matches.slice(0, 20).forEach(function (m) {
+      html += '<div class="ioc-row">' + (icons[m.kind] || '•') + ' <code>' +
+        escapeHtml(m.indicator) + '</code> <span class="faint text-sm">— lista: ' +
+        escapeHtml(m.list_name || m.list_id) + ' · origen: ' + escapeHtml(m.source || '') + '</span></div>';
+    });
+    if (matches.length > 20) {
+      html += '<div class="faint text-sm">… y ' + (matches.length - 20) + ' más</div>';
+    }
     html += '</div>';
     return html;
   }
@@ -483,6 +505,7 @@
       renderAuthSection(auth.results, auth.summary, r.auth_analysis, auth.headers, auth) +
       renderClickfixSection(r.clickfix) +
       renderHiddenSection(r.hidden_text) +
+      renderEdlSection(r.edl) +
       '<div class="detail-section"><h4>🛡️ VirusTotal</h4><div class="text-sm">' +
         'Archivos maliciosos: <strong>' + ((r.virustotal || {}).malicious_files || 0) + '</strong><br>' +
         'URLs maliciosas: <strong>' + ((r.virustotal || {}).malicious_urls || 0) + '</strong><br>' +

@@ -463,11 +463,13 @@ case "$INSTALL_CRON" in [Ss]*)
      echo "0 2  * * * $INSTALL_DIR/scripts/backup.sh >> $INSTALL_DIR/logs/backup.log 2>&1"
      echo "*/5 * * * * $PYTHON_BIN $INSTALL_DIR/scripts/auto_scan.py >> $INSTALL_DIR/logs/auto_scan.log 2>&1"
      echo "0 9  * * * $PYTHON_BIN $INSTALL_DIR/scripts/update_clanker_rules.py >> $INSTALL_DIR/logs/clanker_update.log 2>&1"
+     echo "*/15 * * * * $PYTHON_BIN $INSTALL_DIR/scripts/update_edl.py --due >> $INSTALL_DIR/logs/edl_update.log 2>&1"
      echo "0 8  * * * $INSTALL_DIR/scripts/check_cert_expiry.sh >> $INSTALL_DIR/logs/cert_expiry.log 2>&1"
     ) | crontab -
     touch "$INSTALL_DIR/logs/backup.log" \
           "$INSTALL_DIR/logs/auto_scan.log" \
           "$INSTALL_DIR/logs/clanker_update.log" \
+          "$INSTALL_DIR/logs/edl_update.log" \
           "$INSTALL_DIR/logs/cert_expiry.log" 2>/dev/null || true
     ok "cron jobs configurados"
 

@@ -142,6 +142,37 @@ Las reglas se pueden actualizar:
 
 El formato de las reglas está documentado en `CLANKER_RULES_FORMAT.md` (generado tras la instalación).
 
+## External Dynamic Lists (EDL)
+
+Permiten descargar y consultar localmente listas externas de indicadores
+maliciosos. Se gestionan desde **Ajustes → Detección → Listas EDL** (solo admin):
+añadir/editar listas, activarlas, sincronizarlas y programar su intervalo.
+
+- **Formatos**: lista plana (URL, dominio o IP/CIDR por línea), formato hosts
+  (`0.0.0.0 dominio`), comentarios `#`/`;`/`//` y ofuscación (`hxxp`, `[.]`).
+  El tipo se detecta automáticamente, incluso en listas mixtas.
+- **Espacios independientes**: URL (coincidencia exacta), dominio (exacto +
+  subdominios) e IP (exacta + CIDR). Una entrada nunca se expande a otro espacio.
+- **Efecto**: una coincidencia fuerza el veredicto a `MALICIOSO` (riesgo ≥ 90),
+  igual que VirusTotal o ClickFix.
+- **Higiene**: cada sincronización reemplaza la lista completa, por lo que los
+  indicadores retirados de la fuente desaparecen automáticamente.
+- **Solo HTTPS** y bloqueo de hosts internos (anti-SSRF); nunca se ejecuta el
+  contenido descargado.
+- **Programación**: activa "Auto-sincronizar" en la GUI; un heartbeat de cron
+  cada 15 min sincroniza las listas cuyo intervalo haya vencido.
+
+### Sincronizar las EDL manualmente
+
+```bash
+cd /opt/email-detector   # o tu directorio de instalación
+source venv/bin/activate
+python scripts/update_edl.py            # todas las listas activas
+python scripts/update_edl.py --due      # solo las vencidas
+python scripts/update_edl.py --list ID  # una lista concreta
+python scripts/update_edl.py --show     # estado sin descargar
+```
+
 ## Comandos útiles
 
 ### Health check

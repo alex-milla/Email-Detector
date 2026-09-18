@@ -34,6 +34,21 @@ class TestAssets:
         assert "renderHiddenSection" in js
         assert "hidden_text" in js
 
+    def test_dashboard_has_edl_section(self):
+        js = _read(os.path.join(STATIC, "js", "dashboard.js"))
+        assert "renderEdlSection" in js
+        assert "r.edl" in js
+
+    def test_settings_has_edl_panel(self):
+        html = _read(os.path.join(TEMPLATES, "settings.html"))
+        assert 'id="edl-panel"' in html
+        assert 'data-action="edl-sync-all"' in html
+        assert 'data-action="edl-save-schedule"' in html
+        assert "/static/js/edl.js" in html
+        js = _read(os.path.join(STATIC, "js", "edl.js"))
+        assert "loadLists" in js
+        assert "/api/edl/lists" in js
+
     def test_settings_has_hidden_lang_option(self):
         html = _read(os.path.join(TEMPLATES, "settings.html"))
         assert 'id="hidden-langs"' in html

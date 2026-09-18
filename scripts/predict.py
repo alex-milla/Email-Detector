@@ -14,6 +14,12 @@ sys.path.insert(0, os.path.dirname(__file__))
 from extract_features import extract_features_from_eml
 from virustotal import check_email_artifacts
 
+try:
+    from edl_manager import match_email_indicators
+    _EDL_AVAILABLE = True
+except ImportError:
+    _EDL_AVAILABLE = False
+
 # ── Anti-Clanker (Modelo 10) ─────────────────────────────────────────────────
 import sys as _sys_clk
 import os as _os_clk
@@ -239,6 +245,16 @@ def _apply_clickfix(clickfix, final, risk):
     return final, risk
 
 
+def _apply_edl(edl_result, final, risk):
+    """Fuerza MALICIOSO si algún indicador del correo está en una EDL."""
+    if not edl_result or not edl_result.get("count"):
+        return final, risk
+    risk = min(100.0, max(float(risk), 90.0))
+    if final != "MALICIOSO":
+        final = "MALICIOSO"
+    return final, risk
+
+
 def _apply_hidden_prompt(hidden, final, risk):
     """Escala si hay prompt injection en contenido oculto.
 
@@ -307,6 +323,19 @@ def predict_email(eml_path, use_virustotal=True):
         )
     # ─────────────────────────────────────────────────────────────────────────
 
+    # ── External Dynamic Lists (EDL): IOCs locales ──────────────────────────
+    edl_result = {"enabled": False, "count": 0, "matches": []}
+    if _EDL_AVAILABLE:
+        try:
+            edl_result = match_email_indicators(meta_eml)
+        except Exception as e:
+            logger.warning("EDL error: %s", e)
+            edl_result = {"enabled": False, "count": 0, "matches": [], "error": str(e)}
+    edl_alert = bool(edl_result.get("count"))
+    if edl_alert:
+        logger.info("EDL: %d coincidencia(s) con listas externas", edl_result["count"])
+    # ─────────────────────────────────────────────────────────────────────────
+
     # URLs a consultar en VirusTotal: las del correo + las decodificadas
     # del payload ClickFix (el indicador original que el atacante oculta).
     vt_urls = list(meta_eml.get("urls_found", []))
@@ -314,8 +343,13 @@ def predict_email(eml_path, use_virustotal=True):
         if url and url not in vt_urls:
             vt_urls.append(url)
 
+    skip_vt = edl_alert and os.getenv(
+        "EDL_SKIP_VT_ON_MATCH", "false").strip().lower() in ("1", "true", "yes", "on")
+    if skip_vt:
+        logger.info("EDL: match local — se omite la consulta a VirusTotal")
+
     vt_results = None
-    if use_virustotal:
+    if use_virustotal and not skip_vt:
         vt_results = check_email_artifacts(
             attachment_hashes=meta_eml.get("attachment_hashes", []),
             urls=vt_urls,
@@ -329,6 +363,10 @@ def predict_email(eml_path, use_virustotal=True):
     risk  = proba[1] * 100
     if vt_alert:
         risk = max(risk, 90)
+
+    # ── EDL: escalada a MALICIOSO si hay coincidencia de IOC ──
+    final, risk = _apply_edl(edl_result, final, risk)
+    # ─────────────────────────────────────────────────────────
 
     # ── Autenticación (SPF/DKIM/DMARC): complementa la detección ──
     auth_analysis = _analyze_auth(
@@ -389,6 +427,7 @@ def predict_email(eml_path, use_virustotal=True):
             "attachment_content_entropy_max": features.get("attachment_content_entropy_max", 0),
         },
         "virustotal": vt_results,
+        "edl": edl_result,
         "auth_analysis": auth_analysis,
         "features":   features,
         "metadata": {

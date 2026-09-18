@@ -380,6 +380,7 @@ def register_routes(app):
                 "malicious_urls": (vt.get("summary") or {}).get("malicious_urls", 0),
                 "total_checked": (vt.get("summary") or {}).get("total_checked", 0),
             },
+            "edl": item.get("edl") or md.get("edl") or {},
             "entropy": item.get("entropy_analysis") or {},
             "attachment_count": len(attachments),
             "url_count": len(urls),

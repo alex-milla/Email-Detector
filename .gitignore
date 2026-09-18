@@ -17,5 +17,11 @@ data/processed/
 *.joblib.bak
 config/ssl/
 config/first-login.txt
+config/edl/*.list
+config/edl/*.list.tmp
+config/edl/*.list.bak_*
+config/edl/lists.json
+config/edl/.sync.lock
+!config/edl/.gitkeep
 md/
 

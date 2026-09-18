@@ -253,6 +253,77 @@
             {% endif %}
         </div>
 
+        <!-- External Dynamic Lists (admin) -->
+        {% if user.role == 'admin' %}
+        <div class="card" id="edl-panel">
+            <div class="card-header">
+                <div class="card-header-left">
+                    <h2>🛡️ Listas EDL — External Dynamic Lists <span class="admin-badge">Admin</span></h2>
+                    <p>Descarga local de URLs, dominios e IPs maliciosas reportadas para detección rápida.</p>
+                </div>
+                <span class="badge-status info" id="edl-badge">Comprobando...</span>
+            </div>
+            <div class="info-grid">
+                <div class="info-item"><small>Listas activas / totales</small><strong id="edl-count">—</strong></div>
+                <div class="info-item"><small>Indicadores indexados</small><strong id="edl-entries">—</strong></div>
+                <div class="info-item"><small>Última sincronización</small><strong id="edl-last-sync">—</strong></div>
+            </div>
+            <hr class="divider">
+            <p class="section-title mb-1">Listas configuradas</p>
+            <div id="edl-table" class="mb-2">
+                <span class="faint text-sm">Cargando...</span>
+            </div>
+            <div class="card-footer">
+                <button type="button" class="btn btn-warning" data-action="edl-sync-all">🔄 Sincronizar todas</button>
+                <button type="button" class="btn btn-secondary" data-action="edl-refresh">↻ Refrescar</button>
+                <div class="test-result" id="edl-sync-result"></div>
+            </div>
+            <hr class="divider">
+            <div class="form-grid">
+                <div class="sub-card">
+                    <h3>➕ Añadir lista</h3>
+                    <p class="hint mb-1">Introduce un nombre y la URL HTTPS. El formato (URL, dominio o IP) se detecta automáticamente.</p>
+                    <div class="form-group mb-1">
+                        <label for="edl-name">Nombre</label>
+                        <input type="text" id="edl-name" placeholder="Mi lista de dominios">
+                    </div>
+                    <div class="form-group mb-1">
+                        <label for="edl-url">URL (HTTPS)</label>
+                        <input type="url" id="edl-url" placeholder="https://...">
+                    </div>
+                    <div class="form-group mb-1">
+                        <label for="edl-interval">Intervalo de actualización (horas, opcional)</label>
+                        <input type="number" id="edl-interval" min="1" step="1" placeholder="6">
+                    </div>
+                    <div class="card-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-action="edl-preview">🔍 Probar URL</button>
+                        <button type="button" class="btn btn-primary btn-sm" data-action="edl-add">💾 Añadir</button>
+                    </div>
+                    <div class="test-result mt-1" id="edl-add-result"></div>
+                </div>
+                <div class="sub-card">
+                    <h3>⏰ Programación</h3>
+                    <p class="hint mb-1">La sincronización automática revisa cada lista según su intervalo.</p>
+                    <div class="row mb-2">
+                        <label for="edl-auto-toggle">Auto-sincronizar</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="edl-auto-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group mb-1">
+                        <label for="edl-default-interval">Intervalo por defecto (horas)</label>
+                        <input type="number" id="edl-default-interval" min="1" step="1" value="6">
+                    </div>
+                    <div class="card-footer">
+                        <button type="button" class="btn btn-primary btn-sm" data-action="edl-save-schedule">💾 Guardar programación</button>
+                    </div>
+                    <div class="test-result mt-1" id="edl-schedule-result"></div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- VirusTotal (admin) -->
         {% if user.role == 'admin' %}
         <div class="card section-admin">
@@ -370,4 +441,5 @@
 
 {% block scripts %}
 <script src="/static/js/settings.js"></script>
+<script src="/static/js/edl.js"></script>
 {% endblock %}
