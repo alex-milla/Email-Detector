@@ -103,7 +103,7 @@
   async function openDetail(dbId) {
     dbId = String(dbId);
     currentDbId = dbId;
-    if (_store[dbId]) { renderModal(_store[dbId]); return; }
+    if (_store[dbId] && _store[dbId].metadata) { renderModal(_store[dbId]); return; }
     try {
       var data = await window.EMD.fetchJSON('/history/' + dbId);
       if (data.error) { toast('No se pudo cargar el detalle', 'error'); return; }
@@ -153,7 +153,7 @@
       feedbackBarHtml(dbId, fb);
 
     // Autenticación
-    html += renderAuthSection(md.auth_results, md.auth_summary, r.auth_analysis, md.raw_headers);
+    html += renderAuthSection(md.auth_results, md.auth_summary, r.auth_analysis, md.raw_headers, r.features);
 
     // Entropía
     html += '<div class="detail-section"><h4>📊 Análisis de entropía</h4><div class="detail-grid">' +
@@ -280,10 +280,19 @@
     });
     return '<details class="headers-block"><summary>Ver cabeceras de autenticación</summary>' + body + '</details>';
   }
-  function renderAuthSection(details, summary, analysis, rawHeaders) {
+  function badgesFromFeatures(features) {
+    if (!features) return '';
+    var out = '';
+    AUTH_ORDER.forEach(function (m) {
+      var v = features[m + '_pass'];
+      if (v !== undefined) out += authBadge(m, v ? 'pass' : 'none');
+    });
+    return out;
+  }
+  function renderAuthSection(details, summary, analysis, rawHeaders, features) {
     details = details || [];
     var html = '<div class="detail-section"><h4>🔐 Autenticación</h4>';
-    var badges = renderAuthBadges(summary);
+    var badges = renderAuthBadges(summary) || badgesFromFeatures(features);
     if (badges) {
       html += '<div class="auth-badges">' + badges + '</div>';
     } else if (!details.length) {
@@ -361,7 +370,7 @@
           '<span class="risk-badge risk-' + escapeHtml(r.risk_level) + '">' + escapeHtml(r.risk_level) + ' — ' + r.risk_score + '%</span>' +
         '</div></div>' +
       '</div>' +
-      renderAuthSection(auth.results, auth.summary, r.auth_analysis, auth.headers) +
+      renderAuthSection(auth.results, auth.summary, r.auth_analysis, auth.headers, auth) +
       '<div class="detail-section"><h4>🛡️ VirusTotal</h4><div class="text-sm">' +
         'Archivos maliciosos: <strong>' + ((r.virustotal || {}).malicious_files || 0) + '</strong><br>' +
         'URLs maliciosas: <strong>' + ((r.virustotal || {}).malicious_urls || 0) + '</strong><br>' +
@@ -486,7 +495,7 @@
     var rl = nl(r.risk_level || '');
     var ea = r.entropy_analysis || {};
     var lc = lcMap[rl] || '';
-    if (r._db_id) _store[String(r._db_id)] = r;
+    if (r._db_id && r.metadata) _store[String(r._db_id)] = r;
     var dbId = r._db_id;
     var cardAttr = dbId ? ' data-card-id="' + dbId + '"' : '';
     var reportBtn = dbId ? '<button class="btn btn-secondary btn-sm" data-action="report" data-id="' + dbId + '">📄 Informe</button>' : '';
