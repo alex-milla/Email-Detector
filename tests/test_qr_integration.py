@@ -124,8 +124,8 @@ def test_extract_features_non_url_qr():
         os.unlink(path)
 
 
-def test_features_dict_unchanged():
-    """En Fase 2, el dict features NO debe contener qr_* todavía."""
+def test_features_include_qr():
+    """El dict features debe incluir las features qr_* (v2.0+)."""
     pytest.importorskip("qrcode")
     from extract_features import extract_features_from_eml
 
@@ -133,8 +133,6 @@ def test_features_dict_unchanged():
     try:
         features, metadata = extract_features_from_eml(path)
 
-        # Verificar que NO hay features qr_* todavía
-        for key in features:
-            assert not key.startswith("qr_"), f"Feature {key} no debe existir en Fase 2"
+        assert any(key.startswith("qr_") for key in features)
     finally:
         os.unlink(path)

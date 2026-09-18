@@ -30,6 +30,7 @@ def register_routes(app):
                 session["user_id"] = user["id"]
                 session["username"] = user["username"]
                 session["user_role"] = user["role"]
+                session.permanent = True
                 return redirect(request.args.get("next") or url_for("index"))
             error = "Usuario o contraseña incorrectos"
         return render_template("login.html", error=error)

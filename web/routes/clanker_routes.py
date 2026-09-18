@@ -1,5 +1,6 @@
 import os
 import sys
+import glob
 import subprocess
 import re as _re
 from datetime import datetime
@@ -9,6 +10,34 @@ from flask import request, jsonify
 import yaml
 
 from web.services.decorators import login_required, admin_required
+from web.services.limiter import limiter, user_or_ip_key
+
+RULES_MAX_BYTES = 1 * 1024 * 1024
+BACKUP_KEEP = 10
+
+
+def _rotate_backups(rules_path, keep=BACKUP_KEEP):
+    """Conserva solo los `keep` backups más recientes de rules_path."""
+    backups = sorted(glob.glob(rules_path + ".bak_*"))
+    to_remove = backups if keep <= 0 else backups[:-keep]
+    for old in to_remove:
+        try:
+            os.remove(old)
+        except OSError:
+            pass
+
+
+def _create_backup(rules_path, keep=BACKUP_KEEP):
+    """Crea un backup con marca temporal y rota los antiguos."""
+    if not os.path.exists(rules_path):
+        return None
+    backup_path = f"{rules_path}.bak_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+    try:
+        shutil.copy2(rules_path, backup_path)
+    except OSError:
+        return None
+    _rotate_backups(rules_path, keep)
+    return backup_path
 
 try:
     from extract_clanker_features import (
@@ -110,6 +139,7 @@ def register_routes(app):
             return jsonify({"success": False, "error": str(e)}), 500
 
     @app.route("/api/clanker/update_rules", methods=["POST"])
+    @limiter.limit("5 per minute", key_func=user_or_ip_key)
     @login_required
     @admin_required
     def clanker_trigger_update():
@@ -152,6 +182,7 @@ def register_routes(app):
             for rule in data.get("rules", []):
                 if rule.get("id") == rule_id:
                     rule["enabled"] = not rule.get("enabled", True)
+                    _create_backup(rules_path)
                     with open(rules_path, "w") as f:
                         yaml.dump(data, f, allow_unicode=True, sort_keys=False)
                     return jsonify({"id": rule_id, "enabled": rule["enabled"]})
@@ -176,6 +207,7 @@ def register_routes(app):
             return jsonify({"error": str(e)}), 500
 
     @app.route("/api/clanker/upload_rules", methods=["POST"])
+    @limiter.limit("10 per minute", key_func=user_or_ip_key)
     @login_required
     @admin_required
     def clanker_upload_rules():
@@ -184,7 +216,11 @@ def register_routes(app):
             return jsonify({"success": False, "error": "Campo 'file' requerido"}), 400
         uploaded = request.files["file"]
         try:
-            raw = uploaded.read().decode("utf-8")
+            raw_bytes = uploaded.read(RULES_MAX_BYTES + 1)
+            if len(raw_bytes) > RULES_MAX_BYTES:
+                return jsonify({"success": False,
+                                "error": f"El archivo supera el límite de {RULES_MAX_BYTES // 1024} KB"}), 400
+            raw = raw_bytes.decode("utf-8")
             data = yaml.safe_load(raw)
             if not isinstance(data, dict) or "rules" not in data:
                 return jsonify({"success": False, "error": "Estructura YAML inválida"}), 400
@@ -198,11 +234,13 @@ def register_routes(app):
                 except _re.error as e:
                     return jsonify({"success": False,
                                     "error": f"Regex inválido en {rule['id']}: {e}"}), 400
-            backup_path = rules_path + f".bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            if os.path.exists(rules_path):
-                shutil.copy2(rules_path, backup_path)
+            backup_path = _create_backup(rules_path)
             with open(rules_path, "w", encoding="utf-8") as f:
                 f.write(raw)
             return jsonify({"success": True, "backup": backup_path, "rules_count": len(data["rules"])})
+        except yaml.YAMLError as e:
+            return jsonify({"success": False, "error": f"YAML inválido: {e}"}), 400
+        except UnicodeDecodeError:
+            return jsonify({"success": False, "error": "El archivo debe estar en UTF-8"}), 400
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500

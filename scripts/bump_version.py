@@ -28,6 +28,7 @@ from datetime import datetime
 PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 VERSION_FILE = os.path.join(PROJECT_DIR, "VERSION")
 VERSION_JSON = os.path.join(PROJECT_DIR, "version.json")
+RELEASE_JSON = os.path.join(PROJECT_DIR, "release.json")
 VALIDATE_SCRIPT = os.path.join(PROJECT_DIR, "scripts", "validate_release.py")
 
 
@@ -71,8 +72,30 @@ def ask_new_version(current):
     return new
 
 
+def build_version_data(new_version, changelog):
+    """Metadatos para version.json (usado por el updater)."""
+    return {
+        "version": new_version,
+        "release_date": datetime.now().strftime("%Y-%m-%d"),
+        "changelog": changelog,
+        "min_version": "1.0.0",
+        "zip_url": f"https://github.com/alex-milla/Email-Detector/archive/v{new_version}.zip",
+    }
+
+
+def build_release_data(new_version, changelog):
+    """Payload para la release de GitHub (release.json)."""
+    return {
+        "tag_name": f"v{new_version}",
+        "name": f"Email Malware Detector v{new_version}",
+        "body": changelog,
+        "draft": False,
+        "prerelease": False,
+    }
+
+
 def update_version_files(new_version):
-    print(f"\n[3/6] Actualizando VERSION y version.json a {new_version}...")
+    print(f"\n[3/6] Actualizando VERSION, version.json y release.json a {new_version}...")
 
     with open(VERSION_FILE, "w", encoding="utf-8") as f:
         f.write(new_version + "\n")
@@ -81,24 +104,21 @@ def update_version_files(new_version):
     if not changelog:
         changelog = f"Release {new_version}"
 
-    version_data = {
-        "version": new_version,
-        "release_date": datetime.now().strftime("%Y-%m-%d"),
-        "changelog": changelog,
-        "min_version": "1.0.0",
-        "zip_url": f"https://github.com/alex-milla/Email-Detector/archive/v{new_version}.zip",
-    }
-
     with open(VERSION_JSON, "w", encoding="utf-8") as f:
-        json.dump(version_data, f, indent=2)
+        json.dump(build_version_data(new_version, changelog), f, indent=2)
+        f.write("\n")
+
+    with open(RELEASE_JSON, "w", encoding="utf-8") as f:
+        json.dump(build_release_data(new_version, changelog), f, indent=2)
         f.write("\n")
 
     print("✅ Archivos actualizados")
+    return changelog
 
 
 def git_commit_and_tag(new_version):
     print(f"\n[4/6] Git commit + tag v{new_version}...")
-    _run("git add VERSION version.json")
+    _run("git add VERSION version.json release.json")
     _run(f'git commit -m "release: {new_version}"')
     _run(f'git tag -a v{new_version} -m "release {new_version}"')
     print("✅ Commit y tag creados")
@@ -155,10 +175,10 @@ def main():
     validate()
     current = get_current_version()
     new_version = ask_new_version(current)
-    update_version_files(new_version)
+    changelog = update_version_files(new_version)
     git_commit_and_tag(new_version)
     git_push()
-    create_github_release(new_version, f"Release {new_version}")
+    create_github_release(new_version, changelog)
 
     print("\n" + "=" * 60)
     print(f"🎉 Release v{new_version} publicada correctamente.")

@@ -1,8 +1,8 @@
 {
-  "version": "2.2.2",
+  "version": "2.2.3",
   "release_date": "2026-09-18",
-  "release_id": 391136161,
-  "changelog": "2.2.2 — Fix: corregir caracteres Unicode en clanker_rules.yaml (problema de encoding en GitHub CDN)",
+  "release_id": null,
+  "changelog": "2.2.3 - Anti-Clanker reentrenamiento (pipeline + GUI), health de dependencias, rate limiting ampliado, expiracion de sesion y hardening de reglas",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.2.2.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.2.3.zip"
 }

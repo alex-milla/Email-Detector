@@ -2,6 +2,7 @@ from flask import render_template, request, jsonify, session
 
 from web.services.decorators import login_required, admin_required, current_user
 from web.services.audit_service import log_admin_action
+from web.services.limiter import limiter, user_or_ip_key
 from updater import check_for_updates, get_update_state, start_update
 
 
@@ -18,6 +19,7 @@ def register_routes(app):
         return jsonify(check_for_updates())
 
     @app.route("/api/update/apply", methods=["POST"])
+    @limiter.limit("5 per minute", key_func=user_or_ip_key)
     @admin_required
     def api_update_apply():
         update_info = check_for_updates()

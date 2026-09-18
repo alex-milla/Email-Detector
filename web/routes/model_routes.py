@@ -50,12 +50,12 @@ def register_routes(app):
             return jsonify({"error": "El script no pasó la validación de seguridad."}), 403
 
         log_admin_action(session.get("user_id"), session.get("username"),
-                       "FULL_RETRAIN", "retrain.sh")
+                       "DATASET_DOWNLOAD", "download_dataset.sh")
         t = threading.Thread(
             target=run_training, args=(["bash", script], PROJECT_DIR), daemon=True
         )
         t.start()
-        return jsonify({"started": True, "message": "Entrenamiento iniciado en background"})
+        return jsonify({"started": True, "message": "Descarga de dataset iniciada en background"})
 
     @app.route("/model/retrain", methods=["POST"])
     @admin_required
@@ -73,6 +73,47 @@ def register_routes(app):
         )
         t.start()
         return jsonify({"started": True, "message": "Entrenamiento iniciado en background"})
+
+    @app.route("/model/full-retrain", methods=["POST"])
+    @admin_required
+    def full_retrain():
+        state = load_training_state()
+        if state.get("running"):
+            return jsonify({"error": "Ya hay un entrenamiento en curso"}), 409
+
+        script = os.path.join(PROJECT_DIR, "scripts", "retrain.sh")
+        ok, reason = validate_script_path(script, PROJECT_DIR)
+        if not ok:
+            return jsonify({"error": "El script no pasó la validación de seguridad."}), 403
+
+        log_admin_action(session.get("user_id"), session.get("username"),
+                       "FULL_RETRAIN", "retrain.sh")
+        t = threading.Thread(
+            target=run_training, args=(["bash", script], PROJECT_DIR), daemon=True
+        )
+        t.start()
+        return jsonify({"started": True, "message": "Extracción de features + entrenamiento iniciado en background"})
+
+    @app.route("/model/retrain-clanker", methods=["POST"])
+    @admin_required
+    def retrain_clanker():
+        state = load_training_state()
+        if state.get("running"):
+            return jsonify({"error": "Ya hay un entrenamiento en curso"}), 409
+
+        data = request.get_json(silent=True) or {}
+        synthetic = bool(data.get("synthetic"))
+        log_admin_action(session.get("user_id"), session.get("username"),
+                       "RETRAIN_CLANKER",
+                       "retrain_clanker.py" + (" --synthetic" if synthetic else ""))
+        cmd = [sys.executable, os.path.join(PROJECT_DIR, "scripts", "retrain_clanker.py")]
+        if synthetic:
+            cmd.append("--synthetic")
+        t = threading.Thread(
+            target=run_training, args=(cmd, PROJECT_DIR), daemon=True
+        )
+        t.start()
+        return jsonify({"started": True, "message": "Reentrenamiento Anti-Clanker iniciado en background"})
 
     @app.route("/model/training-status")
     @login_required

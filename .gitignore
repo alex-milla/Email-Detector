@@ -6,11 +6,16 @@ __pycache__/
 .env
 *.db
 *.joblib
+models/
 results/
 logs/
 data/raw/
 data/samples/
 data/labeled/
+data/synthetic_clanker/
+data/processed/
+*.joblib.bak
 config/ssl/
 config/first-login.txt
+md/
 

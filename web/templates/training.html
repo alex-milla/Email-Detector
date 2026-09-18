@@ -172,7 +172,7 @@
             <div class="model-card" data-model="10">
                 <span class="mc-badge" style="background:#6f42c1;color:#fff">Rule-based</span>
                 <div class="mc-name">Anti-Clanker</div>
-                <div class="mc-auc" id="model-10-auc">&#8212;</div>
+                <div class="mc-auc" id="model-10-auc">{% if model_meta.get('anti_clanker_auc') %}{{ "%.4f"|format(model_meta.get('anti_clanker_auc')) }}{% else %}&#8212;{% endif %}</div>
                 <div class="mc-label">Score Anti-Clanker</div>
                 <div class="mc-cv" id="model-10-cv">Reglas: <span id="model-10-rules">&#8212;</span></div>
                 <label class="toggle-switch" title="Activar/desactivar en el ensemble">
@@ -220,6 +220,25 @@
         </div>
         <div class="log-box" id="trainLog"></div>
     </div>
+
+    <!-- Paso 3: Anti-Clanker (solo admin) -->
+    {% if user.role == 'admin' %}
+    <div class="card">
+        <div class="card-header">
+            <h2>🧩 Paso 3 — Reentrenar Anti-Clanker (Modelo 10)</h2>
+            <p>Reentrena solo el detector de artefactos LLM usando las features <code>clanker_*</code> de los CSVs en <code>data/processed/</code>. No modifica el ensemble principal.</p>
+        </div>
+        <div class="status-row">
+            <div class="spinner" id="clankerSpinner"></div>
+            <span class="status-text" id="clankerStatus"></span>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-success"   id="btnClankerTrain"     onclick="retrainClanker(false)">🧩 Reentrenar con CSVs</button>
+            <button class="btn btn-secondary" id="btnClankerSynthetic" onclick="retrainClanker(true)">🧪 Generar sintético + Reentrenar</button>
+        </div>
+        <div class="log-box" id="clankerLog"></div>
+    </div>
+    {% endif %}
 
     <!-- Guía -->
     <div class="card">
@@ -315,14 +334,19 @@ async function downloadDataset() {
 //  ENTRENAMIENTO EN BACKGROUND
 // ═══════════════════════════════════════
 let _poll = null;
+let _ctx = { log:'trainLog', status:'trainStatus' };
+const TRAIN_BUTTONS  = ['btnFullRetrain','btnTrainOnly','btnClankerTrain','btnClankerSynthetic'];
+const TRAIN_SPINNERS = ['trainSpinner','clankerSpinner'];
 
 function setTrainingUI(running) {
-    const spinner = document.getElementById('trainSpinner');
-    const btnFull = document.getElementById('btnFullRetrain');
-    const btnOnly = document.getElementById('btnTrainOnly');
-    spinner.style.display = running ? 'inline-block' : 'none';
-    if (btnFull) btnFull.disabled = running;
-    if (btnOnly) btnOnly.disabled = running;
+    TRAIN_SPINNERS.forEach(id => {
+        const s = document.getElementById(id);
+        if (s) s.style.display = running ? 'inline-block' : 'none';
+    });
+    TRAIN_BUTTONS.forEach(id => {
+        const b = document.getElementById(id);
+        if (b) b.disabled = running;
+    });
 }
 
 function startPoll() {
@@ -334,43 +358,50 @@ function startPoll() {
             if (!st.running) {
                 clearInterval(_poll); _poll = null;
                 setTrainingUI(false);
-                const log = document.getElementById('trainLog');
+                const log = document.getElementById(_ctx.log);
                 if (st.success === true) {
                     log.className   = 'log-box visible success';
                     log.textContent = st.stdout || 'Entrenamiento completado';
-                    document.getElementById('trainStatus').textContent = '✅ Modelo entrenado correctamente';
+                    document.getElementById(_ctx.status).textContent = '✅ Modelo entrenado correctamente';
                     setTimeout(() => location.reload(), 3000);
                 } else if (st.success === false && st.stderr) {
                     log.className   = 'log-box visible error';
                     log.textContent = st.stderr || st.stdout || 'Error en el entrenamiento';
-                    document.getElementById('trainStatus').textContent = '❌ Error en el entrenamiento';
+                    document.getElementById(_ctx.status).textContent = '❌ Error en el entrenamiento';
                 } else {
                     log.className   = 'log-box visible success';
                     log.textContent = st.stdout || 'Proceso finalizado';
-                    document.getElementById('trainStatus').textContent = '✅ Proceso finalizado';
+                    document.getElementById(_ctx.status).textContent = '✅ Proceso finalizado';
                     setTimeout(() => location.reload(), 3000);
                 }
             } else {
                 const elapsed = st.started_at
                     ? Math.round((Date.now() - new Date(st.started_at).getTime()) / 1000)
                     : 0;
-                document.getElementById('trainStatus').textContent =
+                document.getElementById(_ctx.status).textContent =
                     `⏳ Entrenando... ${elapsed}s transcurridos (puedes navegar mientras esperas)`;
             }
         } catch(e) {}
     }, 5000);
 }
 
-async function launchTraining(endpoint) {
-    const log    = document.getElementById('trainLog');
-    const status = document.getElementById('trainStatus');
+async function launchTraining(endpoint, ctx) {
+    _ctx = ctx || { log:'trainLog', status:'trainStatus' };
+    const log    = document.getElementById(_ctx.log);
+    const status = document.getElementById(_ctx.status);
     setTrainingUI(true);
     log.className   = 'log-box visible running';
-    log.textContent = 'Lanzando entrenamiento en background...\nEsto puede tardar varios minutos con datasets grandes.\n';
+    log.textContent = (_ctx.starting || 'Lanzando entrenamiento en background...') + '\nEsto puede tardar varios minutos.\n';
     status.textContent = '⏳ Iniciando...';
 
+    const opts = { method:'POST' };
+    if (_ctx.body) {
+        opts.headers = { 'Content-Type':'application/json' };
+        opts.body    = JSON.stringify(_ctx.body);
+    }
+
     try {
-        const r    = await fetch(endpoint, { method:'POST' });
+        const r    = await fetch(endpoint, opts);
         const data = await r.json();
         if (data.error) {
             log.className   = 'log-box visible error';
@@ -391,8 +422,17 @@ async function launchTraining(endpoint) {
     }
 }
 
-function fullRetrain() { launchTraining('/model/full-retrain'); }
-function trainOnly()   { launchTraining('/model/retrain'); }
+function fullRetrain() { launchTraining('/model/full-retrain', { log:'trainLog', status:'trainStatus' }); }
+function trainOnly()   { launchTraining('/model/retrain', { log:'trainLog', status:'trainStatus' }); }
+function retrainClanker(synthetic) {
+    launchTraining('/model/retrain-clanker', {
+        log:'clankerLog', status:'clankerStatus',
+        body:{ synthetic: !!synthetic },
+        starting: synthetic
+            ? 'Generando dataset sintético Anti-Clanker y reentrenando...'
+            : 'Reentrenando Anti-Clanker desde los CSVs de data/processed/...'
+    });
+}
 
 // Al cargar: comprobar si hay entrenamiento en curso
 (async function checkOnLoad() {

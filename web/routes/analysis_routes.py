@@ -16,6 +16,7 @@ from web.services.history_service import (
     get_history_item, clear_history,
 )
 from web.services.validation_service import validate_eml_upload
+from web.services.limiter import limiter, user_or_ip_key
 
 from predict import predict_email
 from mailbox_connector import download_emails
@@ -27,6 +28,7 @@ def register_routes(app):
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     @app.route("/analyze", methods=["POST"])
+    @limiter.limit("30 per minute", key_func=user_or_ip_key)
     @login_required
     def analyze():
         if "files" not in request.files:
@@ -60,6 +62,7 @@ def register_routes(app):
         return jsonify({"results": results, "total_analyzed": len(results)})
 
     @app.route("/fetch-emails", methods=["POST"])
+    @limiter.limit("5 per minute", key_func=user_or_ip_key)
     @login_required
     def fetch_emails():
         from datetime import datetime as dt
@@ -256,6 +259,7 @@ def register_routes(app):
         return jsonify({"total": total, "benign": benign, "malicious": malicious})
 
     @app.route("/analyze/virustotal/<int:db_id>", methods=["POST"])
+    @limiter.limit("20 per minute", key_func=user_or_ip_key)
     @login_required
     def analyze_virustotal(db_id):
         from virustotal import check_email_artifacts

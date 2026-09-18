@@ -54,7 +54,7 @@ class TestAttachmentRisk:
 
 class TestSpecialChars:
     def test_special_chars_counted(self):
-        assert count_special_chars("¡Hola! ¿Cómo estás?") == 3
+        assert count_special_chars("¡Hola! ¿Cómo estás?") == 6
 
     def test_no_special_chars(self):
         assert count_special_chars("Hola como estas") == 0

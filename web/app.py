@@ -9,7 +9,7 @@ import json
 import sqlite3
 import subprocess
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from functools import wraps
 
@@ -35,6 +35,7 @@ from updater import check_for_updates, get_update_state, start_update
 
 from web.services.history_service import get_model_meta
 from web.services.limiter import limiter
+from web.services.health_service import check_dependencies, summary as deps_summary
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "config", ".env"))
 
@@ -66,10 +67,16 @@ LABELED_DIR = os.path.join(PROJECT_DIR, "data", "labeled")
 DB_PATH = os.path.join(PROJECT_DIR, "config", "users.db")
 
 _has_ssl = os.path.exists(os.path.join(PROJECT_DIR, "config", "ssl", "cert.pem"))
+try:
+    _session_hours = float(os.getenv("SESSION_LIFETIME_HOURS", "8") or 8)
+except ValueError:
+    _session_hours = 8.0
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=_has_ssl,
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=_session_hours),
+    SESSION_REFRESH_EACH_REQUEST=True,
 )
 
 
@@ -108,11 +115,14 @@ def _get_version():
 @app.route("/health")
 def health():
     model_meta = get_model_meta()
+    deps, deps_ok = deps_summary()
     return jsonify({
         "status": "ok",
         "version": _get_version(),
         "model_trained": os.path.exists(os.path.join(MODELS_DIR, "email_classifier.joblib")),
         "models_count": len(model_meta.get("models_available", [])),
+        "dependencies": deps,
+        "dependencies_ok": deps_ok,
         "timestamp": datetime.now().isoformat(),
     })
 
@@ -184,6 +194,12 @@ from web.services.decorators import login_required, admin_required
 from web.services.csrf import inject_csrf
 
 inject_csrf(app)
+
+
+@app.route("/health/dependencies")
+@admin_required
+def health_dependencies():
+    return jsonify(check_dependencies())
 
 
 if __name__ == "__main__":

@@ -62,7 +62,10 @@ email-detector/
 │   ├── url_resolver.py     # Resolución de redirecciones HTTP/meta/JS
 │   ├── extract_clanker_features.py  # Features Anti-Clanker
 │   ├── update_clanker_rules.py      # Auto-actualización de reglas
-│   ├── generate_synthetic_qr_dataset.py  # Dataset sintético con QR
+│   ├── train_clanker_model.py       # Reentrena solo el Modelo 10 (Anti-Clanker)
+│   ├── retrain_clanker.py           # Orquestador: dataset + reentrenar Anti-Clanker
+│   ├── generate_synthetic_qr_dataset.py       # Dataset sintético con QR
+│   ├── generate_synthetic_clanker_dataset.py # Dataset sintético Anti-Clanker
 │   ├── auto_scan.py        # Escaneo automático (cron)
 │   └── backup.sh           # Backup periódico
 └── config/
@@ -128,6 +131,20 @@ El formato de las reglas está documentado en `CLANKER_RULES_FORMAT.md` (generad
 
 ## Comandos útiles
 
+### Health check
+
+```bash
+# Estado básico + resumen de dependencias (público)
+curl -sk https://localhost:5000/health
+
+# Detalle completo de dependencias (solo admin, requiere sesión)
+curl -sk https://localhost:5000/health/dependencies
+```
+
+`/health` incluye `dependencies` (sqlite, modelo, reglas Anti-Clanker, Chromium
+y VirusTotal) y `dependencies_ok`. Chromium y VirusTotal son opcionales: no
+afectan al estado global.
+
 ### Con systemd
 
 ```bash
@@ -172,6 +189,44 @@ python scripts/train_model.py
 ```
 
 El script lee automáticamente todos los CSVs de `data/processed/` y genera `models/email_classifier.joblib` junto con `model_metadata.json`.
+
+### Reentrenamiento del Anti-Clanker (Modelo 10)
+
+Si no dispones de correos etiquetados, genera un dataset sintético que ejercita
+las features Anti-Clanker v1.2.0 (CSS sobre-ingenierizado, clipboard abuse,
+prompt injection, script/event handlers):
+
+```bash
+cd /opt/email-detector
+source venv/bin/activate
+
+# 1. Generar .eml sintéticos (benign + malicious)
+python scripts/generate_synthetic_clanker_dataset.py
+
+# 2. Extraer features
+python scripts/etl_pipeline.py \
+  --ham-dir data/synthetic_clanker/benign \
+  --spam-dir data/synthetic_clanker/malicious \
+  --output clanker_synthetic --no-balance
+
+# 3. Reentrenar SOLO el Modelo 10 (no toca email_classifier.joblib)
+python scripts/train_clanker_model.py --csv data/processed/clanker_synthetic_raw.csv
+```
+
+`train_clanker_model.py` reporta AUC, umbral F2 e importancia de cada feature
+(incluidas las nuevas de v1.2.0) y actualiza `models/model_metadata.json`. Con
+datos reales, apunta `--csv` a los CSV de `data/processed/` generados por el ETL.
+
+También disponible el orquestador (genera el sintético si no hay CSVs) y la GUI:
+
+```bash
+python scripts/retrain_clanker.py                 # usa data/processed/*.csv
+python scripts/retrain_clanker.py --synthetic     # fuerza dataset sintético
+```
+
+En **Entrenamiento → Paso 3 — Reentrenar Anti-Clanker** (solo admin) hay dos
+botones: *Reentrenar con CSVs* y *Generar sintético + Reentrenar*. El proceso
+corre en background y no toca `email_classifier.joblib`.
 
 ### Actualizar reglas Anti-Clanker manualmente
 
