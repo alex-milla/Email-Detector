@@ -37,9 +37,36 @@ class TestAssets:
     def test_settings_has_hidden_lang_option(self):
         html = _read(os.path.join(TEMPLATES, "settings.html"))
         assert 'id="hidden-langs"' in html
+        assert 'id="lang-list"' in html
         assert 'save-hidden-langs' in html
         js = _read(os.path.join(STATIC, "js", "settings.js"))
         assert "saveHiddenLangs" in js
+        assert "filterLangs" in js
+
+    def test_settings_renders_language_multiselect_for_admin(self):
+        from web.app import app
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["user_id"] = 1
+                sess["username"] = "tester"
+                sess["user_role"] = "admin"
+            resp = client.get("/settings")
+        assert resp.status_code == 200
+        body = resp.get_data(as_text=True)
+        assert 'id="hidden-langs-card"' in body
+        assert 'id="lang-list"' in body
+        assert 'id="lang-search"' in body
+
+    def test_settings_hidden_langs_admin_only(self):
+        from web.app import app
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["user_id"] = 1
+                sess["username"] = "tester"
+                sess["user_role"] = "user"
+            resp = client.get("/settings")
+        assert resp.status_code == 200
+        assert 'id="hidden-langs-card"' not in resp.get_data(as_text=True)
 
     def test_app_css_has_tokens_and_components(self):
         css = _read(os.path.join(STATIC, "css", "app.css"))

@@ -14,6 +14,29 @@ from web.auth import (
 )
 from settings_manager import read_global_env, write_global_env, test_imap, test_virustotal, test_m365
 
+try:
+    from hidden_text import get_language_catalog
+    _HIDDEN_LANGS_AVAILABLE = True
+except Exception:
+    _HIDDEN_LANGS_AVAILABLE = False
+
+
+def _language_catalog():
+    if not _HIDDEN_LANGS_AVAILABLE:
+        return []
+    try:
+        return get_language_catalog()
+    except Exception:
+        return []
+
+
+def _sanitize_langs(raw: str):
+    valid = {lang["code"] for lang in _language_catalog()}
+    codes = [part.strip().lower().split("-")[0]
+             for part in str(raw).split(",") if part.strip()]
+    clean = [code for code in codes if not valid or code in valid]
+    return list(dict.fromkeys(clean))
+
 
 def register_routes(app):
     PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
@@ -25,6 +48,7 @@ def register_routes(app):
         return render_template("settings.html",
             config=get_mail_config(uid),
             global_cfg=read_global_env(),
+            languages=_language_catalog(),
             user=current_user(), active_page='settings')
 
     @app.route("/api/settings/mail", methods=["POST"])
@@ -52,6 +76,12 @@ def register_routes(app):
         data = request.get_json(silent=True) or {}
         if not data:
             return jsonify({"success": False, "error": "Payload vacío o inválido"}), 400
+        if "HIDDEN_TEXT_LANGS" in data:
+            langs = _sanitize_langs(data["HIDDEN_TEXT_LANGS"])
+            if not langs:
+                return jsonify({"success": False,
+                                "error": "Selecciona al menos un idioma válido"}), 400
+            data["HIDDEN_TEXT_LANGS"] = ",".join(langs)
         try:
             write_global_env(data)
             env_path = os.path.join(PROJECT_DIR, "config", ".env")

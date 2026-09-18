@@ -170,6 +170,43 @@
     <!-- ========================== TAB: DETECCIÓN =========================== -->
     <section class="tab-panel hidden" data-tab-panel="detection">
 
+        <!-- Idiomas habituales (contenido oculto) -->
+        {% if user.role == 'admin' %}
+        <div class="card" id="hidden-langs-card">
+            <div class="card-header">
+                <div class="card-header-left">
+                    <h2>🌐 Idiomas habituales en contenido oculto <span class="admin-badge">Admin</span></h2>
+                    <p>Idiomas que recibes habitualmente. El texto oculto en otros idiomas sube la sospecha (no fuerza MALICIOSO).</p>
+                </div>
+            </div>
+            {% set _hidden_langs = (global_cfg.get('HIDDEN_TEXT_LANGS', 'es,en') or 'es,en').split(',') %}
+            <div class="lang-multiselect" id="hidden-langs">
+                <button type="button" class="btn btn-secondary" id="lang-toggle" data-action="lang-toggle">
+                    Seleccionar idiomas (<span id="lang-count">{{ _hidden_langs|length }}</span>)
+                </button>
+                <div class="lang-dropdown hidden" id="lang-dropdown">
+                    <input type="text" id="lang-search" placeholder="Buscar idioma..." autocomplete="off">
+                    <div class="lang-actions">
+                        <button type="button" class="btn btn-secondary btn-sm" data-action="lang-all">Todos</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-action="lang-none">Ninguno</button>
+                    </div>
+                    <div class="lang-list" id="lang-list">
+                        {% for lang in languages %}
+                        <label class="lang-item" data-name="{{ (lang.name_es ~ ' ' ~ lang.name_en ~ ' ' ~ lang.code)|lower }}">
+                            <input type="checkbox" class="hidden-lang-cb" value="{{ lang.code }}" {% if lang.code in _hidden_langs %}checked{% endif %}>
+                            <span>{{ lang.name_es }} <small class="faint">{{ lang.code }}</small></span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div class="mt-1">
+                <button type="button" class="btn btn-primary btn-sm" data-action="save-hidden-langs">💾 Guardar idiomas</button>
+                <div class="test-result mt-1" id="hidden-langs-result"></div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Anti-Clanker -->
         <div class="card" id="clanker-panel">
             <div class="card-header">
@@ -213,17 +250,6 @@
                     <div class="test-result mt-1" id="clanker-url-result"></div>
                 </div>
             </div>
-            <hr class="divider">
-            <p class="section-title mb-1">Idiomas esperados en contenido oculto <span class="admin-badge">Admin</span></p>
-            <p class="hint mb-1">Idiomas que tu organización recibe habitualmente. El texto oculto en otros idiomas sube la sospecha (sin forzar MALICIOSO).</p>
-            {% set _hidden_langs = (global_cfg.get('HIDDEN_TEXT_LANGS', 'es,en') or 'es,en').split(',') %}
-            <div id="hidden-langs" class="mb-2">
-                {% for code, label in [('es','Español'), ('en','Inglés'), ('fr','Francés'), ('de','Alemán'), ('pt','Portugués'), ('it','Italiano'), ('ca','Catalán')] %}
-                <label class="mr-2"><input type="checkbox" class="hidden-lang-cb" value="{{ code }}" {% if code in _hidden_langs %}checked{% endif %}> {{ label }}</label>
-                {% endfor %}
-            </div>
-            <button type="button" class="btn btn-primary btn-sm" data-action="save-hidden-langs">💾 Guardar idiomas</button>
-            <div class="test-result mt-1" id="hidden-langs-result"></div>
             {% endif %}
         </div>
 

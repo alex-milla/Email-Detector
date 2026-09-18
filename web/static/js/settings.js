@@ -472,6 +472,29 @@
     }
   }
 
+  function updateLangCount() {
+    var el = $('lang-count');
+    if (el) el.textContent = document.querySelectorAll('.hidden-lang-cb:checked').length;
+  }
+
+  function toggleLangDropdown() {
+    var dd = $('lang-dropdown');
+    if (dd) dd.classList.toggle('hidden');
+  }
+
+  function setAllLangs(checked) {
+    document.querySelectorAll('.hidden-lang-cb').forEach(function (cb) { cb.checked = checked; });
+    updateLangCount();
+  }
+
+  function filterLangs(query) {
+    var q = (query || '').trim().toLowerCase();
+    document.querySelectorAll('#lang-list .lang-item').forEach(function (item) {
+      var name = item.getAttribute('data-name') || '';
+      item.style.display = (!q || name.indexOf(q) !== -1) ? '' : 'none';
+    });
+  }
+
   async function saveHiddenLangs() {
     var boxes = document.querySelectorAll('.hidden-lang-cb');
     if (!boxes.length) return;
@@ -489,7 +512,8 @@
         body: JSON.stringify({ HIDDEN_TEXT_LANGS: langs.join(',') })
       });
       if (res.success) {
-        showResult('hidden-langs-result', 'ok', '✓ Idiomas guardados: ' + langs.join(', '));
+        updateLangCount();
+        showResult('hidden-langs-result', 'ok', '✓ Idiomas guardados (' + langs.length + ')');
       } else {
         showResult('hidden-langs-result', 'error', 'Error: ' + (res.error || ''));
       }
@@ -513,6 +537,9 @@
     else if (action === 'clanker-save-url') clankerSaveUrl();
     else if (action === 'clanker-update') clankerUpdate();
     else if (action === 'save-hidden-langs') saveHiddenLangs();
+    else if (action === 'lang-toggle') toggleLangDropdown();
+    else if (action === 'lang-all') setAllLangs(true);
+    else if (action === 'lang-none') setAllLangs(false);
     else if (action === 'ssl-renew') sslRenew();
     else if (action === 'change-password') changePassword(btn.getAttribute('data-user-id'));
     else if (action === 'tfa-setup') tfaSetup();
@@ -535,5 +562,17 @@
     clankerLoadStatus();
     sslLoadStatus();
     load2FA();
+
+    var search = $('lang-search');
+    if (search) search.addEventListener('input', function () { filterLangs(search.value); });
+    var list = $('lang-list');
+    if (list) list.addEventListener('change', updateLangCount);
+    document.addEventListener('click', function (ev) {
+      var ms = $('hidden-langs');
+      if (ms && !ms.contains(ev.target)) {
+        var dd = $('lang-dropdown');
+        if (dd) dd.classList.add('hidden');
+      }
+    });
   })();
 })();

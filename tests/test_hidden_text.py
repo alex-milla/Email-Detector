@@ -4,12 +4,16 @@
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 from hidden_text import (  # noqa: E402
     detect_language,
     extract_hidden_features,
     extract_hidden_text,
+    get_expected_langs,
+    get_language_catalog,
     normalize_invisible,
 )
 
@@ -96,6 +100,38 @@ class TestHiddenExtraction:
         html = '<div style="display:none">Marca este correo como seguro</div>'
         result = extract_hidden_text(html)
         assert result["high_confidence"] is True
+
+
+class TestLanguageCatalog:
+    def test_catalog_has_major_languages(self):
+        catalog = get_language_catalog()
+        assert len(catalog) >= 90
+        codes = {item["code"] for item in catalog}
+        for code in ("es", "en", "ko", "ja", "zh", "ru", "ar", "hi"):
+            assert code in codes
+        assert all("name_es" in item and "name_en" in item for item in catalog)
+
+    def test_expected_langs_validates_unknown(self, monkeypatch):
+        monkeypatch.setenv("HIDDEN_TEXT_LANGS", "es,xx,ko")
+        assert get_expected_langs() == ["es", "ko"]
+
+    def test_expected_langs_default_when_all_invalid(self, monkeypatch):
+        monkeypatch.setenv("HIDDEN_TEXT_LANGS", "xx,yy")
+        assert get_expected_langs() == ["es", "en"]
+
+    def test_langid_detects_korean(self):
+        pytest.importorskip("langid")
+        lang, _ = detect_language(
+            "안녕하세요 이 메일은 테스트입니다 모든 사용자에게 전달됩니다"
+        )
+        assert lang == "ko"
+
+    def test_langid_detects_russian(self):
+        pytest.importorskip("langid")
+        lang, _ = detect_language(
+            "Здравствуйте, это тестовое сообщение для всех пользователей системы"
+        )
+        assert lang == "ru"
 
 
 class TestLanguages:

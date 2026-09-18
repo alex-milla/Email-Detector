@@ -11,8 +11,8 @@ Este módulo:
 
   * Extrae el texto no visible para humanos (BeautifulSoup con fallback regex).
   * Detecta caracteres invisibles y de control bidi.
-  * Identifica el idioma de forma heurística (palabras función + alfabeto),
-    sin dependencias externas.
+  * Identifica el idioma con ``langid`` (97 idiomas, offline) y, si no está
+    instalado, con una heurística de palabras función + alfabeto.
   * Busca patrones de prompt injection multi-idioma.
   * Genera features ``clanker_hidden_*`` para el Modelo 10 (Anti-Clanker).
 
@@ -27,10 +27,19 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
+# Identificación de idioma offline (soft-fail)
+try:
+    import langid as _langid
+    _LANGID_AVAILABLE = True
+except Exception:
+    _langid = None
+    _LANGID_AVAILABLE = False
+
 MAX_INPUT_CHARS = 500_000
 MAX_HIDDEN_ENTRIES = 60
 MAX_HIDDEN_TEXT_CHARS = 2_000
 LANG_OTHER_MIN_CHARS = 40
+MIN_LANG_CHARS = 12
 
 DEFAULT_EXPECTED_LANGS = "es,en"
 
@@ -146,6 +155,116 @@ _LANG_STOPWORDS: Dict[str, set] = {
            "per", "amb", "no", "es", "com", "aquest", "aquesta"},
 }
 
+# ── Catálogo de idiomas identificables (langid, 97 idiomas) ──────────────────
+_LANGUAGES: List[Tuple[str, str, str]] = [
+    ("af", "Afrikáans", "Afrikaans"),
+    ("am", "Amárico", "Amharic"),
+    ("an", "Aragonés", "Aragonese"),
+    ("ar", "Árabe", "Arabic"),
+    ("as", "Asamés", "Assamese"),
+    ("az", "Azerbaiyano", "Azerbaijani"),
+    ("be", "Bielorruso", "Belarusian"),
+    ("bg", "Búlgaro", "Bulgarian"),
+    ("bn", "Bengalí", "Bengali"),
+    ("br", "Bretón", "Breton"),
+    ("bs", "Bosnio", "Bosnian"),
+    ("ca", "Catalán", "Catalan"),
+    ("cs", "Checo", "Czech"),
+    ("cy", "Galés", "Welsh"),
+    ("da", "Danés", "Danish"),
+    ("de", "Alemán", "German"),
+    ("dz", "Dzongkha", "Dzongkha"),
+    ("el", "Griego", "Greek"),
+    ("en", "Inglés", "English"),
+    ("eo", "Esperanto", "Esperanto"),
+    ("es", "Español", "Spanish"),
+    ("et", "Estonio", "Estonian"),
+    ("eu", "Vasco", "Basque"),
+    ("fa", "Persa", "Persian"),
+    ("fi", "Finés", "Finnish"),
+    ("fo", "Feroés", "Faroese"),
+    ("fr", "Francés", "French"),
+    ("ga", "Irlandés", "Irish"),
+    ("gl", "Gallego", "Galician"),
+    ("gu", "Guyaratí", "Gujarati"),
+    ("he", "Hebreo", "Hebrew"),
+    ("hi", "Hindi", "Hindi"),
+    ("hr", "Croata", "Croatian"),
+    ("hu", "Húngaro", "Hungarian"),
+    ("hy", "Armenio", "Armenian"),
+    ("id", "Indonesio", "Indonesian"),
+    ("is", "Islandés", "Icelandic"),
+    ("it", "Italiano", "Italian"),
+    ("ja", "Japonés", "Japanese"),
+    ("jv", "Javanés", "Javanese"),
+    ("ka", "Georgiano", "Georgian"),
+    ("kk", "Kazajo", "Kazakh"),
+    ("km", "Jemer", "Khmer"),
+    ("kn", "Canarés", "Kannada"),
+    ("ko", "Coreano", "Korean"),
+    ("ku", "Kurdo", "Kurdish"),
+    ("ky", "Kirguís", "Kyrgyz"),
+    ("la", "Latín", "Latin"),
+    ("lb", "Luxemburgués", "Luxembourgish"),
+    ("lo", "Lao", "Lao"),
+    ("lt", "Lituano", "Lithuanian"),
+    ("lv", "Letón", "Latvian"),
+    ("mg", "Malgache", "Malagasy"),
+    ("mk", "Macedonio", "Macedonian"),
+    ("ml", "Malayalam", "Malayalam"),
+    ("mn", "Mongol", "Mongolian"),
+    ("mr", "Maratí", "Marathi"),
+    ("ms", "Malayo", "Malay"),
+    ("mt", "Maltés", "Maltese"),
+    ("nb", "Noruego bokmål", "Norwegian Bokmål"),
+    ("ne", "Nepalí", "Nepali"),
+    ("nl", "Neerlandés", "Dutch"),
+    ("nn", "Noruego nynorsk", "Norwegian Nynorsk"),
+    ("no", "Noruego", "Norwegian"),
+    ("oc", "Occitano", "Occitan"),
+    ("or", "Odia", "Odia"),
+    ("pa", "Panyabí", "Punjabi"),
+    ("pl", "Polaco", "Polish"),
+    ("ps", "Pastún", "Pashto"),
+    ("pt", "Portugués", "Portuguese"),
+    ("qu", "Quechua", "Quechua"),
+    ("ro", "Rumano", "Romanian"),
+    ("ru", "Ruso", "Russian"),
+    ("rw", "Kinyarwanda", "Kinyarwanda"),
+    ("se", "Sami septentrional", "Northern Sami"),
+    ("si", "Cingalés", "Sinhala"),
+    ("sk", "Eslovaco", "Slovak"),
+    ("sl", "Esloveno", "Slovenian"),
+    ("sq", "Albanés", "Albanian"),
+    ("sr", "Serbio", "Serbian"),
+    ("sv", "Sueco", "Swedish"),
+    ("sw", "Suajili", "Swahili"),
+    ("ta", "Tamil", "Tamil"),
+    ("te", "Telugu", "Telugu"),
+    ("th", "Tailandés", "Thai"),
+    ("tl", "Tagalo", "Tagalog"),
+    ("tr", "Turco", "Turkish"),
+    ("ug", "Uigur", "Uyghur"),
+    ("uk", "Ucraniano", "Ukrainian"),
+    ("ur", "Urdu", "Urdu"),
+    ("vi", "Vietnamita", "Vietnamese"),
+    ("wa", "Valón", "Walloon"),
+    ("xh", "Xhosa", "Xhosa"),
+    ("yi", "Yídish", "Yiddish"),
+    ("zh", "Chino", "Chinese"),
+    ("zu", "Zulú", "Zulu"),
+]
+_LANGUAGE_CODES = frozenset(code for code, _, _ in _LANGUAGES)
+
+
+def get_language_catalog() -> List[Dict[str, str]]:
+    """Catálogo de idiomas identificables, ordenado por nombre en español."""
+    return [
+        {"code": code, "name_es": name_es, "name_en": name_en}
+        for code, name_es, name_en in sorted(_LANGUAGES, key=lambda item: item[1])
+    ]
+
+
 _SCRIPT_RANGES = (
     ("latin", 0x0041, 0x024F),
     ("cyrillic", 0x0400, 0x04FF),
@@ -171,10 +290,12 @@ def _safe_text(value: Any, limit: int = MAX_INPUT_CHARS) -> str:
 
 
 def get_expected_langs() -> List[str]:
-    """Idiomas esperados configurados por el admin (HIDDEN_TEXT_LANGS)."""
+    """Idiomas esperados del admin (HIDDEN_TEXT_LANGS), validados."""
     raw = os.getenv("HIDDEN_TEXT_LANGS", DEFAULT_EXPECTED_LANGS) or ""
-    langs = [part.strip().lower() for part in raw.split(",") if part.strip()]
-    return langs or DEFAULT_EXPECTED_LANGS.split(",")
+    codes = [part.strip().lower().split("-")[0]
+             for part in raw.split(",") if part.strip()]
+    valid = [code for code in codes if code in _LANGUAGE_CODES]
+    return valid or DEFAULT_EXPECTED_LANGS.split(",")
 
 
 def normalize_invisible(text: str) -> str:
@@ -399,10 +520,20 @@ def _script_of(text: str) -> str:
 
 
 def detect_language(text: str) -> Tuple[str, float]:
-    """Heurística de idioma: alfabeto + palabras función. Devuelve (lang, conf)."""
+    """Identifica el idioma (langid si está disponible; si no, heurística)."""
     text = normalize_invisible(_safe_text(text))
     if not text.strip():
         return "other", 0.0
+
+    if _LANGID_AVAILABLE and len(text) >= MIN_LANG_CHARS:
+        try:
+            code, score = _langid.classify(text)
+            code = str(code).lower().split("-")[0]
+            if re.fullmatch(r"[a-z]{2,3}", code):
+                return code, round(float(score), 4)
+        except Exception:
+            pass
+
     script = _script_of(text)
     if script not in ("latin", "unknown"):
         return "other", 0.0

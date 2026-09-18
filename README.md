@@ -283,9 +283,12 @@ MALICIOSO** y muestra el texto, el motivo y la coincidencia. El texto oculto en
 un idioma **no esperado** sube el riesgo (sin forzar MALICIOSO); el texto oculto
 legítimo (p. ej. el *preheader* de marketing) no escala.
 
-Idiomas esperados: opción de admin en *Configuración → Detección → Anti-Clanker*
-o variable `HIDDEN_TEXT_LANGS` en `.env` (por defecto `es,en`). Los patrones se
-amplían por idioma en `config/clanker_rules.yaml` (campo `lang`).
+Idiomas habituales: tarjeta **🌐 Idiomas habituales en contenido oculto** al
+inicio de *Configuración → Detección* (solo admin), con un **desplegable
+buscable de 97 idiomas** (identificación offline con `langid`) o la variable
+`HIDDEN_TEXT_LANGS` en `.env` (por defecto `es,en`). El texto oculto en un
+idioma no seleccionado sube la sospecha. Los patrones de inyección se amplían
+por idioma en `config/clanker_rules.yaml` (campo `lang`).
 
 ### Actualizar reglas Anti-Clanker manualmente
 
