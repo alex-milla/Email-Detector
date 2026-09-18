@@ -1,8 +1,7 @@
 {
-  "version": "2.3.3",
+  "version": "2.3.3.1",
   "release_date": "2026-09-18",
-  "release_id": 391441608,
-  "changelog": "2.3.3 - Rediseno de Entrenamiento: estado guiado y pestanas (Puesta en marcha, Mantenimiento y Modelos) para separar la preparacion inicial del uso habitual",
+  "changelog": "2.3.3.1 - Corrige el error al entrenar (TypeError: Object of type int32 is not JSON serializable) serializando tipos numpy en model_metadata.json",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.3.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.3.1.zip"
 }
