@@ -10,6 +10,12 @@
   var TAB_KEY = 'emd_training_tab';
 
   function $(id) { return document.getElementById(id); }
+  function esc(text) {
+    if (text === undefined || text === null) return '';
+    var div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
   function showSpinner(id) { var e = $(id); if (e) e.classList.remove('hidden'); }
   function hideSpinner(id) { var e = $(id); if (e) e.classList.add('hidden'); }
   function setDisabled(id, disabled, title) {
@@ -367,10 +373,133 @@
     } catch (e) { /* silencioso */ }
   })();
 
+  /* ── Historial de entrenamientos y evolución del AUC ────────────────────── */
+  function num(v, d) {
+    var n = parseFloat(v);
+    return isNaN(n) ? '—' : n.toFixed(d);
+  }
+  function intVal(v) {
+    var n = parseInt(v, 10);
+    return isNaN(n) ? '—' : String(n);
+  }
+  function deltaSpan(delta, digits, higherBetter) {
+    if (delta === null || isNaN(delta)) return '';
+    var arrow = delta > 0 ? '↑' : (delta < 0 ? '↓' : '=');
+    var sign = delta > 0 ? '+' : '';
+    var cls = 'delta-flat';
+    if (delta !== 0 && higherBetter !== null) {
+      cls = ((delta > 0) === (higherBetter === true)) ? 'delta-up' : 'delta-down';
+    } else if (delta !== 0) {
+      cls = 'delta-info';
+    }
+    return ' <span class="' + cls + '">' + arrow + ' ' + sign + delta.toFixed(digits) + '</span>';
+  }
+
+  function renderComparison(runs) {
+    var el = $('modelComparison');
+    if (!el) return;
+    if (!runs || runs.length < 2) {
+      el.innerHTML = '<p class="faint text-sm">Se necesitan al menos dos entrenamientos para comparar. ' +
+        'Marca correos y reentrena; aquí verás el antes/después.</p>';
+      return;
+    }
+    var prev = runs[runs.length - 2];
+    var curr = runs[runs.length - 1];
+    var modelChanged = prev.best_model && prev.best_model !== curr.best_model;
+
+    var items = [
+      '<div class="delta-item"><div class="meta-label">Modelo</div>' +
+        '<div class="meta-value">' + esc(curr.best_model || '-') + '</div>' +
+        (modelChanged ? '<small>antes: ' + esc(prev.best_model) + '</small>' : '') + '</div>',
+      '<div class="delta-item"><div class="meta-label">ROC AUC</div>' +
+        '<div class="meta-value">' + num(curr.auc, 4) +
+        deltaSpan((parseFloat(curr.auc) || 0) - (parseFloat(prev.auc) || 0), 4, true) + '</div></div>',
+      '<div class="delta-item"><div class="meta-label">Muestras</div>' +
+        '<div class="meta-value">' + intVal(curr.total_samples) +
+        deltaSpan((parseInt(curr.total_samples, 10) || 0) - (parseInt(prev.total_samples, 10) || 0), 0, null) + '</div></div>',
+      '<div class="delta-item"><div class="meta-label">Features</div>' +
+        '<div class="meta-value">' + intVal(curr.n_features) +
+        deltaSpan((parseInt(curr.n_features, 10) || 0) - (parseInt(prev.n_features, 10) || 0), 0, null) + '</div></div>',
+      '<div class="delta-item"><div class="meta-label">Umbral F2</div>' +
+        '<div class="meta-value">' + num(curr.threshold, 3) +
+        deltaSpan((parseFloat(curr.threshold) || 0) - (parseFloat(prev.threshold) || 0), 3, null) + '</div></div>'
+    ];
+    el.innerHTML = '<div class="delta-grid">' + items.join('') + '</div>';
+  }
+
+  function renderHistoryTable(runs) {
+    var tb = $('trainingHistoryTable');
+    if (!tb) return;
+    if (!runs || !runs.length) {
+      tb.innerHTML = '<tr><td colspan="7" class="text-center faint">Sin entrenamientos registrados</td></tr>';
+      return;
+    }
+    tb.innerHTML = runs.slice().reverse().slice(0, 20).map(function (r) {
+      var cv = (r.auc_cv_mean !== null && r.auc_cv_mean !== undefined)
+        ? num(r.auc_cv_mean, 4) + ' ± ' + num(r.auc_cv_std, 4) : '—';
+      return '<tr>' +
+        '<td class="nowrap">' + esc((r.trained_at || '').slice(0, 16)) + '</td>' +
+        '<td>' + esc(r.best_model || '-') + '</td>' +
+        '<td>' + num(r.auc, 4) + '</td>' +
+        '<td class="faint">' + cv + '</td>' +
+        '<td>' + intVal(r.total_samples) + '</td>' +
+        '<td>' + intVal(r.n_features) + '</td>' +
+        '<td>' + num(r.threshold, 3) + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function renderAucChart(runs) {
+    var ctx = $('aucHistoryChart');
+    if (!ctx || typeof Chart === 'undefined' || !runs || runs.length === 0) return;
+    var css = getComputedStyle(document.documentElement);
+    var cAccent = css.getPropertyValue('--accent').trim() || '#5b8def';
+    var cFaint = css.getPropertyValue('--text-faint').trim() || '#6f7a99';
+    var grid = 'rgba(120,130,160,0.18)';
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: runs.map(function (r) { return (r.trained_at || '').slice(5, 16); }),
+        datasets: [{
+          label: 'ROC AUC',
+          data: runs.map(function (r) { return r.auc; }),
+          borderColor: cAccent,
+          backgroundColor: cAccent,
+          tension: 0.25,
+          pointRadius: 3,
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: cFaint, maxTicksLimit: 10 }, grid: { color: grid } },
+          y: { beginAtZero: false, ticks: { color: cFaint }, grid: { color: grid } }
+        }
+      }
+    });
+  }
+
+  async function loadTrainingHistory() {
+    if (!$('modelComparison') && !$('aucHistoryChart')) return;
+    try {
+      var d = await window.EMD.fetchJSON('/model/history');
+      var runs = d.runs || [];
+      renderComparison(runs);
+      renderHistoryTable(runs);
+      renderAucChart(runs);
+    } catch (e) {
+      var tb = $('trainingHistoryTable');
+      if (tb) tb.innerHTML = '<tr><td colspan="7" class="text-center faint">No se pudo cargar el historial</td></tr>';
+    }
+  }
+
   /* ── Arranque ───────────────────────────────────────────────────────────── */
   activateTab(defaultTab());
   applyGating();
   loadFeedbackStats();
+  if (IS_ADMIN) loadTrainingHistory();
 
   (async function checkOnLoad() {
     try {

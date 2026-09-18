@@ -118,6 +118,15 @@ class TestLayout:
         assert "Mantenimiento" in html
         assert "advanced-block" in html
 
+    def test_training_has_history_and_metrics(self):
+        html = _read(os.path.join(TEMPLATES, "training.html"))
+        assert 'id="modelComparison"' in html
+        assert 'id="aucHistoryChart"' in html
+        assert 'id="trainingHistoryTable"' in html
+        assert "Evolución del ROC AUC" in html
+        assert "Métricas detalladas" in html
+        assert "Matriz de confusión" in html
+
     def test_dashboard_page_migrated(self):
         html = _read(os.path.join(TEMPLATES, "index.html"))
         assert "/static/js/dashboard.js" in html

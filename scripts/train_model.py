@@ -54,6 +54,8 @@ except ImportError:
 
 PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..")
 ENV_PATH    = os.path.join(PROJECT_DIR, "config", ".env")
+HISTORY_PATH = os.path.join(PROJECT_DIR, "results", "training_history.json")
+HISTORY_MAX_RUNS = 50
 USE_GPU     = False
 try:
     if os.path.exists(ENV_PATH):
@@ -228,6 +230,23 @@ def _compute_checksum(filepath):
         for chunk in iter(lambda: f.read(8192), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _append_training_history(run):
+    """Añade un registro de entrenamiento a results/training_history.json."""
+    history = []
+    if os.path.exists(HISTORY_PATH):
+        try:
+            with open(HISTORY_PATH) as f:
+                history = json.load(f)
+            if not isinstance(history, list):
+                history = []
+        except (ValueError, OSError):
+            history = []
+    history.append(run)
+    history = history[-HISTORY_MAX_RUNS:]
+    os.makedirs(os.path.dirname(HISTORY_PATH), exist_ok=True)
+    _write_json(HISTORY_PATH, history)
 
 
 def main():
@@ -417,6 +436,40 @@ def main():
         "calibration_applied":     len(X_balanced) >= 50,
     }
     _write_json(os.path.join(MODEL_DIR, "model_metadata.json"), metadata)
+
+    # Snapshot para el historial de entrenamientos (antes/después en la UI)
+    best_res = results.get(best_model_name, {})
+    try:
+        top_features = {}
+        if isinstance(metadata.get("feature_importance"), dict):
+            top_features = dict(sorted(
+                metadata["feature_importance"].items(),
+                key=lambda kv: kv[1], reverse=True)[:15])
+        run = {
+            "trained_at":              metadata["trained_at"],
+            "best_model":              best_model_name,
+            "auc":                     best_auc,
+            "auc_cv_mean":             best_res.get("auc_cv_mean"),
+            "auc_cv_std":              best_res.get("auc_cv_std"),
+            "total_samples":           metadata["total_samples"],
+            "n_features":              len(feature_names),
+            "threshold":               optimal_threshold,
+            "smote_applied":           metadata["smote_applied"],
+            "calibration_applied":     metadata["calibration_applied"],
+            "gpu_used":                USE_GPU,
+            "models": {n: {"auc_test": r.get("auc_test"),
+                           "auc_cv_mean": r.get("auc_cv_mean"),
+                           "auc_cv_std": r.get("auc_cv_std")}
+                       for n, r in results.items() if "error" not in r},
+            "confusion_matrix":        best_res.get("confusion_matrix"),
+            "feature_importance":      top_features,
+            "n_features_before_prune": metadata["n_features_before_prune"],
+            "n_features_after_prune":  metadata["n_features_after_prune"],
+        }
+        _append_training_history(run)
+        print(f"  Historial guardado: {HISTORY_PATH}")
+    except Exception as e:
+        print(f"  AVISO: no se pudo guardar el historial de entrenamientos: {e}")
 
     print(f"\n  Mejor modelo: {best_model_name} (AUC {best_auc:.4f})")
     ranking = sorted(

@@ -11,7 +11,9 @@ from flask import request, jsonify, render_template, session
 from web.services.decorators import login_required, admin_required, current_user
 from web.services.history_service import get_model_meta
 from web.services.validation_service import validate_script_path
-from web.services.training_service import run_training, load_training_state
+from web.services.training_service import (
+    run_training, load_training_state, get_training_history,
+)
 from web.services.audit_service import log_admin_action
 
 
@@ -130,6 +132,11 @@ def register_routes(app):
     @login_required
     def training_status():
         return jsonify(load_training_state())
+
+    @app.route("/model/history")
+    @admin_required
+    def model_history():
+        return jsonify({"runs": get_training_history(limit=50)})
 
     @app.route("/api/models/toggle", methods=["GET"])
     @admin_required

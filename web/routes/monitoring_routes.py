@@ -20,6 +20,19 @@ def _get_version():
         return "unknown"
 
 
+def _load_model_meta():
+    """Lee model_metadata.json tolerando ausencia o JSON corrupto."""
+    path = os.path.join(MODELS_DIR, "model_metadata.json")
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (ValueError, OSError):
+        return {}
+
+
 # ── Métricas Prometheus (soft import) ────────────────────────────────────────
 try:
     from prometheus_client import generate_latest, Counter, Gauge, Histogram, CONTENT_TYPE_LATEST
@@ -62,15 +75,12 @@ def register_routes(app):
         malicious = sum(1 for h in history if h.get("prediction") == "MALICIOSO")
         MALICIOUS_GAUGE.set(malicious)
 
-        model_meta_path = os.path.join(MODELS_DIR, "model_metadata.json")
-        if os.path.exists(model_meta_path):
-            try:
-                with open(model_meta_path) as f:
-                    meta = json.load(f)
-                MODEL_AUC.set(meta.get("auc", 0))
-                MODEL_SAMPLES.set(meta.get("total_samples", 0))
-            except Exception:
-                pass
+        meta = _load_model_meta()
+        try:
+            MODEL_AUC.set(meta.get("auc", 0))
+            MODEL_SAMPLES.set(meta.get("total_samples", 0))
+        except Exception:
+            pass
 
         return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
 
@@ -110,11 +120,7 @@ def register_routes(app):
             })
 
         if action == "stats":
-            model_meta_path = os.path.join(MODELS_DIR, "model_metadata.json")
-            meta = {}
-            if os.path.exists(model_meta_path):
-                with open(model_meta_path) as f:
-                    meta = json.load(f)
+            meta = _load_model_meta()
             try:
                 from web.auth import get_db as _get_db
                 conn = _get_db()
@@ -161,17 +167,16 @@ def register_routes(app):
             except (ValueError, TypeError):
                 pass
 
-        model_meta_path = os.path.join(MODELS_DIR, "model_metadata.json")
-        meta = {}
-        if os.path.exists(model_meta_path):
-            with open(model_meta_path) as f:
-                meta = json.load(f)
+        meta = _load_model_meta()
 
         drift_state_path = os.path.join(PROJECT_DIR, "results", "drift_state.json")
         drift = {}
         if os.path.exists(drift_state_path):
-            with open(drift_state_path) as f:
-                drift = json.load(f)
+            try:
+                with open(drift_state_path) as f:
+                    drift = json.load(f)
+            except (ValueError, OSError):
+                drift = {}
 
         audit_log_path = os.path.join(PROJECT_DIR, "logs", "audit.log")
         audit_lines = 0

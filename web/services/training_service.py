@@ -6,7 +6,22 @@ from datetime import datetime
 
 PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
 TRAINING_STATE_FILE = os.path.join(PROJECT_DIR, "results", "training_state.json")
+TRAINING_HISTORY_FILE = os.path.join(PROJECT_DIR, "results", "training_history.json")
 os.makedirs(os.path.join(PROJECT_DIR, "results"), exist_ok=True)
+
+
+def get_training_history(limit=50):
+    """Lee el historial de entrenamientos (tolerante a ausencia/corrupción)."""
+    if not os.path.exists(TRAINING_HISTORY_FILE):
+        return []
+    try:
+        with open(TRAINING_HISTORY_FILE) as f:
+            data = json.load(f)
+        if not isinstance(data, list):
+            return []
+    except (ValueError, OSError):
+        return []
+    return data[-limit:] if limit else data
 
 
 def load_training_state():

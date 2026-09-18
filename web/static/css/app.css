@@ -943,6 +943,32 @@ code.small-code { font-family: var(--font-mono); font-size: 0.82em; color: var(-
 .advanced-block summary { cursor: pointer; color: var(--accent); font-size: 0.9em; padding: 4px 0; user-select: none; }
 .advanced-block[open] summary { margin-bottom: 8px; }
 
+/* Historial de entrenamientos y métricas del modelo */
+.delta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.delta-item { background: var(--bg-inner); border: 1px solid var(--border-alt); border-radius: 8px; padding: 12px; }
+.delta-item small { color: var(--text-faint); font-size: 0.78em; }
+.delta-up   { color: var(--success); font-weight: 700; font-size: 0.85em; }
+.delta-down { color: var(--danger); font-weight: 700; font-size: 0.85em; }
+.delta-flat { color: var(--text-faint); font-weight: 700; font-size: 0.85em; }
+.delta-info { color: var(--accent); font-weight: 700; font-size: 0.85em; }
+
+.metrics-2col { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.cm-table { border-collapse: collapse; font-size: 0.85em; }
+.cm-table th, .cm-table td { padding: 7px 10px; border: 1px solid var(--border-alt); text-align: center; }
+.cm-table th { color: var(--text-faint); font-size: 0.78em; font-weight: 600; }
+.cm-table td.ok  { color: var(--success); font-weight: 700; background: rgba(61,220,151,.08); }
+.cm-table td.bad { color: var(--danger); font-weight: 700; background: rgba(240,100,122,.08); }
+
+.metrics-list { list-style: none; }
+.metrics-list li { padding: 5px 0; border-bottom: 1px solid var(--border-alt); font-size: 0.88em; color: var(--text-muted); }
+.metrics-list li:last-child { border-bottom: none; }
+
+.fi-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; font-size: 0.82em; }
+.fi-name { flex: 0 0 42%; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fi-bar { flex: 1; height: 8px; background: var(--bg-inner); border-radius: 4px; overflow: hidden; }
+.fi-fill { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.fi-val { flex: 0 0 62px; text-align: right; color: var(--text-faint); }
+
 .feedback-banner {
   background: var(--bg-inner);
   border: 1px solid var(--border);

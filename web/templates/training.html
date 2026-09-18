@@ -279,6 +279,110 @@
             <div class="alert alert-info">Todavía no hay un modelo entrenado. Completa la pestaña "Puesta en marcha".</div>
             {% endif %}
         </div>
+
+        <div class="card" id="comparisonCard">
+            <div class="card-header">
+                <h2>Comparación con el entrenamiento anterior</h2>
+                <p>Qué cambió respecto a la última vez que entrenaste.</p>
+            </div>
+            <div id="modelComparison"><p class="faint text-sm">Sin historial todavía.</p></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Evolución del ROC AUC</h2>
+                <p>Cada punto es un entrenamiento completado.</p>
+            </div>
+            <div class="chart-wrap"><canvas id="aucHistoryChart"></canvas></div>
+            <div class="mt-3">
+                <div class="section-title mb-1">Historial de entrenamientos</div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr>
+                            <th>Fecha</th><th>Modelo</th><th>AUC</th><th>CV</th>
+                            <th>Muestras</th><th>Features</th><th>Umbral</th>
+                        </tr></thead>
+                        <tbody id="trainingHistoryTable">
+                            <tr><td colspan="7" class="text-center faint">Cargando…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {% if model_exists and model_meta and model_meta.get('results') %}
+        {% set best = model_meta.get('best_model') %}
+        {% set best_res = model_meta.get('results', {}).get(best, {}) %}
+        <div class="card">
+            <div class="card-header">
+                <h2>Métricas detalladas</h2>
+                <p>Qué ha aprendido el modelo actual.</p>
+            </div>
+
+            <div class="metrics-2col">
+                <div>
+                    <div class="section-title mb-1">Matriz de confusión — {{ best }}</div>
+                    {% set cm = best_res.get('confusion_matrix') %}
+                    {% if cm and cm|length == 2 and cm[0]|length == 2 %}
+                    <table class="cm-table">
+                        <thead><tr><th></th><th>Pred. benigno</th><th>Pred. malicioso</th></tr></thead>
+                        <tbody>
+                            <tr><th>Real benigno</th>
+                                <td class="ok">{{ cm[0][0] }}</td>
+                                <td class="bad">{{ cm[0][1] }}</td></tr>
+                            <tr><th>Real malicioso</th>
+                                <td class="bad">{{ cm[1][0] }}</td>
+                                <td class="ok">{{ cm[1][1] }}</td></tr>
+                        </tbody>
+                    </table>
+                    <p class="faint text-sm">Diagonal = aciertos · fuera de diagonal = errores.</p>
+                    {% else %}
+                    <p class="faint text-sm">Matriz de confusión no disponible.</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <div class="section-title mb-1">Configuración del modelo</div>
+                    <ul class="metrics-list">
+                        <li>Umbral F2: <strong>{{ "%.3f"|format(model_meta.get('threshold', 0.5)) }}</strong></li>
+                        <li>SMOTE: <strong>{{ 'Sí' if model_meta.get('smote_applied') else 'No' }}</strong></li>
+                        <li>Calibración: <strong>{{ 'Sí' if model_meta.get('calibration_applied') else 'No' }}</strong></li>
+                        <li>Poda de features: <strong>{{ model_meta.get('n_features_before_prune', 0) }} → {{ model_meta.get('n_features_after_prune', 0) }}</strong></li>
+                        <li>Features finales: <strong>{{ model_meta.get('feature_names', [])|length }}</strong></li>
+                    </ul>
+                </div>
+            </div>
+
+            {% set fi = model_meta.get('feature_importance', {}) %}
+            {% if fi %}
+            <div class="mt-3">
+                <div class="section-title mb-1">Top features por importancia</div>
+                {% set fi_max = fi.values()|max %}
+                {% for name, imp in fi|dictsort(by='value', reverse=true) %}
+                {% if loop.index <= 10 %}
+                <div class="fi-row">
+                    <span class="fi-name" title="{{ name }}">{{ name }}</span>
+                    <span class="fi-bar"><span class="fi-fill" style="width: {{ (imp / fi_max * 100)|round(1) if fi_max else 0 }}%"></span></span>
+                    <span class="fi-val">{{ "%.4f"|format(imp) }}</span>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if model_meta.get('low_importance_features') or model_meta.get('high_correlation_pairs') %}
+            <div class="mt-3 faint text-sm">
+                {% if model_meta.get('low_importance_features') %}
+                <div><strong>Features de baja importancia:</strong>
+                    {{ model_meta.get('low_importance_features', [])[:8]|join(', ') }}{% if model_meta.get('low_importance_features', [])|length > 8 %}…{% endif %}</div>
+                {% endif %}
+                {% if model_meta.get('high_correlation_pairs') %}
+                <div class="mt-1"><strong>Pares con alta correlación:</strong>
+                    {% for pair in model_meta.get('high_correlation_pairs', [])[:5] %}{{ pair[0] }} ↔ {{ pair[1] }}{% if not loop.last %}, {% endif %}{% endfor %}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
     {% endif %}
 </div>
