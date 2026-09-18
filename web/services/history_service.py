@@ -148,6 +148,11 @@ def get_model_meta():
     models_dir = os.path.join(PROJECT_DIR, "models")
     p = os.path.join(models_dir, "model_metadata.json")
     if os.path.exists(p):
-        with open(p) as f:
-            return json.load(f)
+        try:
+            with open(p) as f:
+                return json.load(f)
+        except (ValueError, OSError):
+            # Metadata ausente/corrupta (p. ej. entrenamiento interrumpido):
+            # no debe tumbar el dashboard ni la página de entrenamiento.
+            return {}
     return {}

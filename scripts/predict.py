@@ -61,8 +61,11 @@ def _compute_checksum(filepath):
 def _load_checksums():
     checksum_path = os.path.join(PROJECT_DIR, "models", "model_checksums.json")
     if os.path.exists(checksum_path):
-        with open(checksum_path) as f:
-            return json.load(f)
+        try:
+            with open(checksum_path) as f:
+                return json.load(f)
+        except (ValueError, OSError):
+            return {}
     return {}
 
 
@@ -229,8 +232,14 @@ def predict_email(eml_path, use_virustotal=True):
     if not os.path.exists(METADATA_PATH):
         return {"error": "Modelo no encontrado. Ejecuta train_model.py", "features": features}
 
-    with open(METADATA_PATH) as f:
-        model_meta = json.load(f)
+    try:
+        with open(METADATA_PATH) as f:
+            model_meta = json.load(f)
+    except (ValueError, OSError):
+        return {
+            "error": "model_metadata.json ausente o corrupto. Reentrena el modelo.",
+            "features": features,
+        }
 
     threshold   = model_meta.get("threshold", 0.5)
     models_dict = load_all_models(model_meta)

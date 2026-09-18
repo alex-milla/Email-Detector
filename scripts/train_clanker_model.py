@@ -54,6 +54,14 @@ def _json_default(o):
         return o.tolist()
     return str(o)
 
+
+def _write_json(path, data):
+    """Escritura atómica: no deja el fichero a medias si falla el dump."""
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(data, f, indent=2, default=_json_default)
+    os.replace(tmp, path)
+
 # Features introducidas en Anti-Clanker v1.2.0 que el modelo debe aprender a usar
 NEW_FEATURES_V120 = [
     "clanker_score_overengineered_css",
@@ -190,8 +198,7 @@ def main():
 
     os.makedirs(MODEL_DIR, exist_ok=True)
     joblib.dump(model, os.path.join(MODEL_DIR, "anti_clanker.joblib"))
-    with open(os.path.join(MODEL_DIR, "anti_clanker_cols.json"), "w") as f:
-        json.dump(clanker_cols, f, default=_json_default)
+    _write_json(os.path.join(MODEL_DIR, "anti_clanker_cols.json"), clanker_cols)
     print(f"\n  Modelo guardado: {os.path.join(MODEL_DIR, 'anti_clanker.joblib')}")
 
     metadata = {}
@@ -210,8 +217,7 @@ def main():
         "anti_clanker_features":   clanker_cols,
         "anti_clanker_samples":    {"benign": n_benign, "malicious": n_malicious},
     })
-    with open(METADATA_PATH, "w") as f:
-        json.dump(metadata, f, indent=2, default=_json_default)
+    _write_json(METADATA_PATH, metadata)
     print(f"  Metadata actualizada: {METADATA_PATH}")
     print("\n  NOTA: email_classifier.joblib y all_models/ NO han sido modificados.")
 

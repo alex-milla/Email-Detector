@@ -37,6 +37,14 @@ def _json_default(o):
         return o.tolist()
     return str(o)
 
+
+def _write_json(path, data):
+    """Escritura atómica: no deja el fichero a medias si falla el dump."""
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(data, f, indent=2, default=_json_default)
+    os.replace(tmp, path)
+
 try:
     from imblearn.over_sampling import SMOTE
     HAS_SMOTE = True
@@ -376,8 +384,7 @@ def main():
     # Guardar modelo Anti-Clanker si se entrenó
     if clanker_model is not None:
         joblib.dump(clanker_model, os.path.join(MODEL_DIR, "anti_clanker.joblib"))
-        with open(os.path.join(MODEL_DIR, "anti_clanker_cols.json"), "w") as f:
-            json.dump(clanker_cols, f, default=_json_default)
+        _write_json(os.path.join(MODEL_DIR, "anti_clanker_cols.json"), clanker_cols)
         print("  Anti-Clanker guardado")
 
     # Checksums para validación en producción
@@ -387,8 +394,7 @@ def main():
             if fname.endswith(".joblib"):
                 fpath = os.path.join(root, fname)
                 checksums[os.path.relpath(fpath, MODEL_DIR)] = _compute_checksum(fpath)
-    with open(os.path.join(MODEL_DIR, "model_checksums.json"), "w") as f:
-        json.dump(checksums, f, indent=2)
+    _write_json(os.path.join(MODEL_DIR, "model_checksums.json"), checksums)
     print("  Checksums SHA256 guardados")
 
     smote_applied = HAS_SMOTE and (ratio < 0.5 or ratio > 2.0)
@@ -410,8 +416,7 @@ def main():
         "n_features_after_prune":  len(feature_names),
         "calibration_applied":     len(X_balanced) >= 50,
     }
-    with open(os.path.join(MODEL_DIR, "model_metadata.json"), "w") as f:
-        json.dump(metadata, f, indent=2, default=_json_default)
+    _write_json(os.path.join(MODEL_DIR, "model_metadata.json"), metadata)
 
     print(f"\n  Mejor modelo: {best_model_name} (AUC {best_auc:.4f})")
     ranking = sorted(
