@@ -3,5 +3,6 @@
   "release_date": "2026-09-18",
   "changelog": "2.3.7 - Anti-Clanker: selector multi-idioma (96 idiomas, desplegable con buscador) e identificacion offline con langid (ko, ja, zh, ru, ar, hi...)",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.7.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.7.zip",
+  "release_id": 391525118
 }
