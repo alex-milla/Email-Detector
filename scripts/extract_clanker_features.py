@@ -3,6 +3,8 @@
 Lee clanker_rules.yaml y genera un vector de features numérico a partir del
 HTML raw de un correo. Se integra con extract_features.py del ensemble.
 
+v1.2.0 — Añade detección de CSS sobre-ingenierizado, Clipboard API abuse
+(ClickFix attacks) y Prompt Injection (OWASP Top 10 LLM 2026).
 v1.1.0 — Añade análisis estructural del DOM y nuevas categorías de reglas
 basadas en "Forgetful Foes and Absentminded AIs".
 """
@@ -86,8 +88,9 @@ def _extract_zones(html_raw: str) -> Dict[str, str]:
         "inline_style": "",
         "script_block": "",
     }
-    # Comentarios HTML
-    zones["html_comment"] = " ".join(re.findall(r'<!--(.*?)-->', html_raw,
+    # Comentarios HTML — incluir delimitadores <!-- --> para que los patrones
+    # que empiezan con <!-- puedan hacer match
+    zones["html_comment"] = " ".join(re.findall(r'(<!--.*?-->)', html_raw,
                                                   re.DOTALL | re.IGNORECASE))
     # Atributos href
     zones["href_attr"] = " ".join(re.findall(r'href=["\']([^"\']*)["\']',
@@ -118,6 +121,11 @@ def _extract_dom_features(html_raw: str) -> Dict[str, Any]:
         "clanker_total_comments":     0,
         "clanker_hex_suffix_count":   0,
         "clanker_tag_count":          0,
+        # ── v1.2.0: nuevas features CSS/script/event ──
+        "clanker_css_property_count":    0,
+        "clanker_suspicious_css_count":  0,
+        "clanker_script_block_count":    0,
+        "clanker_event_handler_count":   0,
     }
 
     if not html_raw:
@@ -162,6 +170,36 @@ def _extract_dom_features(html_raw: str) -> Dict[str, Any]:
         html_raw, re.IGNORECASE)
     features["clanker_hex_suffix_count"] = len(hex_suffixes)
 
+    # ── v1.2.0: nuevas features ──────────────────────────────────────────────
+
+    # 6. Contar propiedades CSS únicas (en style inline y bloques <style>)
+    css_props = re.findall(r'([a-z-]+)\s*:', html_raw, re.IGNORECASE)
+    features["clanker_css_property_count"] = len(set(
+        p.lower() for p in css_props
+        if len(p) > 2 and not p.lower().startswith(('http', 'ftp', 'dat'))
+    ))
+
+    # 7. Propiedades CSS sospechosas para emails (típicas de LLMs)
+    suspicious_css = {
+        'orphans', 'widows', 'font-variant-ligatures',
+        'hyphens', 'ligatures', 'text-rendering',
+    }
+    features["clanker_suspicious_css_count"] = sum(
+        1 for prop in css_props if prop.lower() in suspicious_css
+    )
+
+    # 8. Contar bloques <script>
+    features["clanker_script_block_count"] = len(
+        re.findall(r'<script\b', html_raw, re.IGNORECASE)
+    )
+
+    # 9. Contar event handlers inline (onclick, onload, onerror, etc.)
+    event_handlers = re.findall(
+        r'\bon\w+\s*=\s*["\'][^"\']*["\']',
+        html_raw, re.IGNORECASE
+    )
+    features["clanker_event_handler_count"] = len(event_handlers)
+
     return features
 
 
@@ -187,6 +225,7 @@ def extract_clanker_features(html_raw: str) -> Dict[str, Any]:
         "yellow_highlight", "localhost_url", "verbose_code_comment",
         "overengineered_html", "iterative_prompting", "hex_suffix",
         "placeholder_href", "docstring_comment", "overengineered_html",
+        "overengineered_css", "clipboard_abuse", "prompt_injection",
     ]
     for cat in categories:
         features[f"clanker_score_{cat}"] = 0.0
@@ -255,6 +294,13 @@ def extract_clanker_features(html_raw: str) -> Dict[str, Any]:
     if features["clanker_div_vs_table_ratio"] >= 5 and features["clanker_tag_count"] >= 20:
         structural_boost += 0.05
     if features["clanker_hex_suffix_count"] >= 2:
+        structural_boost += 0.10
+    # ── v1.2.0: nuevos bonus estructurales ──
+    if features["clanker_suspicious_css_count"] >= 3:
+        structural_boost += 0.15
+    if features["clanker_event_handler_count"] >= 5:
+        structural_boost += 0.10
+    if features["clanker_script_block_count"] >= 1:
         structural_boost += 0.10
 
     features["clanker_weighted_score"] = round(

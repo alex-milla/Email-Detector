@@ -1,9 +1,12 @@
 meta:
-  version: "1.1.0"
-  updated_at: "2026-04-19"
+  version: "1.2.0"
+  updated_at: "2026-09-18"
   author: "Email Malware Detector Project"
   description: "Reglas para detectar artefactos de LLMs en correos maliciosos"
   update_url: ""
+  changelog:
+    - "v1.2.0: Deteccion de CSS sobre-ingenierizado, Clipboard API abuse (ClickFix), Prompt Injection"
+    - "v1.1.0: Reglas iterativas, hex suffix, placeholder href, docstrings, overengineered HTML"
 
 rules:
 
@@ -299,3 +302,141 @@ rules:
     description: "Comentarios que declaran intencionalmente ausencia de elementos (señal de prompting directo al LLM)"
     added_date: "2026-04-19"
     source: "Forgetful Foes and Absentminded AIs"
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  #  Reglas v1.2.0 — CSS sobre-ingenierizado, Clipboard API abuse, Prompt Injection
+  #  Añadidas: 2026-09-18
+  #  Fuentes: KnowBe4 Research, Sansec, OWASP Top 10 LLM 2026, Microsoft Security
+  # ═══════════════════════════════════════════════════════════════════════════════
+
+  # ── CSS Sobre-Ingenierizado ──
+  # Los LLMs generan CSS con propiedades de tipografía de impresión que no tienen
+  # sentido en emails. Un solo tag <a> con 19+ propiedades es un fuerte indicador.
+
+  - id: CLK-025
+    category: overengineered_css
+    pattern: 'orphans\s*:\s*\d+'
+    target: html_body
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Propiedad CSS 'orphans' inapropiada para emails, tipica de LLM (tipografia de impresion)"
+    added_date: "2026-09-18"
+    source: "KnowBe4 Research 2026"
+
+  - id: CLK-026
+    category: overengineered_css
+    pattern: 'widows\s*:\s*\d+'
+    target: html_body
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Propiedad CSS 'widows' inapropiada para emails, tipica de LLM (tipografia de impresion)"
+    added_date: "2026-09-18"
+    source: "KnowBe4 Research 2026"
+
+  - id: CLK-027
+    category: overengineered_css
+    pattern: 'font-variant-ligatures\s*:\s*normal'
+    target: html_body
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Propiedad CSS 'font-variant-ligatures' inapropiada para emails, tipica de LLM"
+    added_date: "2026-09-18"
+    source: "KnowBe4 Research 2026"
+
+  - id: CLK-027b
+    category: overengineered_css
+    pattern: 'hyphens\s*:\s*(?:auto|manual|none)'
+    target: html_body
+    severity: medium
+    confidence: medium
+    fp_risk: medium
+    enabled: true
+    description: "Propiedad CSS 'hyphens' poco comun en emails legítimos, observada en LLMs"
+    added_date: "2026-09-18"
+    source: "KnowBe4 Research 2026"
+
+  - id: CLK-027c
+    category: overengineered_css
+    pattern: 'text-rendering\s*:\s*(?:optimizeSpeed|optimizeLegibility|geometricPrecision)'
+    target: html_body
+    severity: medium
+    confidence: medium
+    fp_risk: medium
+    enabled: true
+    description: "Propiedad CSS 'text-rendering' poco comun en emails, observada en LLMs"
+    added_date: "2026-09-18"
+    source: "KnowBe4 Research 2026"
+
+  # ── Clipboard API Abuse (ClickFix Attacks) ──
+  # Ataques ClickFix: el usuario es engañado para copiar-pegar comandos maliciosos
+  # en terminal. Surgieron en 2026, usados por actores estatales y criminales.
+
+  - id: CLK-028
+    category: clipboard_abuse
+    pattern: 'navigator\.clipboard\.writeText\s*\('
+    target: script_block
+    severity: critical
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Uso de navigator.clipboard.writeText - posible ataque ClickFix"
+    added_date: "2026-09-18"
+    source: "Sansec Research 2026"
+
+  - id: CLK-029
+    category: clipboard_abuse
+    pattern: 'navigator\.clipboard\.writeText\s*\([^)]*(?:powershell|cmd|bash|terminal|run|execute|iex|iwr|downloadstring|base64)'
+    target: script_block
+    severity: critical
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Clipboard writeText con comandos de terminal - alto riesgo ClickFix"
+    added_date: "2026-09-18"
+    source: "Sansec Research 2026"
+
+  # ── Prompt Injection ──
+  # OWASP #1 threat para LLMs en 2026. Intentos de manipular detectores basados en IA
+  # mediante prompts ocultos en comentarios HTML o metadatos.
+
+  - id: CLK-030
+    category: prompt_injection
+    pattern: '<!--\s*(?:IGNORE\s+ALL\s+PREVIOUS\s+INSTRUCTIONS|DISREGARD\s+(?:ALL\s+)?(?:PREVIOUS|PRIOR)|FORGET\s+(?:ALL\s+)?(?:PREVIOUS|PRIOR))'
+    target: html_comment
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Intento de prompt injection - instrucciones para ignorar contexto previo"
+    added_date: "2026-09-18"
+    source: "OWASP Top 10 LLM 2026"
+
+  - id: CLK-031
+    category: prompt_injection
+    pattern: '<!--\s*(?:SYSTEM\s+PROMPT|USER\s+PROMPT|ASSISTANT\s+PROMPT|<\|im_start\|>|<\|system\|>|<\|user\|>|<\|assistant\|>)'
+    target: html_comment
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Intento de prompt injection - referencia a roles de LLM (system/user/assistant)"
+    added_date: "2026-09-18"
+    source: "OWASP Top 10 LLM 2026"
+
+  - id: CLK-032
+    category: prompt_injection
+    pattern: '<!--\s*(?:You\s+are\s+a|Act\s+as\s+a|Pretend\s+you\s+are|From\s+now\s+on\s+you\s+are)'
+    target: html_comment
+    severity: high
+    confidence: medium
+    fp_risk: medium
+    enabled: true
+    description: "Intento de prompt injection - redefinicion de rol del LLM"
+    added_date: "2026-09-18"
+    source: "OWASP Top 10 LLM 2026"
