@@ -176,6 +176,7 @@ def validate_no_forward_reference_in_app():
                     "requests", "Version", "warnings", "math", "collections",
                     "functools", "typing", "pathlib", "csv", "argparse",
                     "urllib", "random", "string", "inspect", "builtins",
+                    "__file__", "__name__", "__doc__", "__builtins__",
                     "None", "True", "False", "print", "len", "range", "list",
                     "dict", "set", "tuple", "int", "str", "float", "bool",
                     "type", "isinstance", "hasattr", "getattr", "setattr",
@@ -213,6 +214,18 @@ def validate_no_forward_reference_in_app():
         elif isinstance(node, ast.ImportFrom):
             for alias in node.names:
                 defined.add(alias.asname or alias.name)
+        elif isinstance(node, (ast.Try, ast.If, ast.With, ast.For, ast.While)):
+            for sub in ast.walk(node):
+                if not isinstance(sub, (ast.Assign, ast.AnnAssign)):
+                    continue
+                targets = sub.targets if isinstance(sub, ast.Assign) else [sub.target]
+                for target in targets:
+                    if isinstance(target, ast.Name):
+                        defined.add(target.id)
+                    elif isinstance(target, ast.Tuple):
+                        for elt in target.elts:
+                            if isinstance(elt, ast.Name):
+                                defined.add(elt.id)
 
     return errors
 
