@@ -3,5 +3,6 @@
   "release_date": "2026-09-18",
   "changelog": "2.3.5 - ClickFix: motor de deteccion de copiar/pegar PowerShell ofuscado, desofuscado sin ejecutar (Base64/-enc, fromCharCode, atob, variables/arrays JS, [char]) y extraccion de la URL/dominio/IP original (C2), con escalada a MALICIOSO y consulta a VirusTotal",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.5.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.5.zip",
+  "release_id": 391493061
 }
