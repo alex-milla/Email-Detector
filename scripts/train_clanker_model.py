@@ -41,6 +41,19 @@ PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..")
 MODEL_DIR   = os.path.join(PROJECT_DIR, "models")
 METADATA_PATH = os.path.join(MODEL_DIR, "model_metadata.json")
 
+
+def _json_default(o):
+    """Convierte tipos numpy a tipos nativos para json.dump."""
+    if isinstance(o, np.integer):
+        return int(o)
+    if isinstance(o, np.floating):
+        return float(o)
+    if isinstance(o, np.bool_):
+        return bool(o)
+    if isinstance(o, np.ndarray):
+        return o.tolist()
+    return str(o)
+
 # Features introducidas en Anti-Clanker v1.2.0 que el modelo debe aprender a usar
 NEW_FEATURES_V120 = [
     "clanker_score_overengineered_css",
@@ -178,7 +191,7 @@ def main():
     os.makedirs(MODEL_DIR, exist_ok=True)
     joblib.dump(model, os.path.join(MODEL_DIR, "anti_clanker.joblib"))
     with open(os.path.join(MODEL_DIR, "anti_clanker_cols.json"), "w") as f:
-        json.dump(clanker_cols, f)
+        json.dump(clanker_cols, f, default=_json_default)
     print(f"\n  Modelo guardado: {os.path.join(MODEL_DIR, 'anti_clanker.joblib')}")
 
     metadata = {}
@@ -198,7 +211,7 @@ def main():
         "anti_clanker_samples":    {"benign": n_benign, "malicious": n_malicious},
     })
     with open(METADATA_PATH, "w") as f:
-        json.dump(metadata, f, indent=2)
+        json.dump(metadata, f, indent=2, default=_json_default)
     print(f"  Metadata actualizada: {METADATA_PATH}")
     print("\n  NOTA: email_classifier.joblib y all_models/ NO han sido modificados.")
 

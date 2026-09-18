@@ -24,6 +24,19 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.preprocessing import StandardScaler
 import joblib
 
+
+def _json_default(o):
+    """Convierte tipos numpy a tipos nativos para json.dump."""
+    if isinstance(o, np.integer):
+        return int(o)
+    if isinstance(o, np.floating):
+        return float(o)
+    if isinstance(o, np.bool_):
+        return bool(o)
+    if isinstance(o, np.ndarray):
+        return o.tolist()
+    return str(o)
+
 try:
     from imblearn.over_sampling import SMOTE
     HAS_SMOTE = True
@@ -364,7 +377,7 @@ def main():
     if clanker_model is not None:
         joblib.dump(clanker_model, os.path.join(MODEL_DIR, "anti_clanker.joblib"))
         with open(os.path.join(MODEL_DIR, "anti_clanker_cols.json"), "w") as f:
-            json.dump(clanker_cols, f)
+            json.dump(clanker_cols, f, default=_json_default)
         print("  Anti-Clanker guardado")
 
     # Checksums para validación en producción
@@ -398,7 +411,7 @@ def main():
         "calibration_applied":     len(X_balanced) >= 50,
     }
     with open(os.path.join(MODEL_DIR, "model_metadata.json"), "w") as f:
-        json.dump(metadata, f, indent=2)
+        json.dump(metadata, f, indent=2, default=_json_default)
 
     print(f"\n  Mejor modelo: {best_model_name} (AUC {best_auc:.4f})")
     ranking = sorted(
