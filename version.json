@@ -1,6 +1,7 @@
 {
   "version": "2.3.4",
   "release_date": "2026-09-18",
+  "release_id": 391474244,
   "changelog": "2.3.4 - Entrenamiento: historial de entrenamientos, comparacion antes/despues y metricas detalladas (matriz de confusion, top features, evolucion del AUC)",
   "min_version": "1.0.0",
   "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.4.zip"
