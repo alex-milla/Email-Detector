@@ -1,6 +1,7 @@
 {
   "version": "2.3.2",
   "release_date": "2026-09-18",
+  "release_id": 391413556,
   "changelog": "2.3.2 - Corrige el informe de amenazas cuando VirusTotal esta desactivado y muestra las cabeceras SPF/DKIM/DMARC/ARC, penalizando los fallos de autenticacion",
   "min_version": "1.0.0",
   "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.2.zip"
