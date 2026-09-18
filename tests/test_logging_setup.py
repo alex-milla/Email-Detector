@@ -82,3 +82,25 @@ class TestStandaloneLogging:
         configure_standalone_logging(app, str(logs_dir))
         assert logs_dir.is_dir()
         assert (logs_dir / "access.log").exists()
+
+
+class TestFrontendLogging:
+    def test_writes_frontend_log(self, tmp_path):
+        from web.services.logging_setup import configure_frontend_logging
+
+        logger = logging.getLogger("web.frontend")
+        for handler in list(logger.handlers):
+            logger.removeHandler(handler)
+            handler.close()
+
+        try:
+            active = configure_frontend_logging(str(tmp_path))
+            active.warning("front-boom")
+            for handler in active.handlers:
+                handler.flush()
+            content = (tmp_path / "frontend.log").read_text(encoding="utf-8")
+            assert "front-boom" in content
+        finally:
+            for handler in list(logger.handlers):
+                logger.removeHandler(handler)
+                handler.close()

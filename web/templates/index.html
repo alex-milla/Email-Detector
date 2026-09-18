@@ -2,98 +2,13 @@
 
 {% block title %}Email Malware Detector{% endblock %}
 
-{% block styles %}
-    <style>
-        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:15px; margin-bottom:30px; }
-        .stat-card { background:var(--bg-card); border-radius:12px; padding:20px; border-left:4px solid var(--accent); }
-        .stat-card.danger  { border-left-color:var(--danger); }
-        .stat-card.success { border-left-color:var(--success); }
-        .stat-card.info    { border-left-color:#8b5cf6; }
-        .stat-number { font-size:2em; font-weight:bold; }
-        .stat-label  { color:var(--text-muted); font-size:0.9em; }
-
-        .section h2 { font-size:1.3em; margin-bottom:15px; padding-bottom:10px; border-bottom:1px solid var(--border); }
-
-        .upload-zone { border:2px dashed var(--toggle-knob); border-radius:12px; padding:40px; text-align:center; cursor:pointer; transition:all 0.3s; }
-        .upload-zone:hover, .upload-zone.dragover { border-color:var(--accent); background:rgba(59,130,246,0.1); }
-        .upload-zone p { color:var(--text-muted); margin-top:10px; }
-
-        .btn-secondary { background:var(--border); color:var(--text-primary); }
-        .btn-secondary:hover { background:var(--toggle-knob); }
-        .btn-benign    { background:rgba(34,197,94,0.15); color:var(--success); border:1px solid var(--success); border-radius:6px; padding:6px 14px; cursor:pointer; font-weight:600; }
-        .btn-malicious { background:rgba(239,68,68,0.15); color:var(--danger); border:1px solid var(--danger); border-radius:6px; padding:6px 14px; cursor:pointer; font-weight:600; }
-
-        .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px; }
-        .controls label { color:var(--text-muted); font-size:0.9em; display:flex; align-items:center; gap:6px; }
-
-        .result-card { background:var(--bg-body); border-radius:10px; padding:16px; margin-top:12px; border-left:4px solid var(--border); cursor:pointer; transition:background 0.2s; }
-        .result-card:hover { background:var(--toggle-bg); }
-        .result-card.critico { border-left-color:var(--danger); }
-        .result-card.alto    { border-left-color:#f97316; }
-        .result-card.medio   { border-left-color:var(--warning); }
-        .result-card.bajo    { border-left-color:var(--success); }
-        .result-card.minimo  { border-left-color:#86efac; }
-
-        .risk-badge { display:inline-block; padding:3px 12px; border-radius:12px; font-size:0.82em; font-weight:700; background:var(--border); }
-        /* Escala de riesgo: verde → naranja (sospechoso) → rojo */
-        .risk-badge.risk-MINIMO  { background:rgba(34,197,94,0.15);  color:#16a34a; }
-        .risk-badge.risk-BAJO    { background:rgba(74,222,128,0.15); color:#22c55e; }
-        .risk-badge.risk-MEDIO   { background:rgba(251,146,60,0.15); color:#f97316; }
-        .risk-badge.risk-ALTO    { background:rgba(249,115,22,0.2);  color:#ea580c; }
-        .risk-badge.risk-CRITICO { background:rgba(239,68,68,0.2);   color:#dc2626; }
-        /* Predicción */
-        .risk-badge.pred-benigno    { background:rgba(34,197,94,0.2); color:var(--success); }
-        .risk-badge.pred-malicioso  { background:rgba(239,68,68,0.2); color:var(--danger); }
-
-        .entropy-bar { height:6px; background:var(--border); border-radius:4px; overflow:hidden; margin-top:4px; }
-        .entropy-fill { height:100%; border-radius:4px; transition:width 0.5s; }
-
-        td { padding:10px; border-bottom:1px solid var(--toggle-bg); font-size:0.9em; }
-        tr:hover td { background:var(--toggle-bg); cursor:pointer; }
-
-        .pagination { display:flex; align-items:center; gap:8px; margin-top:14px; flex-wrap:wrap; }
-        .pagination .page-info  { color:var(--text-faint); font-size:0.88em; }
-        .pagination .total-info { color:var(--toggle-knob); font-size:0.82em; }
-
-        .spinner { display:none; width:36px; height:36px; border:4px solid var(--border); border-top:4px solid var(--accent); border-radius:50%; animation:spin 1s linear infinite; margin:16px auto; }
-        @keyframes spin { to { transform:rotate(360deg); } }
-
-        .date-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
-        .date-row label { color:var(--text-muted); font-size:0.85em; }
-
-        .modal-overlay { display:none; position:fixed; inset:0; background:var(--bg-overlay); z-index:1000; align-items:center; justify-content:center; padding:16px; }
-        .modal-overlay.open { display:flex; }
-        .modal { background:var(--bg-card); border-radius:14px; max-width:820px; width:100%; max-height:88vh; overflow-y:auto; border:1px solid var(--border); }
-        .modal-header { padding:18px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:var(--bg-card); z-index:1; }
-        .modal-header h3 { font-size:1em; word-break:break-all; }
-        .modal-close { background:none; border:none; color:var(--text-faint); font-size:1.4em; cursor:pointer; padding:0 4px; line-height:1; }
-        .modal-close:hover { color:var(--text-primary); }
-        .modal-body { padding:20px 24px; }
-
-        .detail-section { margin-bottom:20px; }
-        .detail-section h4 { color:var(--text-faint); font-size:0.78em; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--bg-card); }
-        .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-        .detail-item { background:var(--bg-body); border-radius:7px; padding:10px 12px; }
-        .detail-item .label { color:var(--text-faint); font-size:0.75em; margin-bottom:3px; }
-        .detail-item .value { font-weight:600; font-size:0.92em; word-break:break-all; }
-
-        .url-list, .hash-list { list-style:none; }
-        .url-list li, .hash-list li { background:var(--bg-body); border-radius:6px; padding:8px 12px; margin-bottom:5px; font-size:0.82em; word-break:break-all; color:var(--text-muted); }
-        .url-list li a { color:#60a5fa; text-decoration:none; }
-        .url-list li a:hover { text-decoration:underline; }
-
-        .feedback-bar { display:flex; gap:8px; align-items:center; margin-bottom:16px; padding:12px 16px; background:var(--bg-body); border-radius:10px; flex-wrap:wrap; }
-        .feedback-bar .fb-label { color:var(--text-faint); font-size:0.85em; flex-shrink:0; margin-right:4px; }
-        .feedback-applied { padding:4px 12px; border-radius:12px; font-size:0.82em; font-weight:600; }
-        .feedback-applied.benign    { background:rgba(34,197,94,0.15); color:var(--success); }
-        .feedback-applied.malicious { background:rgba(239,68,68,0.15); color:var(--danger); }
-
-        @media(max-width:600px) { .detail-grid { grid-template-columns:1fr; } }
-    </style>
-{% endblock %}
-
 {% block content %}
-<div class="container" style="padding-top:24px">
+<div class="container">
+
+    <div class="page-header">
+        <h1>📊 Dashboard</h1>
+        <p>Analiza correos y revisa tus detecciones</p>
+    </div>
 
     <!-- Stats -->
     <div class="stats-grid">
@@ -115,103 +30,98 @@
         </div>
     </div>
 
-    <!-- Gráfico de tendencias -->
+    <!-- Gráfico -->
     <div class="section">
-        <h2>📈 Tendencias (últimos 30 días)
-            <small style="color:var(--text-faint);font-size:0.6em;font-weight:400">— maliciosos vs benignos por día</small>
-        </h2>
-        <div style="position:relative;height:220px;">
-            <canvas id="trendChart"></canvas>
-        </div>
+        <h2>📈 Tendencias (últimos 30 días) <small>— maliciosos vs benignos por día</small></h2>
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
     </div>
 
-    <!-- Analizar archivos subidos -->
+    <!-- Analizar archivos -->
     <div class="section">
-        <h2>📤 Analizar Correos</h2>
-        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-            <div style="font-size:3em">📧</div>
+        <h2>📤 Analizar correos</h2>
+        <div class="upload-zone" id="uploadZone">
+            <div class="upload-icon">📧</div>
             <p><strong>Arrastra archivos .eml aquí</strong> o haz clic para seleccionar</p>
-            <p style="font-size:0.85em">Puedes subir varios a la vez</p>
+            <p class="faint text-sm">Puedes subir varios a la vez</p>
         </div>
-        <input type="file" id="fileInput" multiple accept=".eml" style="display:none">
+        <input type="file" id="fileInput" multiple accept=".eml" class="hidden">
         <div class="controls">
             <label><input type="checkbox" id="useVT" checked> Consultar VirusTotal</label>
-            <button class="btn btn-primary" id="analyzeBtn" disabled onclick="analyzeFiles()">Analizar archivos seleccionados</button>
+            <button class="btn btn-primary" id="analyzeBtn" disabled>Analizar archivos seleccionados</button>
         </div>
-        <div class="spinner" id="analyzeSpinner"></div>
+        <div class="spinner hidden center" id="analyzeSpinner"></div>
         <div id="results"></div>
     </div>
 
-    <!-- Descargar y analizar -->
+    <!-- Descargar del buzón -->
     <div class="section">
-        <h2>📥 Descargar y Analizar del Buzón</h2>
-        <div class="controls" style="margin-bottom:10px">
-            <select id="provider">
+        <h2>📥 Descargar y analizar del buzón</h2>
+        <div class="controls mb-1">
+            <select id="provider" class="w-auto">
                 <option value="imap">IMAP genérico</option>
                 <option value="m365">Microsoft 365</option>
                 <option value="gmail">Gmail (App Password)</option>
             </select>
-            <!-- Carpeta fija: siempre se analiza la bandeja de entrada -->
             <input type="hidden" id="folder" value="inbox">
-            <label>Máx: <input type="number" id="maxEmails" value="20" min="1" max="50" style="width:65px"></label>
+            <label>Máx: <input type="number" id="maxEmails" value="20" min="1" max="50" class="input-sm w-auto"></label>
             <label><input type="checkbox" id="fetchVT"> VirusTotal</label>
         </div>
         <div class="date-row">
-            <label>Desde: <input type="date" id="dateFrom"></label>
-            <label>Hasta: <input type="date" id="dateTo"></label>
-            <button class="btn btn-secondary" onclick="setQuick(1)"  style="padding:7px 12px">Hoy</button>
-            <button class="btn btn-secondary" onclick="setQuick(7)"  style="padding:7px 12px">7d</button>
-            <button class="btn btn-secondary" onclick="setQuick(30)" style="padding:7px 12px">30d</button>
-            <button class="btn btn-primary"   onclick="fetchEmails()">⬇️ Descargar y analizar</button>
+            <label>Desde: <input type="date" id="dateFrom" class="w-auto"></label>
+            <label>Hasta: <input type="date" id="dateTo" class="w-auto"></label>
+            <button class="btn btn-secondary btn-sm" data-action="quick" data-days="1">Hoy</button>
+            <button class="btn btn-secondary btn-sm" data-action="quick" data-days="7">7d</button>
+            <button class="btn btn-secondary btn-sm" data-action="quick" data-days="30">30d</button>
+            <button class="btn btn-primary" data-action="fetch-emails">⬇️ Descargar y analizar</button>
         </div>
-        <div class="spinner" id="fetchSpinner"></div>
+        <div class="spinner hidden center" id="fetchSpinner"></div>
         <div id="fetchResult"></div>
     </div>
 
     <!-- Historial -->
     <div class="section">
-        <h2>📋 Historial
-            <small style="color:var(--text-faint);font-size:0.6em;font-weight:400">— haz clic en una fila para ver el detalle</small>
-        </h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Fecha</th><th>Archivo</th><th>Asunto</th>
-                    <th>Resultado</th><th>Riesgo</th><th>Entropía</th><th>Feedback</th><th></th>
-                </tr>
-            </thead>
-            <tbody id="historyTable"></tbody>
-        </table>
+        <h2>📋 Historial <small>— haz clic en una fila para ver el detalle</small></h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th><th>Archivo</th><th>Asunto</th>
+                        <th>Resultado</th><th>Riesgo</th><th>Entropía</th><th>Feedback</th><th></th>
+                    </tr>
+                </thead>
+                <tbody id="historyTable"></tbody>
+            </table>
+        </div>
         <div class="pagination">
-            <button class="btn btn-secondary" id="btnPrev" onclick="changePage(currentPage-1)" style="padding:6px 14px">← Anterior</button>
-            <span class="page-info"  id="pageInfo"></span>
-            <button class="btn btn-secondary" id="btnNext" onclick="changePage(currentPage+1)" style="padding:6px 14px">Siguiente →</button>
+            <button class="btn btn-secondary btn-sm" id="btnPrev" data-action="page" data-page="prev">← Anterior</button>
+            <span class="page-info" id="pageInfo"></span>
+            <button class="btn btn-secondary btn-sm" id="btnNext" data-action="page" data-page="next">Siguiente →</button>
             <span class="total-info" id="totalInfo"></span>
         </div>
-        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-danger" onclick="clearHistory()">🗑️ Limpiar mi historial</button>
-            <a href="/api/export/csv" class="btn btn-primary" style="text-decoration:none">📥 Exportar CSV</a>
+        <div class="row mt-2">
+            <button class="btn btn-danger" data-action="clear-history">🗑️ Limpiar mi historial</button>
+            <a href="/api/export/csv" class="btn btn-primary">📥 Exportar CSV</a>
         </div>
     </div>
 </div>
 
 <!-- Modal de detalle -->
-<div class="modal-overlay" id="detailModal" onclick="if(event.target===this)closeModal()">
+<div class="modal-overlay" id="detailModal">
     <div class="modal">
         <div class="modal-header">
             <h3 id="modalTitle">Detalle del análisis</h3>
-            <button class="modal-close" onclick="closeModal()">✕</button>
+            <button class="modal-close" data-modal-close="detailModal">✕</button>
         </div>
         <div class="modal-body" id="modalBody"></div>
     </div>
 </div>
 
 <!-- Modal de informe -->
-<div class="modal-overlay" id="reportModal" onclick="if(event.target===this)closeReport()">
-    <div class="modal" style="max-width:720px">
+<div class="modal-overlay" id="reportModal">
+    <div class="modal">
         <div class="modal-header">
             <h3>📋 Informe de amenaza</h3>
-            <button class="modal-close" onclick="closeReport()">✕</button>
+            <button class="modal-close" data-modal-close="reportModal">✕</button>
         </div>
         <div class="modal-body" id="reportBody"></div>
     </div>
@@ -219,659 +129,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-const _store    = {};
-let currentPage = 1;
-let totalPages  = 1;
-let currentDbId = null;
-
-function nl(s) {
-    return (s||'')
-        .replace('MÍNIMO','MINIMO').replace('MíNIMO','MINIMO')
-        .replace('CRÍTICO','CRITICO').replace('CRíTICO','CRITICO');
-}
-const ew = v => Math.min(((parseFloat(v)||0)/8)*100,100).toFixed(1);
-const ec = v => (parseFloat(v)||0)>5.5?'#ef4444':(parseFloat(v)||0)>4.5?'#eab308':'#22c55e';
-const colorMap = {CRITICO:'#ef4444',ALTO:'#f97316',MEDIO:'#f97316',BAJO:'#22c55e',MINIMO:'#22c55e'};
-const lcMap    = {CRITICO:'critico',ALTO:'alto',MEDIO:'medio',BAJO:'bajo',MINIMO:'minimo'};
-
-async function loadHistory(page) {
-    try {
-        const r    = await fetch(`/history/page/${page}`);
-        const data = await r.json();
-        currentPage = data.page;
-        totalPages  = data.pages;
-        renderHistoryTable(data.items);
-        updatePageControls(data.pages, data.total);
-    } catch(e) { console.error('loadHistory:', e); }
-}
-
-function changePage(page) {
-    if (page < 1 || page > totalPages) return;
-    loadHistory(page);
-}
-
-function renderHistoryTable(items) {
-    const tbody = document.getElementById('historyTable');
-    if (!tbody) return;
-    if (!items || items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-faint);padding:20px">Sin análisis todavía</td></tr>`;
-        return;
-    }
-    tbody.innerHTML = items.map(r => {
-        const rl = nl(r.risk_level||'');
-        const fb = r.feedback_label !== null && r.feedback_label !== undefined
-            ? (r.feedback_label === 0
-                ? '<span style="color:#22c55e;font-size:0.8em">✅ Benigno</span>'
-                : '<span style="color:#ef4444;font-size:0.8em">⛔ Malicioso</span>')
-            : '<span style="color:var(--border);font-size:0.8em">—</span>';
-        return `<tr onclick="openDetail(${r.id})">
-            <td style="white-space:nowrap">${(r.timestamp||'-').slice(0,16)}</td>
-            <td style="color:var(--text-faint);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r.filename||'-').slice(0,28)}</td>
-            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r.subject||'(sin asunto)').slice(0,40)}</td>
-            <td><span class="risk-badge ${r.prediction==='MALICIOSO'?'pred-malicioso':'pred-benigno'}">${r.prediction||'-'}</span></td>
-            <td>${r.risk_score||0}%</td>
-            <td>${r.body_entropy||'-'}</td>
-            <td>${fb}</td>
-            <td><button class="btn btn-secondary btn-sm" style="font-size:0.75em;padding:3px 8px" onclick="event.stopPropagation();showReport(${r.id})">📄</button></td>
-        </tr>`;
-    }).join('');
-}
-
-function updatePageControls(pages, total) {
-    const pi = document.getElementById('pageInfo');
-    const ti = document.getElementById('totalInfo');
-    const bp = document.getElementById('btnPrev');
-    const bn = document.getElementById('btnNext');
-    if (pi) pi.textContent = `Página ${currentPage} de ${pages}`;
-    if (ti) ti.textContent = `(${total} análisis en total)`;
-    if (bp) bp.disabled = currentPage <= 1;
-    if (bn) bn.disabled = currentPage >= pages;
-}
-
-async function updateStats() {
-    try {
-        const r    = await fetch('/history');
-        const hist = await r.json();
-        const el   = id => document.getElementById(id);
-        if(el('stat-total'))     el('stat-total').textContent     = hist.length;
-        if(el('stat-malicious')) el('stat-malicious').textContent = hist.filter(r=>r.prediction==='MALICIOSO').length;
-        if(el('stat-benign'))    el('stat-benign').textContent    = hist.filter(r=>r.prediction==='BENIGNO').length;
-    } catch(e) {}
-    loadHistory(1);
-}
-
-async function clearHistory() {
-    if (!confirm('¿Borrar todo tu historial?')) return;
-    await fetch('/history/clear', {method:'POST'});
-    loadHistory(1);
-    updateStats();
-}
-
-async function openDetail(dbId) {
-    currentDbId = dbId;
-    if (_store[dbId]) { renderModal(_store[dbId]); return; }
-    try {
-        const r    = await fetch(`/history/${dbId}`);
-        const data = await r.json();
-        if (data.error) { alert('No se pudo cargar el detalle'); return; }
-        _store[dbId] = data;
-        renderModal(data);
-    } catch(e) { alert('Error: ' + e.message); }
-}
-
-function closeModal() {
-    document.getElementById('detailModal').classList.remove('open');
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function renderModal(r) {
-    const dbId = r._db_id || currentDbId;
-    const ea   = r.entropy_analysis || {};
-    const ft   = r.features         || {};
-    const md   = r.metadata         || {};
-    const vt   = r.virustotal       || {};
-    const vts  = vt.summary         || {};
-    const rl   = nl(r.risk_level||'');
-    const rc   = colorMap[rl] || (r.prediction === 'MALICIOSO' ? '#ef4444' : '#22c55e');
-    const fb   = (r.feedback_label !== null && r.feedback_label !== undefined) ? r.feedback_label : null;
-
-    let html = `
-    <div style="background:var(--bg-body);border-radius:10px;padding:14px;margin-bottom:16px;border-left:4px solid ${rc}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
-            <div>
-                <div style="color:var(--text-muted);font-size:0.78em">ASUNTO</div>
-                <div style="font-weight:600;margin-bottom:4px">${escapeHtml(r.subject)||'(sin asunto)'}</div>
-                <div style="color:var(--text-faint);font-size:0.83em">De: ${escapeHtml(r.from)||'-'}</div>
-                <div style="color:var(--text-faint);font-size:0.83em">Fecha: ${escapeHtml((r.timestamp||'').slice(0,16))}</div>
-                <div style="color:var(--text-faint);font-size:0.83em">Analizado por: ${escapeHtml(r.analyzed_by)||'-'}</div>
-            </div>
-            <div style="text-align:right">
-                <span class="risk-badge ${r.prediction==='MALICIOSO'?'pred-malicioso':'pred-benigno'}">${escapeHtml(r.prediction)||'-'}</span>
-                <div style="color:${rc};font-weight:600;margin-top:5px">${escapeHtml(r.risk_level)||'-'} — ${r.risk_score||0}%</div>
-                <div style="color:var(--text-faint);font-size:0.8em;margin-top:3px">Modelo: ${escapeHtml(r.model_used)||'-'}</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="feedback-bar" id="fbBar_${dbId}">
-        <span class="fb-label">¿Clasificación correcta?</span>
-        ${fb === null ? `
-            <button class="btn-benign"    onclick="doFeedback(${dbId},0)">✅ Benigno</button>
-            <button class="btn-malicious" onclick="doFeedback(${dbId},1)">⛔ Malicioso</button>
-        ` : `
-            <span class="feedback-applied ${fb===0?'benign':'malicious'}">
-                ${fb===0?'✅ Marcado como benigno':'⛔ Marcado como malicioso'}
-            </span>
-            <button class="btn-benign"    onclick="doFeedback(${dbId},0)" style="font-size:0.8em">✅</button>
-            <button class="btn-malicious" onclick="doFeedback(${dbId},1)" style="font-size:0.8em">⛔</button>
-        `}
-    </div>`;
-
-    // Autenticación (SPF, DKIM, DMARC, ARC)
-    const auth = r.metadata && r.metadata.auth_results;
-    if (auth && auth.length > 0) {
-        const authBadge = (method, result) => {
-            const cls = result === 'pass' ? 'pred-benigno' : (result === 'fail' ? 'pred-malicioso' : 'risk-MEDIO');
-            const icon = result === 'pass' ? '✅' : (result === 'fail' ? '❌' : '⚠️');
-            return `<span class="risk-badge ${cls}" style="margin:2px">${icon} ${method.toUpperCase()}=${result}</span>`;
-        };
-        let authHtml = '';
-        const seen = new Set();
-        auth.forEach(a => {
-            const key = a.method + a.result;
-            if (seen.has(key)) return;
-            seen.add(key);
-            authHtml += authBadge(a.method, a.result) + ' ';
-        });
-        const ft = r.features || {};
-        if (ft.arc_pass !== undefined) {
-            authHtml += authBadge('ARC', ft.arc_pass ? 'pass' : 'none');
-        }
-        html += `<div class="detail-section">
-            <h4>🔐 Autenticación</h4>
-            <div style="padding:8px 12px;background:var(--bg-body);border-radius:8px;font-size:0.85em">
-                ${authHtml}
-            </div>
-        </div>`;
-    }
-
-    // Entropía
-    html += `<div class="detail-section">
-        <h4>📊 Análisis de entropía</h4>
-        <div class="detail-grid">
-            <div class="detail-item"><div class="label">Cuerpo</div><div class="value">${ea.body_entropy||'-'}</div></div>
-            <div class="detail-item"><div class="label">Asunto</div><div class="value">${ea.subject_entropy||'-'}</div></div>
-            <div class="detail-item"><div class="label">URL máx.</div><div class="value">${ea.url_entropy_max||'-'}</div></div>
-            <div class="detail-item"><div class="label">Adjunto máx.</div><div class="value">${ea.attachment_content_entropy_max||'-'}</div></div>
-        </div>
-    </div>`;
-
-    // URLs — sanitizadas para prevenir XSS
-    const urls = (r.metadata && r.metadata.urls_found) || r.urls || [];
-    if (urls.length > 0) {
-        html += `<div class="detail-section"><h4>🔗 URLs detectadas (${urls.length})</h4><ul class="url-list">`;
-        urls.slice(0,10).forEach(u => {
-            const safeU = escapeHtml(u);
-            // Solo enlaces http/https; el resto se muestra como texto plano
-            const isHttp = /^https?:\/\//i.test(u);
-            if (isHttp) {
-                html += `<li><a href="${safeU}" target="_blank" rel="noopener">${safeU}</a></li>`;
-            } else {
-                html += `<li style="color:var(--warning)">⚠️ ${safeU} <em>(protocolo no seguro)</em></li>`;
-            }
-        });
-        if (urls.length > 10) html += `<li style="color:var(--text-faint)">... y ${urls.length-10} más</li>`;
-        html += `</ul></div>`;
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // 📱 Códigos QR detectados (NUEVO en v2.0)
-    // ─────────────────────────────────────────────────────────
-    const qrCodes = (r.metadata && r.metadata.qr_codes_found) || [];
-    if (qrCodes.length > 0) {
-        html += `<div class="detail-section">
-            <h4>📱 Códigos QR detectados (${qrCodes.length})</h4>`;
-
-        qrCodes.forEach((qr, idx) => {
-            const res = qr.resolution || {};
-            const chain = res.chain || [qr.raw_payload];
-            const final = res.final || qr.raw_payload;
-            const isUrl = qr.is_url;
-            const inline = qr.is_inline ? '📎 inline' : '📎 adjunto';
-            const shortener = res.is_shortener ? '🔗 acortador' : '';
-            const jsRedir = res.used_js ? '⚡ JS redirect' : '';
-            const metaRedir = res.used_meta_refresh ? '🔄 meta-refresh' : '';
-            const tags = [inline, shortener, jsRedir, metaRedir].filter(Boolean).join(' · ');
-
-            html += `<div style="margin-top:10px;padding:10px;border-radius:8px;
-                                  background:var(--bg-body);border-left:3px solid #f59e0b">
-                <div style="font-size:0.82em;color:var(--text-faint);margin-bottom:4px">
-                    QR #${idx+1} en ${escapeHtml(qr.source_filename)} · ${tags}
-                </div>`;
-
-            if (isUrl) {
-                html += `<div style="font-size:0.85em;margin-bottom:3px">
-                    <strong>Original:</strong>
-                    <code style="word-break:break-all">${escapeHtml(qr.raw_payload)}</code>
-                </div>`;
-
-                if (chain.length > 2) {
-                    html += `<div style="font-size:0.8em;color:var(--text-muted);margin:4px 0">
-                        <strong>Cadena (${chain.length-1} saltos):</strong><br>`;
-                    chain.forEach((u, i) => {
-                        const arrow = i < chain.length - 1 ? ' ↓' : '';
-                        html += `<div style="margin-left:8px">
-                            ${i+1}. <code style="word-break:break-all;font-size:0.95em">${escapeHtml(u)}</code>${arrow}
-                        </div>`;
-                    });
-                    html += `</div>`;
-                }
-
-                html += `<div style="font-size:0.88em;margin-top:4px">
-                    <strong style="color:#ef4444">Final:</strong>
-                    <a href="${escapeHtml(final)}" target="_blank" rel="noopener noreferrer"
-                       style="word-break:break-all;color:#f59e0b">
-                       ${escapeHtml(final)}
-                    </a>
-                </div>`;
-
-                const vtMatch = (vt.urls || []).find(x => x.url === final);
-                if (vtMatch) {
-                    const mal = vtMatch.malicious || 0;
-                    const susp = vtMatch.suspicious || 0;
-                    if (mal > 0 || susp > 0) {
-                        html += `<div style="margin-top:5px;padding:5px 8px;border-radius:5px;
-                                              background:rgba(239,68,68,0.1);font-size:0.83em;color:#ef4444">
-                            ⚠️ VirusTotal: ${mal} maliciosa · ${susp} sospechosa (de ${vtMatch.total||0})
-                        </div>`;
-                    } else if (vtMatch.found) {
-                        html += `<div style="margin-top:5px;padding:5px 8px;border-radius:5px;
-                                              background:rgba(34,197,94,0.1);font-size:0.83em;color:#22c55e">
-                            ✅ VirusTotal: limpia (${vtMatch.total||0} motores)
-                        </div>`;
-                    }
-                }
-            } else {
-                html += `<div style="font-size:0.85em">
-                    <strong>Contenido (no-URL):</strong>
-                    <code style="word-break:break-all">${escapeHtml(qr.raw_payload.slice(0, 200))}</code>
-                    ${qr.raw_payload.length > 200 ? '<em>(truncado)</em>' : ''}
-                </div>`;
-            }
-            html += `</div>`;
-        });
-        html += `</div>`;
-    }
-
-    // VirusTotal
-    if (vt && Object.keys(vt).length > 0) {
-        const ok = !vts.malicious_files && !vts.malicious_urls;
-        html += `<div class="detail-section"><h4>🛡️ VirusTotal</h4>
-        <div style="padding:10px 14px;border-radius:8px;background:rgba(${ok?'34,197,94':'239,68,68'},0.08);border:1px solid rgba(${ok?'34,197,94':'239,68,68'},0.2);font-size:0.88em">
-            <span style="color:${ok?'#22c55e':'#ef4444'}">${ok?'✅ Sin amenazas':`⚠️ ${vts.malicious_files||0} archivos + ${vts.malicious_urls||0} URLs maliciosas`}</span>
-            — ${vts.total_checked||0} consultas
-        </div>
-        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-            <button class="btn btn-secondary" style="font-size:0.85em" onclick="recheckVT(${dbId}, this)">🔍 Volver a consultar VirusTotal</button>
-        </div></div>`;
-    }
-
-    // Informe
-    html += `<div class="detail-section" style="text-align:center">
-        <button class="btn btn-primary" style="font-size:0.9em;padding:10px 24px" onclick="showReport(${dbId})">📄 Ver informe completo</button>
-    </div>`;
-
-    document.getElementById('modalTitle').textContent = escapeHtml(r.filename) || 'Detalle';
-    document.getElementById('modalBody').innerHTML = html;
-    document.getElementById('detailModal').classList.add('open');
-}
-
-async function doFeedback(dbId, label) {
-    try {
-        const r    = await fetch(`/feedback/${dbId}`, {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({label})
-        });
-        const data = await r.json();
-        if (data.success) {
-            if (_store[dbId]) _store[dbId].feedback_label = label;
-            const bar = document.getElementById(`fbBar_${dbId}`);
-            if (bar) bar.innerHTML = `
-                <span class="fb-label">¿Clasificación correcta?</span>
-                <span class="feedback-applied ${label===0?'benign':'malicious'}">
-                    ${label===0?'✅ Marcado como benigno':'⛔ Marcado como malicioso'}
-                </span>
-                <button class="btn-benign"    onclick="doFeedback(${dbId},0)" style="font-size:0.8em">✅</button>
-                <button class="btn-malicious" onclick="doFeedback(${dbId},1)" style="font-size:0.8em">⛔</button>`;
-            loadHistory(currentPage);
-        }
-    } catch(e) { console.error(e); }
-}
-
-async function showReport(dbId) {
-    try {
-        const r = await fetch(`/api/report/${dbId}`);
-        if (!r.ok) { alert('Error al generar el informe'); return; }
-        const data = await r.json();
-        renderReportModal(data);
-    } catch(e) { alert('Error: ' + e.message); }
-}
-
-function renderReportModal(r) {
-    const m = document.getElementById('reportModal');
-    const b = document.getElementById('reportBody');
-    const authIcon = v => v == 1 ? '✅' : '❌';
-
-    const indent = (arr, fn) => arr && arr.length > 0 ? arr.map(fn).join('') : '<span style="color:var(--text-faint)">—</span>';
-    const iocSection = (title, items, fn) => items && items.length > 0
-        ? `<div style="margin-top:10px"><strong style="font-size:0.82em;color:var(--text-muted)">${title}:</strong>${indent(items, fn)}</div>`
-        : '';
-
-    const urlsHtml = iocSection('URLs', r.indicators && r.indicators.urls,
-        u => `<div style="word-break:break-all;font-size:0.82em;padding:3px 0;border-bottom:1px solid var(--border-alt)">🔗 ${escapeHtml(u)}</div>`);
-    const hashesHtml = iocSection('Hashes', r.indicators && r.indicators.attachment_hashes,
-        h => `<div style="font-size:0.8em;padding:2px 0"><code>${h.sha256 || '-'}</code> ${escapeHtml(h.filename)}</div>`);
-    const domainsHtml = iocSection('Dominios', r.indicators && r.indicators.domains,
-        d => `<div style="font-size:0.82em;padding:2px 0">🌐 ${escapeHtml(d)}</div>`);
-
-    b.innerHTML = `
-    <div style="background:var(--bg-body);border-radius:10px;padding:14px;margin-bottom:16px;border-left:4px solid ${r.prediction === 'MALICIOSO' ? '#eb5757' : '#6fcf97'}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
-            <div>
-                <div style="font-size:1em;font-weight:700">${escapeHtml(r.file)}</div>
-                <div style="color:var(--text-muted);font-size:0.85em;margin-top:2px">${escapeHtml(r.subject)}</div>
-                <div style="color:var(--text-faint);font-size:0.8em;margin-top:2px">De: ${escapeHtml(r.from)} · ${(r.timestamp||'').slice(0,10)}</div>
-            </div>
-            <div style="text-align:right">
-                <span class="risk-badge ${r.prediction === 'MALICIOSO' ? 'pred-malicioso' : 'pred-benigno'}">${r.prediction}</span><br>
-                <span class="risk-badge risk-${r.risk_level}">${r.risk_level} — ${r.risk_score}%</span>
-            </div>
-        </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-        <div class="detail-section" style="margin:0">
-            <h4>🔐 Autenticación</h4>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:0.85em">
-                <span>SPF ${authIcon(r.authentication.spf_pass)}</span>
-                <span>DKIM ${authIcon(r.authentication.dkim_pass)}</span>
-                <span>DMARC ${authIcon(r.authentication.dmarc_pass)}</span>
-                <span>ARC ${authIcon(r.authentication.arc_pass)}</span>
-            </div>
-        </div>
-        <div class="detail-section" style="margin:0">
-            <h4>🛡️ VirusTotal</h4>
-            <div style="font-size:0.85em;padding:4px 0">
-                Archivos maliciosos: <strong>${r.virustotal.malicious_files}</strong><br>
-                URLs maliciosas: <strong>${r.virustotal.malicious_urls}</strong><br>
-                Consultas: ${r.virustotal.total_checked || 0}
-            </div>
-        </div>
-    </div>
-
-    <div class="detail-section">
-        <h4>🔗 Indicadores (IoCs)</h4>
-        ${urlsHtml}
-        ${hashesHtml}
-        ${domainsHtml}
-        ${!urlsHtml && !hashesHtml && !domainsHtml ? '<span style="color:var(--text-faint);font-size:0.85em">Sin indicadores extraídos</span>' : ''}
-    </div>
-
-    <div class="detail-section">
-        <h4>📊 ML & Riesgo</h4>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.85em">
-            <div class="detail-item"><div class="label">Modelo</div><div class="value">${escapeHtml(r.model)}</div></div>
-            <div class="detail-item"><div class="label">Confianza ML</div><div class="value">${r.ml_confidence}%</div></div>
-            <div class="detail-item"><div class="label">Riesgo</div><div class="value">${r.risk_score}% (${r.risk_level})</div></div>
-            <div class="detail-item"><div class="label">Adjuntos</div><div class="value">${r.attachment_count}</div></div>
-            <div class="detail-item"><div class="label">URLs</div><div class="value">${r.url_count}</div></div>
-            <div class="detail-item"><div class="label">QRs</div><div class="value">${r.qr_count}</div></div>
-        </div>
-    </div>
-
-    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn btn-secondary btn-sm" onclick="closeReport()">Cerrar</button>
-        <button class="btn btn-primary btn-sm" onclick="downloadReportJSON(${currentDbId})">📥 Descargar JSON</button>
-    </div>`;
-    m.classList.add('open');
-}
-
-function closeReport() {
-    document.getElementById('reportModal').classList.remove('open');
-}
-
-async function downloadReportJSON(dbId) {
-    try {
-        const r = await fetch(`/api/report/${dbId}`);
-        const data = await r.json();
-        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `reporte_${(data.file || 'correo').replace(/\.eml$/,'')}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    } catch(e) { alert('Error: ' + e.message); }
-}
-
-async function recheckVT(dbId, btn) {
-    btn.disabled    = true;
-    btn.textContent = '⏳ Consultando...';
-    try {
-        const r    = await fetch(`/analyze/virustotal/${dbId}`, {method:'POST'});
-        const data = await r.json();
-        const res  = btn.nextElementSibling || btn.parentElement.querySelector('.vt-result');
-        if (data.success) {
-            const vts = data.virustotal?.summary || {};
-            const ok  = !vts.malicious_files && !vts.malicious_urls;
-            if (_store[dbId]) _store[dbId].virustotal = data.virustotal;
-        }
-    } catch(e) {}
-    btn.disabled    = false;
-    btn.textContent = '🔍 Volver a consultar VirusTotal';
-}
-
-// Upload zone
-const uploadZone = document.getElementById('uploadZone');
-const fileInput  = document.getElementById('fileInput');
-const analyzeBtn = document.getElementById('analyzeBtn');
-let selectedFiles = [];
-
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
-uploadZone.addEventListener('drop', e => {
-    e.preventDefault(); uploadZone.classList.remove('dragover');
-    selectedFiles = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.eml'));
-    updateFileList();
-});
-fileInput.addEventListener('change', () => { selectedFiles = Array.from(fileInput.files); updateFileList(); });
-
-function updateFileList() {
-    analyzeBtn.disabled    = selectedFiles.length === 0;
-    analyzeBtn.textContent = `Analizar ${selectedFiles.length} archivo(s)`;
-}
-
-async function analyzeFiles() {
-    if (!selectedFiles.length) return;
-    const spinner    = document.getElementById('analyzeSpinner');
-    const resultsDiv = document.getElementById('results');
-    const useVT      = document.getElementById('useVT').checked;
-    spinner.style.display = 'block';
-    analyzeBtn.disabled   = true;
-    resultsDiv.innerHTML  = '';
-
-    // Procesar en lotes de 3 en paralelo para no saturar el proxy
-    const CONCURRENCY = 3;
-    const queue = [...selectedFiles];
-    let processed = 0;
-
-    async function processOne(file) {
-        const formData = new FormData();
-        formData.append('files', file);
-        formData.append('use_virustotal', useVT);
-        try {
-            const r = await fetch('/analyze', {method:'POST', body:formData});
-            if (!r.ok) {
-                const text = await r.text();
-                throw new Error(`HTTP ${r.status}: ${text.slice(0,100)}`);
-            }
-            const data = await r.json();
-            (data.results||[]).forEach(res => {
-                resultsDiv.innerHTML += renderCard(res);
-            });
-        } catch(err) {
-            resultsDiv.innerHTML += renderCard({
-                error: err.message,
-                file: file.name,
-                prediction: 'ERROR',
-                risk_level: '-',
-                risk_score: 0
-            });
-        }
-        processed++;
-        analyzeBtn.textContent = `Analizando... ${processed}/${selectedFiles.length}`;
-    }
-
-    while (queue.length > 0) {
-        const batch = queue.splice(0, CONCURRENCY);
-        await Promise.all(batch.map(f => processOne(f)));
-    }
-
-    updateStats();
-    spinner.style.display = 'none';
-    analyzeBtn.disabled   = false;
-    analyzeBtn.textContent = `Analizar ${selectedFiles.length} archivo(s)`;
-}
-
-function renderCard(r) {
-    if (r.error) return `<div class="result-card">❌ ${r.error}</div>`;
-    const rl  = nl(r.risk_level||'');
-    const ea  = r.entropy_analysis||{};
-    const lc  = lcMap[rl]||'';
-    if (r._db_id) _store[r._db_id] = r;
-    const dbId = r._db_id;
-    const click = dbId ? `onclick="openDetail(${dbId})"` : '';
-    const reportBtn = dbId ? `<button class="btn btn-secondary btn-sm" style="margin-left:8px;font-size:0.8em" onclick="event.stopPropagation();showReport(${dbId})">📄 Informe</button>` : '';
-    return `<div class="result-card ${lc}" ${click}>
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
-            <div><strong>${r.file||''}</strong><br><small style="color:var(--text-muted)">${r.subject||'-'}</small></div>
-            <div style="text-align:right">
-                <span class="risk-badge ${r.prediction==='MALICIOSO'?'pred-malicioso':'pred-benigno'}">${r.prediction} — ${r.risk_level}</span><br>
-                <small>Riesgo: ${r.risk_score}%</small>
-            </div>
-        </div>
-        <div style="margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
-            <div><small style="color:var(--text-muted)">Cuerpo: ${ea.body_entropy||0}</small>
-                <div class="entropy-bar"><div class="entropy-fill" style="width:${ew(ea.body_entropy||0)}%;background:${ec(ea.body_entropy||0)}"></div></div></div>
-            <div><small style="color:var(--text-muted)">URL: ${ea.url_entropy_max||0}</small>
-                <div class="entropy-bar"><div class="entropy-fill" style="width:${ew(ea.url_entropy_max||0)}%;background:${ec(ea.url_entropy_max||0)}"></div></div></div>
-            <div><small style="color:var(--text-muted)">Adj: ${ea.attachment_content_entropy_max||0}</small>
-                <div class="entropy-bar"><div class="entropy-fill" style="width:${ew(ea.attachment_content_entropy_max||0)}%;background:${ec(ea.attachment_content_entropy_max||0)}"></div></div></div>
-        </div>
-        <div style="margin-top:6px;display:flex;align-items:center;gap:6px">
-            <small style="color:var(--text-faint)">🔍 Clic para ver detalle</small>
-            ${reportBtn}
-        </div>
-    </div>`;
-}
-
-(function initDates() {
-    const today = new Date();
-    const week  = new Date(today); week.setDate(today.getDate()-7);
-    const fmt   = d => d.toISOString().split('T')[0];
-    const df = document.getElementById('dateFrom');
-    const dt = document.getElementById('dateTo');
-    if (df) df.value = fmt(week);
-    if (dt) dt.value = fmt(today);
-})();
-
-function setQuick(days) {
-    const today = new Date();
-    const from  = new Date(today); from.setDate(today.getDate()-days+1);
-    const fmt   = d => d.toISOString().split('T')[0];
-    document.getElementById('dateFrom').value = fmt(from);
-    document.getElementById('dateTo').value   = fmt(today);
-}
-
-async function fetchEmails() {
-    const spinner = document.getElementById('fetchSpinner');
-    const rd      = document.getElementById('fetchResult');
-    spinner.style.display = 'block';
-    rd.innerHTML = '';
-    try {
-        const r = await fetch('/fetch-emails', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({
-                provider:       document.getElementById('provider').value,
-                folder:         document.getElementById('folder').value,
-                max_emails:     document.getElementById('maxEmails').value,
-                use_virustotal: document.getElementById('fetchVT').checked,
-                date_from:      document.getElementById('dateFrom').value,
-                date_to:        document.getElementById('dateTo').value,
-            })
-        });
-        const data = await r.json();
-        if (data.success) {
-            let html = `<div class="result-card bajo" style="margin-top:10px">
-                ✅ Descargados: <strong>${data.downloaded}</strong> | Analizados: <strong>${data.analyzed}</strong>
-                ${data.errors>0?` | ⚠️ Errores: ${data.errors}`:''}
-                <small style="color:var(--text-faint);margin-left:8px">Clic en un resultado para ver el detalle</small>
-            </div>`;
-            (data.results||[]).forEach(r => { html += renderCard(r); });
-            rd.innerHTML = html;
-            updateStats();
-        } else {
-            rd.innerHTML = `<div class="result-card critico">❌ Error: ${data.error}</div>`;
-        }
-    } catch(err) {
-        let msg = err.message;
-        if (err instanceof SyntaxError || msg.includes('JSON') || msg.includes('token')) {
-            msg = 'El servidor tardó demasiado en responder (timeout). Reduce el número de correos o el rango de fechas.';
-        }
-        rd.innerHTML = `<div class="result-card critico">❌ Error: ${msg}</div>`;
-    }
-    spinner.style.display = 'none';
-}
-
-loadHistory(1);
-
-// ── Chart.js Trend ──
-(async function loadChart() {
-    try {
-        const r = await fetch('/api/stats/trend');
-        const d = await r.json();
-        const ctx = document.getElementById('trendChart');
-        if (!ctx) return;
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: d.labels.map(l => l.slice(5)),
-                datasets: [
-                    { label: 'Maliciosos', data: d.malicious,
-                      backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 4 },
-                    { label: 'Benignos', data: d.benign,
-                      backgroundColor: 'rgba(34,197,94,0.7)', borderRadius: 4 },
-                ]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 12 } } },
-                scales: {
-                    x: { ticks: { color: '#64748b', maxTicksLimit: 15 },
-                         grid: { color: 'rgba(51,65,85,0.3)' } },
-                    y: { beginAtZero: true, ticks: { color: '#64748b', stepSize: 1 },
-                         grid: { color: 'rgba(51,65,85,0.3)' } },
-                }
-            }
-        });
-    } catch(e) { console.error('Chart error:', e); }
-})();
-</script>
+<script src="/static/js/dashboard.js"></script>
 {% endblock %}

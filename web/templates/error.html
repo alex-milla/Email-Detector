@@ -1,24 +1,20 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Error — Email Malware Detector</title>
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg-body); color:var(--text-primary); min-height:100vh; display:flex; align-items:center; justify-content:center; }
-        .card { text-align:center; padding:40px; }
-        h1 { font-size:4em; color:var(--danger); }
-        p  { color:var(--text-muted); margin:16px 0 24px; }
-        a  { color:var(--accent); text-decoration:none; }
-    </style>
+    <link rel="stylesheet" href="/static/css/app.css">
 </head>
-<body>
-<div class="card">
-    <h1>⛔</h1>
-    <h2>{{ message }}</h2>
-    <p>No tienes permisos para acceder a esta sección.</p>
-    <a href="/">← Volver al Dashboard</a>
-</div>
+<body class="auth-page">
+<main class="auth-card text-center">
+    <div class="auth-emoji">⛔</div>
+    <h2 class="mb-1">{{ message }}</h2>
+    <p class="muted mb-3">No tienes permisos para acceder a esta sección.</p>
+    <a href="/" class="btn btn-secondary">← Volver al Dashboard</a>
+</main>
+<script src="/static/js/app.js"></script>
 <script src="/static/theme.js"></script>
 </body>
 </html>

@@ -1,474 +1,79 @@
 /**
- * theme.js — Selector de tema claro / oscuro / sistema
- * Email Malware Detector v1.2.11
+ * theme.js — Selector de tema claro / oscuro / sistema.
  *
- * Cubre todos los selectores de todos los templates.
- * Un único archivo controla el aspecto visual completo de la aplicación.
+ * Las paletas viven en app.css (`:root` para oscuro y `[data-theme="light"]`
+ * para claro). Este módulo solo gestiona el atributo `data-theme`, la
+ * preferencia guardada y el botón de cambio. Sin CSS inyectado.
  */
 (function () {
   'use strict';
-
-  // ── Paletas ────────────────────────────────────────────────────────────────
-  const THEMES = {
-    dark: {
-      '--bg-body':             '#1a1a2e',
-      '--bg-nav':              '#16213e',
-      '--bg-card':             '#1e2a45',
-      '--bg-inner':            '#1a1a2e',
-      '--bg-input':            '#1a1a2e',
-      '--bg-input-alt':        '#161b2b',
-      '--bg-hover':            'rgba(124,131,219,0.08)',
-      '--bg-overlay':          'rgba(0,0,0,0.75)',
-      '--border':              '#2d3f55',
-      '--border-alt':          '#243447',
-      '--border-input':        '#1f3348',
-      '--border-nav':          '#7c83db',
-      '--text-primary':        '#e8e8f0',
-      '--text-muted':          '#a0aec0',
-      '--text-faint':          '#718096',
-      '--text-code':           '#a3bffa',
-      '--accent':              '#7c83db',
-      '--accent-hover':        '#6b73d0',
-      '--danger':              '#eb5757',
-      '--danger-text':         '#f5a3a3',
-      '--success':             '#6fcf97',
-      '--success-text':        '#a2d9b8',
-      '--warning':             '#f2c94c',
-      '--warning-text':        '#f7dc7a',
-      '--shadow':              'rgba(0,0,0,0.4)',
-      '--badge-admin-bg':      '#92400e',
-      '--badge-admin-fg':      '#fcd34d',
-      '--section-admin-bg':    '#1a1200',
-      '--section-admin-border':'#4c3000',
-      '--placeholder':         '#3d5068',
-      '--toggle-bg':           '#1e2a45',
-      '--toggle-knob':         '#718096',
-      '--save-bar-bg':         '#1a1a2e',
-      '--save-bar-border':     '#1e2a45',
-    },
-    light: {
-      '--bg-body':             '#f8f6ff',
-      '--bg-nav':              '#ffffff',
-      '--bg-card':             '#ffffff',
-      '--bg-inner':            '#f8f6ff',
-      '--bg-input':            '#f8f6ff',
-      '--bg-input-alt':        '#f0edfe',
-      '--bg-hover':            'rgba(124,131,219,0.06)',
-      '--bg-overlay':          'rgba(0,0,0,0.4)',
-      '--border':              '#d4d0e8',
-      '--border-alt':          '#e2def0',
-      '--border-input':        '#d4d0e8',
-      '--border-nav':          '#7c83db',
-      '--text-primary':        '#1a1a2e',
-      '--text-muted':          '#5a5a7a',
-      '--text-faint':          '#8a8aaa',
-      '--text-code':           '#5b6abf',
-      '--accent':              '#7c83db',
-      '--accent-hover':        '#6b73d0',
-      '--danger':              '#eb5757',
-      '--danger-text':         '#c0392b',
-      '--success':             '#6fcf97',
-      '--success-text':        '#27ae60',
-      '--warning':             '#f2c94c',
-      '--warning-text':        '#d4a017',
-      '--shadow':              'rgba(0,0,0,0.06)',
-      '--badge-admin-bg':      '#fef3c7',
-      '--badge-admin-fg':      '#92400e',
-      '--section-admin-bg':    '#fffbeb',
-      '--section-admin-border':'#fde68a',
-      '--placeholder':         '#94a3b8',
-      '--toggle-bg':           '#e2def0',
-      '--toggle-knob':         '#8a8aaa',
-      '--save-bar-bg':         '#f8f6ff',
-      '--save-bar-border':     '#e2def0',
-    },
-  };
 
   function systemPrefersDark() {
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
 
-  function applyPalette(palette) {
-    const root = document.documentElement;
-    Object.entries(palette).forEach(([k, v]) => root.style.setProperty(k, v));
+  function resolve(theme) {
+    if (theme === 'system') return systemPrefersDark() ? 'dark' : 'light';
+    return theme === 'light' ? 'light' : 'dark';
+  }
+
+  function updateToggleUI(theme) {
+    document.querySelectorAll('.theme-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.theme === theme);
+    });
   }
 
   function applyTheme(theme) {
-    const resolved = theme === 'system' ? (systemPrefersDark() ? 'dark' : 'light') : theme;
-    applyPalette(THEMES[resolved] || THEMES.dark);
-    document.documentElement.setAttribute('data-theme', resolved);
-  }
-
-  function init() {
-    const saved = localStorage.getItem('emd_theme') || 'dark';
-    applyTheme(saved);
-    if (window.matchMedia) {
-      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-        if (localStorage.getItem('emd_theme') === 'system') applyTheme('system');
-      });
-    }
+    document.documentElement.setAttribute('data-theme', resolve(theme));
+    updateToggleUI(theme);
   }
 
   function setTheme(theme) {
     localStorage.setItem('emd_theme', theme);
     applyTheme(theme);
-    updateToggleUI(theme);
     fetch('/api/theme', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ theme }),
-    }).catch(() => {});
-  }
-
-  function updateToggleUI(theme) {
-    document.querySelectorAll('.theme-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.theme === theme);
-    });
+      body: JSON.stringify({ theme: theme })
+    }).catch(function () { /* sin sesión o sin red */ });
   }
 
   function buildToggle() {
-    const saved = localStorage.getItem('emd_theme') || 'dark';
-    const wrap = document.createElement('div');
+    var saved = localStorage.getItem('emd_theme') || 'dark';
+    var wrap = document.createElement('div');
     wrap.className = 'theme-toggle';
     wrap.title = 'Cambiar tema';
-    wrap.innerHTML = [
-      { key: 'light',  icon: '☀️',  label: 'Claro'   },
-      { key: 'system', icon: '💻',  label: 'Sistema' },
-      { key: 'dark',   icon: '🌙',  label: 'Oscuro'  },
-    ].map(({ key, icon, label }) =>
-      `<button class="theme-btn${saved === key ? ' active' : ''}" data-theme="${key}" title="${label}" onclick="EMDTheme.set('${key}')">${icon}</button>`
-    ).join('');
+
+    [
+      { key: 'light', icon: '☀️', label: 'Claro' },
+      { key: 'system', icon: '💻', label: 'Sistema' },
+      { key: 'dark', icon: '🌙', label: 'Oscuro' }
+    ].forEach(function (opt) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'theme-btn' + (saved === opt.key ? ' active' : '');
+      btn.dataset.theme = opt.key;
+      btn.title = opt.label;
+      btn.textContent = opt.icon;
+      btn.addEventListener('click', function () { setTheme(opt.key); });
+      wrap.appendChild(btn);
+    });
     return wrap;
   }
 
   function injectToggle() {
-    const navRight = document.querySelector('.nav-right');
-    if (!navRight) return;
-    if (navRight.querySelector('.theme-toggle')) return;
+    var navRight = document.querySelector('.nav-right');
+    if (!navRight || navRight.querySelector('.theme-toggle')) return;
     navRight.insertBefore(buildToggle(), navRight.firstChild);
   }
 
-  function injectStyles() {
-    if (document.getElementById('emd-theme-styles')) return;
-    const s = document.createElement('style');
-    s.id = 'emd-theme-styles';
-    s.textContent = `
+  applyTheme(localStorage.getItem('emd_theme') || 'dark');
 
-      /* ══ BASE ══════════════════════════════════════════════════════════════ */
-      body {
-        background: var(--bg-body) !important;
-        color:      var(--text-primary) !important;
-      }
-
-      /* ══ NAVEGACIÓN ════════════════════════════════════════════════════════ */
-      nav {
-        background:   var(--bg-nav) !important;
-        border-color: var(--border-nav) !important;
-      }
-      .nav-brand, nav .nav-brand {
-        border-color: var(--border) !important;
-        color: var(--text-primary) !important;
-      }
-      .nav-brand span    { color: var(--accent) !important; }
-      nav a.nav-link     { color: var(--text-muted) !important; }
-      nav a.nav-link:hover {
-        color:      var(--text-primary) !important;
-        background: var(--bg-hover) !important;
-      }
-      nav a.nav-link.active { color: var(--accent) !important; }
-      nav a.nav-logout      { color: var(--danger) !important; }
-      .nav-user             { color: var(--text-faint) !important; }
-
-      /* ══ CARDS Y SECCIONES ═════════════════════════════════════════════════ */
-      .card, .section {
-        background:   var(--bg-card) !important;
-        border-color: var(--border-alt) !important;
-      }
-      .card-header          { border-color: var(--border) !important; }
-      .card-header h2,
-      .card-header-left h2  { color: var(--text-primary) !important; }
-      .card-header p,
-      .card-header-left p   { color: var(--text-faint) !important; }
-
-      /* ══ ELEMENTOS INTERNOS ════════════════════════════════════════════════ */
-      .stat-card, .model-card, .meta-item, .detail-item,
-      .feedback-banner, .feedback-bar, .ensemble-banner,
-      .result-card, .locked-msg, .step,
-      .sub-card, .default-select,
-      .upload-zone, .url-list {
-        background:   var(--bg-inner) !important;
-        border-color: var(--border) !important;
-        color:        var(--text-primary) !important;
-      }
-      /* version-box necesita mayor especificidad para ganar al style del template */
-      .card .version-box, .version-grid .version-box, .version-box {
-        background:   var(--bg-inner) !important;
-        border-color: var(--border) !important;
-        color:        var(--text-primary) !important;
-      }
-      .log-box {
-        color:        var(--text-muted) !important;
-        border-color: var(--border) !important;
-      }
-      .log-box.success { border-color: var(--success) !important; }
-      .log-box.error   { border-color: var(--danger) !important; }
-
-      /* ══ MODALES ═══════════════════════════════════════════════════════════ */
-      .modal, .modal-header {
-        background: var(--bg-card) !important;
-        color:      var(--text-primary) !important;
-      }
-      .modal-overlay { background: var(--bg-overlay) !important; }
-      .modal-close   { color: var(--text-muted) !important; }
-
-      /* ══ FORMULARIOS ═══════════════════════════════════════════════════════ */
-      input, select, textarea {
-        background:   var(--bg-input) !important;
-        color:        var(--text-primary) !important;
-        border-color: var(--border-input) !important;
-      }
-      input::placeholder,
-      textarea::placeholder { color: var(--placeholder) !important; }
-      input:focus, select:focus, textarea:focus {
-        border-color: var(--accent) !important;
-        outline: none !important;
-      }
-      label { color: var(--text-muted) !important; }
-
-      /* ══ TABLAS ════════════════════════════════════════════════════════════ */
-      td, th      { border-color: var(--border) !important; color: var(--text-primary) !important; }
-      th          { color: var(--text-faint) !important; }
-      tr:hover td { background: var(--bg-inner) !important; }
-
-      /* ══ BOTONES SECUNDARIOS ═══════════════════════════════════════════════ */
-      .btn-secondary {
-        background:   var(--bg-inner) !important;
-        color:        var(--text-muted) !important;
-        border-color: var(--border-input) !important;
-      }
-      .btn-secondary:hover {
-        color:        var(--text-primary) !important;
-        border-color: var(--text-faint) !important;
-        background:   var(--bg-card) !important;
-      }
-      .btn-ghost {
-        background:   transparent !important;
-        color:        var(--text-muted) !important;
-        border-color: var(--border) !important;
-      }
-      .btn-ghost:hover {
-        color:        var(--text-primary) !important;
-        border-color: var(--text-faint) !important;
-      }
-
-      /* ══ BADGES ════════════════════════════════════════════════════════════ */
-      .badge-status.ok, .badge-ok {
-        background: rgba(34,197,94,0.12) !important;
-        color:      var(--success) !important;
-      }
-      .badge-status.missing, .badge-error {
-        background: rgba(239,68,68,0.12) !important;
-        color:      var(--danger) !important;
-      }
-      .badge-status.warn {
-        background: rgba(234,179,8,0.12) !important;
-        color:      var(--warning) !important;
-      }
-      .badge-status.info, .badge-loading {
-        background: rgba(59,130,246,0.12) !important;
-        color:      var(--accent) !important;
-      }
-      .badge-update {
-        background: rgba(245,158,11,0.15) !important;
-        color:      var(--warning) !important;
-      }
-      .admin-badge {
-        background: var(--badge-admin-bg) !important;
-        color:      var(--badge-admin-fg) !important;
-      }
-      .cat-badge {
-        background:   var(--bg-card) !important;
-        color:        var(--text-muted) !important;
-        border-color: var(--border) !important;
-      }
-
-      /* ══ SECTION ADMIN ═════════════════════════════════════════════════════ */
-      .section-admin {
-        background:   var(--section-admin-bg) !important;
-        border-color: var(--section-admin-border) !important;
-      }
-      .section-admin .card-header {
-        border-color: var(--section-admin-border) !important;
-      }
-
-      /* ══ VERSION BOX ═══════════════════════════════════════════════════════ */
-      .version-box            { border-left-color: var(--border) !important; }
-      .version-box.remote     { border-left-color: var(--success) !important; }
-      .version-box.has-update { border-left-color: var(--warning) !important; }
-      .version-box .label,
-      .version-box .date      { color: var(--text-faint) !important; }
-      .version-box .number    { color: var(--text-primary) !important; }
-      .changelog {
-        background:   var(--bg-inner) !important;
-        color:        var(--text-muted) !important;
-        border-color: var(--accent) !important;
-      }
-
-      /* ══ RESULT BANNER ═════════════════════════════════════════════════════ */
-      .result-banner.success {
-        background:   rgba(34,197,94,0.1) !important;
-        border-color: var(--success) !important;
-        color:        var(--success-text) !important;
-      }
-      .result-banner.error {
-        background:   rgba(239,68,68,0.1) !important;
-        border-color: var(--danger) !important;
-        color:        var(--danger-text) !important;
-      }
-
-      /* ══ TEST RESULTS ══════════════════════════════════════════════════════ */
-      .test-result.ok {
-        background:   rgba(34,197,94,0.1) !important;
-        color:        var(--success) !important;
-        border-color: rgba(34,197,94,0.25) !important;
-      }
-      .test-result.error {
-        background:   rgba(239,68,68,0.1) !important;
-        color:        var(--danger-text) !important;
-        border-color: rgba(239,68,68,0.25) !important;
-      }
-      .test-result.loading {
-        background:   rgba(59,130,246,0.1) !important;
-        color:        var(--accent) !important;
-        border-color: rgba(59,130,246,0.25) !important;
-      }
-      .test-result.warning {
-        background:   rgba(234,179,8,0.1) !important;
-        color:        var(--warning-text) !important;
-        border-color: rgba(234,179,8,0.25) !important;
-      }
-
-      /* ══ TEXTOS ESPECÍFICOS ════════════════════════════════════════════════ */
-      .page-header h1  { color: var(--text-primary) !important; }
-      .page-header p,
-      .subtitle,
-      .stat-label,
-      .meta-label,
-      .mc-label,
-      .eb-txt          { color: var(--text-faint) !important; }
-      .stat-number,
-      .meta-value,
-      .mc-name,
-      .eb-num          { color: var(--text-primary) !important; }
-      code.small-code  { color: var(--text-code) !important; }
-      hr.divider       { border-color: var(--border) !important; }
-      .info-item small { color: var(--text-faint) !important; }
-      .info-item strong{ color: var(--text-primary) !important; }
-      .mc-auc, .mc-cv  { color: var(--text-muted) !important; }
-      .mc-err          { color: var(--danger-text) !important; }
-      .step-num        { color: var(--text-faint) !important; }
-      .status-text     { color: var(--text-muted) !important; }
-
-      /* ══ TOGGLE SWITCH ═════════════════════════════════════════════════════ */
-      .toggle-slider {
-        background:   var(--toggle-bg) !important;
-        border-color: var(--border-input) !important;
-      }
-      .toggle-slider:before { background: var(--toggle-knob) !important; }
-      input:checked + .toggle-slider {
-        background:   var(--accent) !important;
-        border-color: var(--accent) !important;
-      }
-      input:checked + .toggle-slider:before { background: white !important; }
-
-
-      /* ══ ADDITIONAL SELECTORS ══════════════════════════════════════════════════ */
-      /* stat cards */
-      .stat-card {
-        background: var(--bg-inner) !important;
-      }
-      /* upload zone */
-      .upload-zone {
-        border-color: var(--border) !important;
-        color: var(--text-primary) !important;
-      }
-      .upload-zone p { color: var(--text-muted) !important; }
-      /* risk badges */
-      .risk-badge { background: var(--border); color: var(--text-primary); }
-      /* table rows */
-      tr { background: transparent !important; }
-      /* inline style overrides for JS-generated content */
-      [style*="background:#0f172a"] { background: var(--bg-body) !important; }
-      [style*="background:#1e293b"] { background: var(--bg-card) !important; }
-      /* History table */
-      #historyTable td { color: var(--text-primary) !important; }
-      /* Form row */
-      .form-row label { color: var(--text-muted) !important; }
-      /* Nav logout */
-      .nav-logout { color: var(--danger) !important; }
-      /* Step numbers - only color, not background */
-      .step-body p { color: var(--text-faint) !important; }
-      .step-body h4 { color: var(--text-primary) !important; }
-      /* model meta */
-      .meta-label { color: var(--text-faint) !important; }
-      .meta-value { color: var(--text-primary) !important; }
-      /* Spinner */
-      .spinner { border-color: var(--border) !important; border-top-color: var(--accent) !important; }
-      /* Log boxes */
-      .log-box { background: var(--bg-input-alt) !important; border-color: var(--border) !important; color: var(--text-muted) !important; }
-
-
-            /* ══ SAVE BAR ══════════════════════════════════════════════════════════ */
-      .save-bar {
-        background:   var(--save-bar-bg) !important;
-        border-color: var(--save-bar-border) !important;
-      }
-
-      /* ══ PAGINACIÓN ════════════════════════════════════════════════════════ */
-      .pagination a, .pagination span {
-        background:   var(--bg-inner) !important;
-        color:        var(--text-muted) !important;
-        border-color: var(--border) !important;
-      }
-      .pagination a:hover { color: var(--text-primary) !important; }
-
-      /* ══ SELECTOR DE TEMA ══════════════════════════════════════════════════ */
-      .theme-toggle {
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        background: var(--bg-inner);
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        padding: 3px 5px;
-      }
-      .theme-btn {
-        background: none;
-        border: none;
-        border-radius: 50%;
-        width: 28px;
-        height: 28px;
-        cursor: pointer;
-        font-size: 0.9em;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0.45;
-        transition: opacity 0.2s, background 0.2s;
-      }
-      .theme-btn:hover  { opacity: 0.85; }
-      .theme-btn.active {
-        opacity: 1;
-        background: var(--accent);
-        box-shadow: 0 0 0 2px var(--accent);
-      }
-    `;
-    document.head.appendChild(s);
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+      if (localStorage.getItem('emd_theme') === 'system') applyTheme('system');
+    });
   }
-
-  // ── Ejecutar ──────────────────────────────────────────────────────────────
-  init();
-  injectStyles();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', injectToggle);

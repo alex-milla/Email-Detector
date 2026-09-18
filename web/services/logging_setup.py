@@ -20,6 +20,7 @@ _BACKUPS = 5
 
 _ERROR_MARKER = "_emd_error"
 _ACCESS_MARKER = "_emd_access"
+_FRONTEND_MARKER = "_emd_frontend"
 
 
 def _rotating_handler(path, level, formatter, marker):
@@ -73,3 +74,20 @@ def configure_standalone_logging(app, logs_dir):
         app._emd_access_registered = True
 
     return access_logger
+
+
+def configure_frontend_logging(logs_dir, level=logging.INFO):
+    """Logger a fichero para errores reportados por el navegador.
+
+    Se configura siempre (tambien bajo gunicorn) para que los fallos de UI
+    queden en `logs/frontend.log` tanto en local como en produccion.
+    """
+    os.makedirs(logs_dir, exist_ok=True)
+    logger = logging.getLogger("web.frontend")
+    logger.setLevel(level)
+    logger.propagate = False
+    if not _has_handler(logger, _FRONTEND_MARKER):
+        logger.addHandler(_rotating_handler(
+            os.path.join(logs_dir, "frontend.log"),
+            level, logging.Formatter(_FORMAT), _FRONTEND_MARKER))
+    return logger

@@ -2,88 +2,6 @@
 
 {% block title %}Entrenamiento — Email Malware Detector{% endblock %}
 
-{% block styles %}
-    <style>
-        .container { max-width:900px; margin:0 auto; padding:20px; }
-
-
-        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:20px; }
-        .stat-card { background:var(--bg-inner,#0f172a); border-radius:10px; padding:16px; border-left:4px solid #3b82f6; }
-        .stat-card.success { border-left-color:#22c55e; }
-        .stat-card.danger  { border-left-color:#ef4444; }
-        .stat-card.warning { border-left-color:#eab308; }
-        .stat-number { font-size:1.8em; font-weight:bold; }
-        .stat-label  { color:var(--text-muted,#94a3b8); font-size:0.82em; margin-top:4px; }
-
-        .model-meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-top:16px; }
-        .meta-item  { background:var(--bg-inner,#0f172a); border-radius:8px; padding:12px; border:1px solid var(--border-alt,#283548); }
-        .meta-label { color:var(--text-faint,#64748b); font-size:0.78em; margin-bottom:4px; }
-        .meta-value { font-weight:600; color:var(--text-primary,#e2e8f0); }
-
-        .feedback-banner { background:var(--bg-inner,#0f172a); border:1px solid var(--border,#334155); border-radius:10px; padding:14px 18px; margin-bottom:20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
-        .feedback-banner .fb-count { font-size:1.4em; font-weight:700; }
-        .feedback-banner .fb-detail { color:var(--text-faint,#64748b); font-size:0.85em; }
-        .feedback-banner .fb-hint   { font-size:0.82em; margin-left:auto; }
-        .fb-hint.ok      { color:#22c55e; }
-        .fb-hint.warn    { color:#eab308; }
-        .fb-hint.neutral { color:var(--text-faint,#475569); }
-
-
-        .btn-group { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
-
-        .status-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; min-height:32px; }
-        .status-text { font-size:0.9em; color:var(--text-muted,#94a3b8); }
-
-        .log-box { background:var(--bg-input-alt,#0a1020); border:1px solid var(--border,#334155); border-radius:8px; padding:14px; font-family:monospace; font-size:0.83em; white-space:pre-wrap; max-height:380px; overflow-y:auto; color:var(--text-faint,#64748b); display:none; margin-top:12px; }
-        .log-box.visible { display:block; }
-        .log-box.success { border-color:#22c55e; color:#86efac; }
-        .log-box.error   { border-color:#ef4444; color:#fca5a5; }
-        .log-box.running { border-color:#3b82f6; color:#93c5fd; }
-
-        .spinner { display:none; width:24px; height:24px; border:3px solid var(--border,#334155); border-top:3px solid #3b82f6; border-radius:50%; animation:spin 1s linear infinite; flex-shrink:0; }
-        @keyframes spin { to { transform:rotate(360deg); } }
-
-        .step { display:flex; gap:14px; padding:14px 0; border-bottom:1px solid var(--border-alt,#1e293b); }
-        .step:last-child { border-bottom:none; }
-        .step-num { background:#3b82f6; color:white; border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.82em; flex-shrink:0; margin-top:2px; }
-        .step-body h4 { margin-bottom:3px; color:var(--text-primary,#e2e8f0); }
-        .step-body p  { color:var(--text-faint,#64748b); font-size:0.87em; }
-
-        .locked-msg { background:var(--bg-inner,#0f172a); border:1px solid var(--border,#334155); border-radius:8px; padding:12px 16px; color:var(--text-faint,#64748b); font-size:0.88em; margin-top:14px; }
-
-        .models-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:16px;}
-        .model-card{background:var(--bg-inner,#0f172a);border-radius:10px;padding:14px 16px;border:1px solid var(--border-alt,#283548);position:relative;}
-        .model-card.best{border-color:#3b82f6;}
-        .mc-badge{position:absolute;top:10px;right:10px;font-size:0.7em;padding:2px 8px;border-radius:10px;font-weight:700;}
-        .mc-badge.best{background:rgba(59,130,246,0.15);color:#60a5fa;}
-        .mc-badge.bagging{background:rgba(34,197,94,0.12);color:#4ade80;}
-        .mc-badge.boosting{background:rgba(234,179,8,0.12);color:#facc15;}
-        .mc-badge.base{background:rgba(148,163,184,0.1);color:#94a3b8;}
-        .mc-name{font-weight:700;font-size:0.95em;margin-bottom:8px;padding-right:60px;color:var(--text-primary,#e2e8f0);}
-        .mc-auc{font-size:1.4em;font-weight:700;color:#3b82f6;}
-        .mc-label{color:var(--text-faint,#64748b);font-size:0.75em;margin-top:2px;}
-        .mc-cv{font-size:0.78em;color:var(--text-faint,#475569);margin-top:6px;}
-        .mc-err{font-size:0.78em;color:#f87171;margin-top:6px;}
-        .ensemble-banner{background:var(--bg-inner,#0f172a);border:1px solid #3b82f6;border-radius:10px;
-                         padding:14px 18px;margin-top:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
-        .eb-num{font-size:1.6em;font-weight:700;color:#3b82f6;}
-        .eb-txt{font-size:0.88em;color:var(--text-muted,#94a3b8);}
-        .gpu-badge{display:inline-flex;align-items:center;gap:5px;font-size:0.78em;padding:3px 10px;border-radius:10px;margin-left:auto;}
-        .gpu-badge.on{background:rgba(34,197,94,0.1);color:#22c55e;}
-        .gpu-badge.off{background:rgba(100,116,139,0.1);color:var(--text-faint,#64748b);}
-        .model-toggle{position:absolute;bottom:12px;right:12px;}
-        .mt-input{display:none;}
-        .mt-slider{display:inline-block;width:36px;height:20px;background:var(--toggle-bg,#1a2535);
-                   border:1px solid var(--border-input,#2d3f55);border-radius:20px;cursor:pointer;transition:.25s;position:relative;}
-        .mt-slider:before{content:"";position:absolute;width:14px;height:14px;
-                          top:2px;left:2px;background:var(--toggle-knob,#475569);border-radius:50%;transition:.25s;}
-        .mt-input:checked + .mt-slider{background:#3b82f6;border-color:#3b82f6;}
-        .mt-input:checked + .mt-slider:before{transform:translateX(16px);background:white;}
-        .model-card.disabled-card{opacity:0.42;filter:grayscale(55%);}
-        .model-card.disabled-card .mc-auc{color:var(--text-faint,#475569);}
-    </style>
-{% endblock %}
-
 {% block content %}
 <div class="container">
     <div class="page-header">
@@ -91,19 +9,17 @@
         <p>Gestiona el dataset y entrena la IA para mejorar las detecciones</p>
     </div>
 
-    <!-- Estado del modelo -->
     <div class="card">
         <div class="card-header">
-            <h2>📊 Estado del Modelo</h2>
+            <h2>📊 Estado del modelo</h2>
             <p>Información sobre el modelo de IA actualmente cargado</p>
         </div>
 
-        <!-- Feedback pendiente -->
         <div class="feedback-banner" id="feedbackBanner">
             <span class="fb-count" id="fbTotal">—</span>
             <span class="fb-detail">correcciones pendientes de entrenar
-                (<span id="fbBenign" style="color:#22c55e">—</span> benignos,
-                 <span id="fbMalicious" style="color:#ef4444">—</span> maliciosos)
+                (<span class="text-success" id="fbBenign">—</span> benignos,
+                 <span class="text-danger" id="fbMalicious">—</span> maliciosos)
             </span>
             <span class="fb-hint neutral" id="fbHint"></span>
         </div>
@@ -139,18 +55,18 @@
             <div class="meta-item"><div class="meta-label">Modelos ensemble</div><div class="meta-value">{{ model_meta.get('models_available',[])| length }}</div></div>
         </div>
 
-        {% if model_exists and model_meta and model_meta.get('models_available') %}
+        {% if model_meta.get('models_available') %}
         <div class="ensemble-banner">
             <span class="eb-num">{{ model_meta.get('models_available',[])| length }}</span>
-            <span class="eb-txt">modelos en votacion ensemble ponderada por AUC</span>
+            <span class="eb-txt">modelos en votación ensemble ponderada por AUC</span>
             {% if model_meta.get('gpu_used') %}<span class="gpu-badge on">GPU activada</span>
             {% else %}<span class="gpu-badge off">CPU</span>{% endif %}
         </div>
         {% endif %}
 
-        {% if model_exists and model_meta and model_meta.get('results') %}
-        <div style="margin-top:20px;">
-            <div style="font-size:0.85em;color:var(--text-faint,#64748b);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Ranking de modelos por ROC AUC</div>
+        {% if model_meta.get('results') %}
+        <div class="mt-3">
+            <div class="section-title mb-1">Ranking de modelos por ROC AUC</div>
             <div class="models-grid">
             {% set type_map = {'DecisionTree':'base','RandomForest':'bagging','ExtraTrees':'bagging','Bagging':'bagging','GradientBoosting':'boosting','HistGradientBoosting':'boosting','AdaBoost':'boosting','XGBoost':'boosting','LightGBM':'boosting','CatBoost':'boosting'} %}
             {% for name, res in model_meta.get('results', {}).items()|sort(attribute='1.auc_test', reverse=True) %}
@@ -165,21 +81,16 @@
                 <div class="mc-label">ROC AUC test</div>
                 <div class="mc-cv">CV: {{ "%.4f"|format(res.get('auc_cv_mean',0)) }} +/- {{ "%.4f"|format(res.get('auc_cv_std',0)) }}</div>
                 {% elif res.get('error') %}<div class="mc-err">{{ res.error[:60] }}</div>
-                {% else %}<div class="mc-label" style="color:var(--text-faint,#475569);">No disponible</div>{% endif %}
+                {% else %}<div class="mc-label faint">No disponible</div>{% endif %}
             </div>
             {% endfor %}
-            <!-- Modelo 10: Anti-Clanker -->
+
             <div class="model-card" data-model="10">
-                <span class="mc-badge" style="background:#6f42c1;color:#fff">Rule-based</span>
+                <span class="mc-badge rule">Rule-based</span>
                 <div class="mc-name">Anti-Clanker</div>
                 <div class="mc-auc" id="model-10-auc">{% if model_meta.get('anti_clanker_auc') %}{{ "%.4f"|format(model_meta.get('anti_clanker_auc')) }}{% else %}&#8212;{% endif %}</div>
                 <div class="mc-label">Score Anti-Clanker</div>
-                <div class="mc-cv" id="model-10-cv">Reglas: <span id="model-10-rules">&#8212;</span></div>
-                <label class="toggle-switch" title="Activar/desactivar en el ensemble">
-                    <input type="checkbox" checked id="toggle-model-10" data-model="10"
-                        onchange="toggleModel(10, this.checked)">
-                    <span class="slider"></span>
-                </label>
+                <div class="mc-cv">Reglas: <span id="model-10-rules">&#8212;</span></div>
             </div>
             </div>
         </div>
@@ -188,40 +99,37 @@
         {% endif %}
     </div>
 
-    <!-- Paso 1: Dataset (solo admin) -->
     {% if user.role == 'admin' %}
     <div class="card">
         <div class="card-header">
-            <h2>📦 Paso 1 — Descargar Dataset</h2>
+            <h2>📦 Paso 1 — Descargar dataset</h2>
             <p>Descarga el SpamAssassin Public Corpus (~6.000 correos ya etiquetados, ~25 MB). Solo una vez.</p>
         </div>
         <div class="status-row">
-            <div class="spinner" id="dlSpinner"></div>
+            <div class="spinner hidden" id="dlSpinner"></div>
             <span class="status-text" id="dlStatus"></span>
         </div>
-        <button class="btn btn-primary" onclick="downloadDataset()">⬇️ Descargar SpamAssassin Corpus</button>
-        <div class="log-box" id="dlLog"></div>
+        <button class="btn btn-primary" id="btnDownloadDataset">⬇️ Descargar SpamAssassin Corpus</button>
+        <div class="log-box hidden" id="dlLog"></div>
     </div>
     {% endif %}
 
-    <!-- Paso 2: Entrenar -->
     <div class="card">
         <div class="card-header">
-            <h2>🚀 Paso 2 — Entrenar el Modelo</h2>
-            <p>Extrae características de todos los correos etiquetados y entrena todos los modelos disponibles (hasta 9). La predicción usa votación ensemble ponderada por AUC.</p>
+            <h2>🚀 Paso 2 — Entrenar el modelo</h2>
+            <p>Extrae características de todos los correos etiquetados y entrena los modelos disponibles. La predicción usa votación ensemble ponderada por AUC.</p>
         </div>
         <div class="status-row">
-            <div class="spinner" id="trainSpinner"></div>
+            <div class="spinner hidden" id="trainSpinner"></div>
             <span class="status-text" id="trainStatus"></span>
         </div>
         <div class="btn-group">
-            <button class="btn btn-success"   id="btnFullRetrain" onclick="fullRetrain()">🧠 Extraer features + Entrenar</button>
-            <button class="btn btn-secondary" id="btnTrainOnly"   onclick="trainOnly()">⚡ Solo re-entrenar (CSVs ya generados)</button>
+            <button class="btn btn-success"   id="btnFullRetrain">🧠 Extraer features + Entrenar</button>
+            <button class="btn btn-secondary" id="btnTrainOnly">⚡ Solo re-entrenar (CSVs ya generados)</button>
         </div>
-        <div class="log-box" id="trainLog"></div>
+        <div class="log-box hidden" id="trainLog"></div>
     </div>
 
-    <!-- Paso 3: Anti-Clanker (solo admin) -->
     {% if user.role == 'admin' %}
     <div class="card">
         <div class="card-header">
@@ -229,22 +137,19 @@
             <p>Reentrena solo el detector de artefactos LLM usando las features <code>clanker_*</code> de los CSVs en <code>data/processed/</code>. No modifica el ensemble principal.</p>
         </div>
         <div class="status-row">
-            <div class="spinner" id="clankerSpinner"></div>
+            <div class="spinner hidden" id="clankerSpinner"></div>
             <span class="status-text" id="clankerStatus"></span>
         </div>
         <div class="btn-group">
-            <button class="btn btn-success"   id="btnClankerTrain"     onclick="retrainClanker(false)">🧩 Reentrenar con CSVs</button>
-            <button class="btn btn-secondary" id="btnClankerSynthetic" onclick="retrainClanker(true)">🧪 Generar sintético + Reentrenar</button>
+            <button class="btn btn-success"   id="btnClankerTrain">🧩 Reentrenar con CSVs</button>
+            <button class="btn btn-secondary" id="btnClankerSynthetic">🧪 Generar sintético + Reentrenar</button>
         </div>
-        <div class="log-box" id="clankerLog"></div>
+        <div class="log-box hidden" id="clankerLog"></div>
     </div>
     {% endif %}
 
-    <!-- Guía -->
     <div class="card">
-        <div class="card-header">
-            <h2>📖 Cuándo re-entrenar</h2>
-        </div>
+        <div class="card-header"><h2>📖 Cuándo re-entrenar</h2></div>
         <div class="step">
             <div class="step-num">1</div>
             <div class="step-body">
@@ -271,241 +176,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-// ═══════════════════════════════════════
-//  FEEDBACK STATS
-// ═══════════════════════════════════════
-async function loadFeedbackStats() {
-    try {
-        const r    = await fetch('/feedback/stats');
-        const data = await r.json();
-        document.getElementById('fbTotal').textContent     = data.total;
-        document.getElementById('fbBenign').textContent    = data.benign;
-        document.getElementById('fbMalicious').textContent = data.malicious;
-        const hint = document.getElementById('fbHint');
-        if (data.total === 0) {
-            hint.textContent  = 'Sin correcciones pendientes';
-            hint.className    = 'fb-hint neutral';
-        } else if (data.total < 20) {
-            hint.textContent  = `⚠️ Se recomiendan al menos 20 antes de re-entrenar`;
-            hint.className    = 'fb-hint warn';
-        } else {
-            hint.textContent  = `✅ Listo para re-entrenar`;
-            hint.className    = 'fb-hint ok';
-        }
-    } catch(e) {}
-}
-loadFeedbackStats();
-
-// ═══════════════════════════════════════
-//  DESCARGA DATASET
-// ═══════════════════════════════════════
-async function downloadDataset() {
-    const spinner = document.getElementById('dlSpinner');
-    const status  = document.getElementById('dlStatus');
-    const log     = document.getElementById('dlLog');
-
-    spinner.style.display = 'inline-block';
-    status.textContent    = '⏳ Descargando dataset... (puede tardar varios minutos)';
-    log.className         = 'log-box visible running';
-    log.textContent       = 'Iniciando descarga del SpamAssassin Public Corpus...\n';
-
-    try {
-        const r    = await fetch('/dataset/download', { method:'POST' });
-        const data = await r.json();
-        if (data.success) {
-            log.className   = 'log-box visible success';
-            log.textContent = data.stdout || 'Dataset descargado correctamente';
-            status.textContent = '✅ Dataset descargado correctamente';
-        } else {
-            log.className   = 'log-box visible error';
-            log.textContent = data.stderr || data.error || 'Error desconocido';
-            status.textContent = '❌ Error en la descarga';
-        }
-    } catch(e) {
-        log.className   = 'log-box visible error';
-        log.textContent = e.message;
-        status.textContent = '❌ Error de conexión';
-    }
-    spinner.style.display = 'none';
-}
-
-// ═══════════════════════════════════════
-//  ENTRENAMIENTO EN BACKGROUND
-// ═══════════════════════════════════════
-let _poll = null;
-let _ctx = { log:'trainLog', status:'trainStatus' };
-const TRAIN_BUTTONS  = ['btnFullRetrain','btnTrainOnly','btnClankerTrain','btnClankerSynthetic'];
-const TRAIN_SPINNERS = ['trainSpinner','clankerSpinner'];
-
-function setTrainingUI(running) {
-    TRAIN_SPINNERS.forEach(id => {
-        const s = document.getElementById(id);
-        if (s) s.style.display = running ? 'inline-block' : 'none';
-    });
-    TRAIN_BUTTONS.forEach(id => {
-        const b = document.getElementById(id);
-        if (b) b.disabled = running;
-    });
-}
-
-function startPoll() {
-    if (_poll) clearInterval(_poll);
-    _poll = setInterval(async () => {
-        try {
-            const r  = await fetch('/model/training-status');
-            const st = await r.json();
-            if (!st.running) {
-                clearInterval(_poll); _poll = null;
-                setTrainingUI(false);
-                const log = document.getElementById(_ctx.log);
-                if (st.success === true) {
-                    log.className   = 'log-box visible success';
-                    log.textContent = st.stdout || 'Entrenamiento completado';
-                    document.getElementById(_ctx.status).textContent = '✅ Modelo entrenado correctamente';
-                    setTimeout(() => location.reload(), 3000);
-                } else if (st.success === false && st.stderr) {
-                    log.className   = 'log-box visible error';
-                    log.textContent = st.stderr || st.stdout || 'Error en el entrenamiento';
-                    document.getElementById(_ctx.status).textContent = '❌ Error en el entrenamiento';
-                } else {
-                    log.className   = 'log-box visible success';
-                    log.textContent = st.stdout || 'Proceso finalizado';
-                    document.getElementById(_ctx.status).textContent = '✅ Proceso finalizado';
-                    setTimeout(() => location.reload(), 3000);
-                }
-            } else {
-                const elapsed = st.started_at
-                    ? Math.round((Date.now() - new Date(st.started_at).getTime()) / 1000)
-                    : 0;
-                document.getElementById(_ctx.status).textContent =
-                    `⏳ Entrenando... ${elapsed}s transcurridos (puedes navegar mientras esperas)`;
-            }
-        } catch(e) {}
-    }, 5000);
-}
-
-async function launchTraining(endpoint, ctx) {
-    _ctx = ctx || { log:'trainLog', status:'trainStatus' };
-    const log    = document.getElementById(_ctx.log);
-    const status = document.getElementById(_ctx.status);
-    setTrainingUI(true);
-    log.className   = 'log-box visible running';
-    log.textContent = (_ctx.starting || 'Lanzando entrenamiento en background...') + '\nEsto puede tardar varios minutos.\n';
-    status.textContent = '⏳ Iniciando...';
-
-    const opts = { method:'POST' };
-    if (_ctx.body) {
-        opts.headers = { 'Content-Type':'application/json' };
-        opts.body    = JSON.stringify(_ctx.body);
-    }
-
-    try {
-        const r    = await fetch(endpoint, opts);
-        const data = await r.json();
-        if (data.error) {
-            log.className   = 'log-box visible error';
-            log.textContent = data.error;
-            status.textContent = '❌ ' + data.error;
-            setTrainingUI(false);
-            return;
-        }
-        if (data.started) {
-            status.textContent = '⏳ Entrenando en background...';
-            startPoll();
-        }
-    } catch(e) {
-        log.className   = 'log-box visible error';
-        log.textContent = e.message;
-        status.textContent = '❌ Error de conexión';
-        setTrainingUI(false);
-    }
-}
-
-function fullRetrain() { launchTraining('/model/full-retrain', { log:'trainLog', status:'trainStatus' }); }
-function trainOnly()   { launchTraining('/model/retrain', { log:'trainLog', status:'trainStatus' }); }
-function retrainClanker(synthetic) {
-    launchTraining('/model/retrain-clanker', {
-        log:'clankerLog', status:'clankerStatus',
-        body:{ synthetic: !!synthetic },
-        starting: synthetic
-            ? 'Generando dataset sintético Anti-Clanker y reentrenando...'
-            : 'Reentrenando Anti-Clanker desde los CSVs de data/processed/...'
-    });
-}
-
-// Al cargar: comprobar si hay entrenamiento en curso
-(async function checkOnLoad() {
-    try {
-        const r  = await fetch('/model/training-status');
-        const st = await r.json();
-        if (st.running) {
-            setTrainingUI(true);
-            document.getElementById('trainStatus').textContent = '⏳ Entrenamiento en curso...';
-            document.getElementById('trainLog').className = 'log-box visible running';
-            document.getElementById('trainLog').textContent = 'Entrenamiento en progreso. Se actualizará al terminar.';
-            startPoll();
-        }
-    } catch(e) {}
-})();
-</script>
-<script>
-(function(){
-var IS_ADMIN={{ 'true' if user.role == 'admin' else 'false' }};
-function applyState(name,enabled){
-  var c=document.querySelector('.model-card[data-model="'+name+'"]');
-  if(!c)return;
-  c.classList.toggle('disabled-card',!enabled);
-  var x=c.querySelector('.mt-input');if(x)x.checked=enabled;
-}
-async function loadModelStates(){
-  try{
-    var r=await fetch('/api/models/toggle');
-    var d=await r.json();
-    (d.models||[]).forEach(function(m){applyState(m.name,m.enabled);});
-  }catch(e){}
-}
-async function toggleModel(name,enabled){
-  if(!IS_ADMIN)return;
-  try{
-    var r=await fetch('/api/models/toggle',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name:name,enabled:enabled})});
-    var d=await r.json();
-    if(d.ok){
-      applyState(name,enabled);
-      if(!document.querySelectorAll('.mt-input:checked').length)
-        alert('Atencion: todos los modelos deshabilitados.');
-    }else{alert('Error: '+(d.error||'?'));}
-  }catch(e){alert('Error de conexion');}
-}
-window.toggleModel=toggleModel;
-document.addEventListener('DOMContentLoaded',function(){
-  if(IS_ADMIN){
-    document.querySelectorAll('.model-card[data-model]').forEach(function(card){
-      var n=card.getAttribute('data-model');
-      var l=document.createElement('label');
-      l.className='model-toggle';l.title='Habilitar/Deshabilitar';
-      l.innerHTML='<input class="mt-input" type="checkbox" checked '
-        +'onchange="toggleModel(\''+n+'\',this.checked)">'
-        +'<span class="mt-slider"></span>';
-      card.appendChild(l);
-    });
-  }
-  loadModelStates();
-});
-})();
-</script>
-<script>
-(async function() {
-  try {
-    const r = await fetch('/api/clanker/status');
-    const d = await r.json();
-    if (!d.enabled) return;
-    const el = document.getElementById('model-10-rules');
-    if (el) el.textContent = d.active_rules + ' / ' + d.total_rules;
-  } catch(e) {}
-})();
-</script>
+<script src="/static/js/training.js"></script>
 {% endblock %}

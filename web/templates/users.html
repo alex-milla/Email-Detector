@@ -2,141 +2,80 @@
 
 {% block title %}Usuarios — Email Malware Detector{% endblock %}
 
-{% block styles %}
-    <style>
-        .section { margin-top:30px; }
-        .section h2 { font-size:1.3em; margin-bottom:6px; }
-        .section .subtitle { color:var(--text-faint); font-size:0.9em; margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid var(--border); }
-        .form-row { margin-bottom:20px; }
-        .form-group label { color:var(--text-muted); font-size:0.85em; text-transform:none; letter-spacing:0; }
-    </style>
-{% endblock %}
-
 {% block content %}
 <div class="container">
-    <div class="section">
-        <h2>👥 Gestión de Usuarios</h2>
-        <p class="subtitle">Crea, elimina y gestiona los usuarios del sistema</p>
+    <div class="page-header">
+        <h1>👥 Gestión de usuarios</h1>
+        <p>Crea, elimina y gestiona los usuarios del sistema</p>
+    </div>
 
-        <!-- Crear usuario -->
-        <h3 style="margin-bottom:12px; color:var(--text-muted); font-size:0.95em; text-transform:uppercase; letter-spacing:0.05em">Nuevo usuario</h3>
+    <div class="card">
+        <div class="card-header"><h2>Nuevo usuario</h2></div>
         <div class="form-row">
             <div class="form-group">
-                <label>Usuario</label>
-                <input type="text" id="newUsername" placeholder="nombre_usuario">
+                <label for="newUsername">Usuario</label>
+                <input type="text" id="newUsername" placeholder="nombre_usuario" autocomplete="off">
             </div>
             <div class="form-group">
-                <label>Contraseña</label>
-                <input type="password" id="newPassword" placeholder="mínimo 6 caracteres">
+                <label for="newPassword">Contraseña</label>
+                <input type="password" id="newPassword" placeholder="mínimo 8 caracteres" autocomplete="new-password">
             </div>
             <div class="form-group">
-                <label>Rol</label>
+                <label for="newRole">Rol</label>
                 <select id="newRole">
                     <option value="user">Usuario</option>
                     <option value="admin">Admin</option>
                 </select>
             </div>
-            <button class="btn btn-primary" onclick="createUser()">Crear usuario</button>
+            <button class="btn btn-primary" id="createUserBtn">Crear usuario</button>
         </div>
+    </div>
 
-        <!-- Tabla de usuarios -->
-        <table>
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Usuario</th>
-                    <th>Rol</th>
-                    <th>Creado</th>
-                    <th>Último acceso</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="usersTable">
-                {% for u in users %}
-                <tr id="row-{{ u.id }}">
-                    <td style="color:var(--text-faint)">{{ u.id }}</td>
-                    <td><strong>{{ u.username }}</strong></td>
-                    <td><span class="badge badge-{{ u.role }}">{{ u.role }}</span></td>
-                    <td style="color:var(--text-faint); font-size:0.9em">{{ u.created_at[:16] }}</td>
-                    <td style="color:var(--text-faint); font-size:0.9em">{{ u.last_login[:16] if u.last_login else '—' }}</td>
-                    <td style="display:flex; gap:8px">
-                        <button class="btn btn-sm btn-primary" onclick="changePassword({{ u.id }}, '{{ u.username }}')">🔑 Contraseña</button>
-                        {% if u.id != user.id %}
-                        <button class="btn btn-sm btn-danger" onclick="deleteUser({{ u.id }}, '{{ u.username }}')">Eliminar</button>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="card">
+        <div class="card-header"><h2>Usuarios ({{ users|length }})</h2></div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Usuario</th>
+                        <th>Rol</th>
+                        <th>Creado</th>
+                        <th>Último acceso</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTable">
+                    {% for u in users %}
+                    <tr id="row-{{ u.id }}">
+                        <td class="faint">{{ u.id }}</td>
+                        <td><strong>{{ u.username }}</strong></td>
+                        <td><span class="badge badge-{{ u.role }}">{{ u.role }}</span></td>
+                        <td class="faint text-sm">{{ u.created_at[:16] }}</td>
+                        <td class="faint text-sm">{{ u.last_login[:16] if u.last_login else '—' }}</td>
+                        <td>
+                            <div class="row-actions">
+                                <button class="btn btn-sm btn-primary"
+                                        data-action="password"
+                                        data-id="{{ u.id }}"
+                                        data-username="{{ u.username }}">🔑 Contraseña</button>
+                                {% if u.id != user.id %}
+                                <button class="btn btn-sm btn-danger"
+                                        data-action="delete"
+                                        data-id="{{ u.id }}"
+                                        data-username="{{ u.username }}">Eliminar</button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
-
-<div class="toast" id="toast"></div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-    function showToast(msg, type='success') {
-        const t = document.getElementById('toast');
-        t.textContent = msg;
-        t.className   = `toast ${type} show`;
-        setTimeout(() => t.classList.remove('show'), 3000);
-    }
-
-    async function createUser() {
-        const username = document.getElementById('newUsername').value.trim();
-        const password = document.getElementById('newPassword').value;
-        const role     = document.getElementById('newRole').value;
-        if (!username || !password) return showToast('Rellena todos los campos', 'error');
-
-        const r    = await fetch('/api/users', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username, password, role}) });
-        const data = await r.json();
-        if (data.success) { showToast('Usuario creado'); setTimeout(() => location.reload(), 1000); }
-        else showToast(data.error, 'error');
-    }
-
-    async function deleteUser(id, username) {
-        if (!confirm(`¿Eliminar el usuario "${username}"?`)) return;
-        const r    = await fetch(`/api/users/${id}`, { method:'DELETE' });
-        const data = await r.json();
-        if (data.success) { document.getElementById(`row-${id}`).remove(); showToast('Usuario eliminado'); }
-        else showToast(data.error, 'error');
-    }
-
-    async function changePassword(id, username) {
-        const inputId = `pwd-input-${id}`;
-        const existing = document.getElementById(inputId);
-        if (existing) {
-            const pwd = existing.value;
-            if (!pwd || pwd.length < 6) {
-                showToast('Mínimo 6 caracteres', 'error');
-                return;
-            }
-            const r = await fetch(`/api/users/${id}/password`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({password: pwd})
-            });
-            const data = await r.json();
-            if (data.success) {
-                showToast('Contraseña actualizada');
-                existing.parentElement.remove();
-            } else {
-                showToast(data.error, 'error');
-            }
-            return;
-        }
-        const row = document.querySelector(`#row-${id} td:last-child`);
-        const wrapper = document.createElement('div');
-        wrapper.style.cssText = 'display:flex;gap:6px;margin-top:6px;align-items:center;';
-        wrapper.innerHTML = `
-            <input type="password" id="${inputId}" placeholder="Nueva contraseña" style="padding:5px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg-body);color:var(--text-primary);font-size:0.85em;">
-            <button class="btn btn-sm btn-primary" onclick="changePassword(${id}, '${username.replace(/'/g, "\\'")}')">Guardar</button>
-            <button class="btn btn-sm btn-secondary" onclick="this.parentElement.remove()">Cancelar</button>
-        `;
-        row.appendChild(wrapper);
-        document.getElementById(inputId).focus();
-    }
-</script>
+<script src="/static/js/users.js"></script>
 {% endblock %}

@@ -36,6 +36,7 @@ from updater import check_for_updates, get_update_state, start_update
 from web.services.history_service import get_model_meta
 from web.services.limiter import limiter
 from web.services.health_service import check_dependencies, summary as deps_summary
+from web.services.logging_setup import configure_frontend_logging
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "config", ".env"))
 
@@ -65,6 +66,8 @@ RESULTS_DIR = os.path.join(PROJECT_DIR, "results")
 MODELS_DIR = os.path.join(PROJECT_DIR, "models")
 LABELED_DIR = os.path.join(PROJECT_DIR, "data", "labeled")
 DB_PATH = os.path.join(PROJECT_DIR, "config", "users.db")
+LOGS_DIR = os.path.join(PROJECT_DIR, "logs")
+frontend_logger = configure_frontend_logging(LOGS_DIR)
 
 _has_ssl = os.path.exists(os.path.join(PROJECT_DIR, "config", "ssl", "cert.pem"))
 try:
@@ -89,7 +92,7 @@ def security_headers(response):
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
+        "script-src 'self'; "
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data:; "
         "connect-src 'self'; "
@@ -200,6 +203,30 @@ inject_csrf(app)
 @admin_required
 def health_dependencies():
     return jsonify(check_dependencies())
+
+
+@app.route("/api/client-log", methods=["POST"])
+@limiter.limit("30 per minute")
+def client_log():
+    """Recibe errores del navegador y los registra en logs/frontend.log."""
+    data = request.get_json(silent=True) or {}
+
+    def _clean(value, limit=500):
+        return str(value)[:limit] if value is not None else ""
+
+    message = _clean(data.get("message"))
+    if not message:
+        return jsonify({"ok": False, "error": "mensaje vacío"}), 400
+
+    frontend_logger.warning(
+        "client error: %s | src=%s:%s | url=%s | stack=%s",
+        message,
+        _clean(data.get("source"), 200),
+        _clean(data.get("line"), 12),
+        _clean(data.get("url"), 300),
+        _clean(data.get("stack"), 1000),
+    )
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":

@@ -2,77 +2,6 @@
 
 {% block title %}Configuración — Email Malware Detector{% endblock %}
 
-{% block styles %}
-    <style>
-        .container { max-width:900px; margin:0 auto; padding:20px; }
-
-        .card-header { align-items:flex-start; }
-
-        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-        .form-grid.cols-1 { grid-template-columns:1fr; }
-
-        .test-result { font-size:0.85em; padding:7px 13px; border-radius:6px; display:none; align-items:center; gap:6px; }
-        .test-result.ok      { background:rgba(34,197,94,0.1);  color:#22c55e; border:1px solid rgba(34,197,94,0.25);  display:flex; }
-        .test-result.error   { background:rgba(239,68,68,0.1);  color:#f87171; border:1px solid rgba(239,68,68,0.25);  display:flex; }
-        .test-result.loading { background:rgba(59,130,246,0.1); color:#60a5fa; border:1px solid rgba(59,130,246,0.25); display:flex; }
-        .test-result.warning { background:rgba(245,158,11,0.1); color:#fbbf24; border:1px solid rgba(245,158,11,0.25); display:flex; }
-
-        .badge-status { display:inline-flex; align-items:center; gap:5px; font-size:0.78em; padding:3px 10px; border-radius:10px; white-space:nowrap; }
-        .badge-status.ok      { background:rgba(34,197,94,0.1);  color:#22c55e; }
-        .badge-status.missing { background:rgba(239,68,68,0.1);  color:#f87171; }
-        .badge-status.warn    { background:rgba(245,158,11,0.1); color:#fbbf24; }
-        .badge-status.info    { background:rgba(59,130,246,0.1); color:#60a5fa; }
-
-        .default-select { display:flex; align-items:center; gap:10px; margin-bottom:20px; padding:14px; background:var(--bg-input-alt,#0a1020); border-radius:8px; border:1px solid var(--border-input,#2d3f55); }
-        .default-select label { color:var(--text-muted,#94a3b8); font-size:0.85em; margin:0; text-transform:none; letter-spacing:0; }
-
-        .section-admin { border:1px solid var(--section-admin-border,#4c3000); background:var(--section-admin-bg,#1a1200); }
-        .section-admin .card-header { border-bottom-color:var(--section-admin-border,#6b4500); }
-        .admin-badge { background:var(--badge-admin-bg,#92400e); color:var(--badge-admin-fg,#fcd34d); padding:2px 8px; border-radius:6px; font-size:0.75em; }
-
-        .info-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:16px; margin-bottom:16px; }
-        .info-item small { color:var(--text-faint,#64748b); font-size:0.78em; display:block; margin-bottom:3px; }
-        .info-item strong { font-size:0.93em; color:var(--text-primary,#e2e8f0); }
-
-        .sub-card { background:var(--bg-input-alt,#0a1020); border:1px solid var(--border-input,#2d3f55); border-radius:8px; padding:16px; }
-        .sub-card h3 { font-size:0.9em; margin-bottom:6px; display:flex; align-items:center; gap:6px; color:var(--text-primary,#e2e8f0); }
-
-        .input-row { display:flex; gap:8px; align-items:stretch; }
-        .input-row input { flex:1; min-width:0; }
-
-        hr.divider { border:none; border-top:1px solid var(--border,#334155); margin:16px 0; }
-
-        .table-wrapper { overflow-x:auto; }
-        table.rules-table { width:100%; border-collapse:collapse; font-size:0.83em; }
-        table.rules-table th { color:var(--text-faint,#64748b); font-weight:600; text-align:left; padding:6px 10px; border-bottom:1px solid var(--border,#334155); }
-        table.rules-table td { padding:6px 10px; border-bottom:1px solid var(--border-alt,#1e293b); vertical-align:middle; color:var(--text-primary,#e2e8f0); }
-        table.rules-table tr:last-child td { border-bottom:none; }
-        table.rules-table tr:hover td { background:var(--bg-inner,#0f172a); }
-        .sev-badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:0.8em; font-weight:600; }
-        .sev-critical { background:rgba(239,68,68,0.15);  color:#f87171; }
-        .sev-high     { background:rgba(245,158,11,0.15); color:#fbbf24; }
-        .sev-medium   { background:rgba(59,130,246,0.15); color:#60a5fa; }
-        .sev-low      { background:rgba(100,116,139,0.15);color:#94a3b8; }
-        .cat-badge    { display:inline-block; padding:2px 7px; border-radius:5px; font-size:0.78em; background:var(--bg-card,#1e293b); color:var(--text-muted,#94a3b8); border:1px solid var(--border,#334155); }
-        code.small-code { font-family:monospace; font-size:0.82em; color:var(--text-code,#7dd3fc); }
-
-        .toggle-switch { position:relative; display:inline-block; width:48px; height:26px; flex-shrink:0; }
-        .toggle-switch input { opacity:0; width:0; height:0; }
-        .toggle-slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
-            background:var(--toggle-bg,#1a2535); border-radius:26px; transition:.3s; border:1px solid var(--border-input,#2d3f55); }
-        .toggle-slider:before { position:absolute; content:""; height:18px; width:18px;
-            left:3px; bottom:3px; background:var(--toggle-knob,#64748b); border-radius:50%; transition:.3s; }
-        input:checked + .toggle-slider { background:#3b82f6; border-color:#3b82f6; }
-        input:checked + .toggle-slider:before { transform:translateX(22px); background:white; }
-        .form-check-switch { display:flex; align-items:center; gap:8px; }
-
-
-        .save-bar { position:sticky; bottom:0; background:var(--save-bar-bg,#0f172a); border-top:1px solid var(--save-bar-border,#1e293b); padding:14px 0; margin-top:8px; display:flex; justify-content:flex-end; }
-
-        @media(max-width:600px) { .form-grid { grid-template-columns:1fr; } }
-    </style>
-{% endblock %}
-
 {% block content %}
 <div class="container">
     <div class="page-header">
@@ -89,13 +18,13 @@
             </div>
         </div>
         <div class="default-select">
-            <label>Proveedor activo:</label>
+            <label for="default-provider">Proveedor activo:</label>
             <select id="default-provider">
                 <option value="imap"  {% if config.default_provider == 'imap'  %}selected{% endif %}>📬 IMAP genérico</option>
                 <option value="m365"  {% if config.default_provider == 'm365'  %}selected{% endif %}>🏢 Microsoft 365</option>
                 <option value="gmail" {% if config.default_provider == 'gmail' %}selected{% endif %}>📧 Gmail</option>
             </select>
-            <button type="button" class="btn btn-primary" onclick="saveAll()">Guardar</button>
+            <button type="button" class="btn btn-primary" data-action="save-all">Guardar</button>
         </div>
     </div>
 
@@ -103,7 +32,7 @@
     <div class="card">
         <div class="card-header">
             <div class="card-header-left">
-                <h2>📬 IMAP Genérico</h2>
+                <h2>📬 IMAP genérico</h2>
                 <p>Gmail App Password, Outlook, servidor propio…</p>
             </div>
             <span class="badge-status {{ 'ok' if config.imap_server and config.imap_user else 'missing' }}">
@@ -112,28 +41,30 @@
         </div>
         <div class="form-grid">
             <div class="form-group">
-                <label>Servidor IMAP</label>
+                <label for="imap-server">Servidor IMAP</label>
                 <input type="text" id="imap-server" placeholder="imap.gmail.com" value="{{ config.imap_server }}">
             </div>
             <div class="form-group">
-                <label>Puerto</label>
+                <label for="imap-port">Puerto</label>
                 <input type="number" id="imap-port" placeholder="993" value="{{ config.imap_port or '993' }}">
             </div>
             <div class="form-group">
-                <label>Usuario / Email</label>
+                <label for="imap-user">Usuario / Email</label>
                 <input type="email" id="imap-user" placeholder="usuario@dominio.com" value="{{ config.imap_user }}">
             </div>
             <div class="form-group">
-                <label>Contraseña / App Password</label>
+                <label for="imap-password">Contraseña / App Password</label>
                 <input type="password" id="imap-password" placeholder="••••••••" value="{{ config.imap_password }}">
-                <p style="color:var(--text-faint,#64748b);font-size:0.78em;margin-top:4px;line-height:1.4;">
-                    ℹ️ <strong>Gmail:</strong> usa una <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:var(--accent,#3b82f6);">App Password</a> (necesitas <a href="https://myaccount.google.com/signinoptions/two-step-verification" target="_blank" style="color:var(--accent,#3b82f6);">2FA activado</a>). Tu contraseña normal de Google ya no funciona para IMAP.
+                <p class="hint">
+                    ℹ️ <strong>Gmail:</strong> usa una <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App Password</a>
+                    (necesitas <a href="https://myaccount.google.com/signinoptions/two-step-verification" target="_blank" rel="noopener">2FA activado</a>).
+                    Tu contraseña normal de Google ya no funciona para IMAP.
                 </p>
             </div>
         </div>
         <div class="card-footer">
-            <button type="button" class="btn btn-primary" onclick="saveAll()">💾 Guardar</button>
-            <button type="button" class="btn btn-secondary" onclick="testConn('imap')">🧪 Probar conexión</button>
+            <button type="button" class="btn btn-primary" data-action="save-all">💾 Guardar</button>
+            <button type="button" class="btn btn-secondary" data-action="test" data-provider="imap">🧪 Probar conexión</button>
             <div class="test-result" id="test-imap"></div>
         </div>
     </div>
@@ -151,26 +82,26 @@
         </div>
         <div class="form-grid">
             <div class="form-group">
-                <label>Client ID</label>
+                <label for="m365-client-id">Client ID</label>
                 <input type="password" id="m365-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" value="{{ config.ms365_client_id }}">
             </div>
             <div class="form-group">
-                <label>Client Secret</label>
+                <label for="m365-client-secret">Client Secret</label>
                 <input type="password" id="m365-client-secret" placeholder="••••••••" value="{{ config.ms365_client_secret }}">
             </div>
             <div class="form-group">
-                <label>Tenant ID</label>
+                <label for="m365-tenant-id">Tenant ID</label>
                 <input type="password" id="m365-tenant-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" value="{{ config.ms365_tenant_id }}">
             </div>
             <div class="form-group">
-                <label>Email del buzón</label>
+                <label for="m365-email">Email del buzón</label>
                 <input type="email" id="m365-email" placeholder="usuario@empresa.com" value="{{ config.ms365_user_email }}">
             </div>
         </div>
         <div class="card-footer">
-            <button type="button" class="btn btn-primary" onclick="saveAll()">💾 Guardar</button>
-            <button type="button" class="btn btn-secondary" onclick="testConn('m365')">🧪 Probar conexión</button>
-            <a href="https://portal.azure.com" target="_blank" class="btn btn-secondary">🔗 Azure Portal</a>
+            <button type="button" class="btn btn-primary" data-action="save-all">💾 Guardar</button>
+            <button type="button" class="btn btn-secondary" data-action="test" data-provider="m365">🧪 Probar conexión</button>
+            <a href="https://portal.azure.com" target="_blank" rel="noopener" class="btn btn-secondary">🔗 Azure Portal</a>
             <div class="test-result" id="test-m365"></div>
         </div>
     </div>
@@ -188,21 +119,20 @@
         </div>
         <div class="form-grid">
             <div class="form-group">
-                <label>Client ID</label>
+                <label for="gmail-client-id">Client ID</label>
                 <input type="password" id="gmail-client-id" placeholder="xxxx.apps.googleusercontent.com" value="{{ config.gmail_client_id }}">
             </div>
             <div class="form-group">
-                <label>Client Secret</label>
+                <label for="gmail-client-secret">Client Secret</label>
                 <input type="password" id="gmail-client-secret" placeholder="••••••••" value="{{ config.gmail_client_secret }}">
             </div>
         </div>
         <div class="card-footer">
-            <button type="button" class="btn btn-primary" onclick="saveAll()">💾 Guardar</button>
-            <a href="https://console.cloud.google.com" target="_blank" class="btn btn-secondary">🔗 Google Cloud Console</a>
+            <button type="button" class="btn btn-primary" data-action="save-all">💾 Guardar</button>
+            <a href="https://console.cloud.google.com" target="_blank" rel="noopener" class="btn btn-secondary">🔗 Google Cloud Console</a>
         </div>
     </div>
 
-    <!-- VirusTotal (solo admin) -->
     {% if user.role == 'admin' %}
     <div class="card section-admin">
         <div class="card-header">
@@ -216,13 +146,13 @@
         </div>
         <div class="form-grid cols-1">
             <div class="form-group">
-                <label>API Key</label>
+                <label for="vt-apikey">API Key</label>
                 <input type="password" id="vt-apikey" placeholder="Pega aquí tu API Key" value="{{ global_cfg.get('VIRUSTOTAL_API_KEY', '') }}">
             </div>
         </div>
         <div class="card-footer">
-            <button type="button" class="btn btn-primary" onclick="saveGlobal()">💾 Guardar API Key</button>
-            <button type="button" class="btn btn-secondary" onclick="testConn('virustotal')">🧪 Probar</button>
+            <button type="button" class="btn btn-primary" data-action="save-global">💾 Guardar API Key</button>
+            <button type="button" class="btn btn-secondary" data-action="test" data-provider="virustotal">🧪 Probar</button>
             <div class="test-result" id="test-vt"></div>
         </div>
     </div>
@@ -236,23 +166,20 @@
                 <p>Activa GPU para XGBoost y LightGBM durante el entrenamiento (requiere CUDA)</p>
             </div>
         </div>
-        <div class="form-group" style="flex-direction:row;align-items:center;gap:14px;">
-            <label for="use-gpu-toggle" style="text-transform:uppercase;">Usar GPU en entrenamiento</label>
+        <div class="row">
+            <label for="use-gpu-toggle">Usar GPU en entrenamiento</label>
             <label class="toggle-switch">
                 <input type="checkbox" id="use-gpu-toggle">
                 <span class="toggle-slider"></span>
             </label>
-            <span id="gpu-status-text" style="color:var(--text-faint,#64748b);font-size:0.85em;">Cargando...</span>
+            <span id="gpu-status-text" class="faint text-sm">Cargando...</span>
         </div>
-        <p style="color:var(--text-faint,#475569);font-size:0.82em;margin-top:10px;">
-            Solo tiene efecto con GPU NVIDIA y CUDA instalado. Requiere re-entrenar para aplicar.
-        </p>
+        <p class="hint">Solo tiene efecto con GPU NVIDIA y CUDA instalado. Requiere re-entrenar para aplicar.</p>
         <div class="card-footer">
-            <button type="button" class="btn btn-primary" onclick="saveGpuSetting()">💾 Guardar</button>
+            <button type="button" class="btn btn-primary" data-action="save-gpu">💾 Guardar</button>
             <div class="test-result" id="gpu-save-result"></div>
         </div>
     </div>
-
 
     <!-- Anti-Clanker -->
     <div class="card" id="clanker-panel">
@@ -263,56 +190,45 @@
             <span class="badge-status info" id="clanker-badge">Comprobando...</span>
         </div>
         <div class="info-grid">
-            <div class="info-item">
-                <small>Versión de reglas</small>
-                <strong id="clanker-version">—</strong>
-            </div>
-            <div class="info-item">
-                <small>Última actualización</small>
-                <strong id="clanker-updated">—</strong>
-            </div>
-            <div class="info-item">
-                <small>Reglas activas / totales</small>
-                <strong id="clanker-rules-count">—</strong>
-            </div>
+            <div class="info-item"><small>Versión de reglas</small><strong id="clanker-version">—</strong></div>
+            <div class="info-item"><small>Última actualización</small><strong id="clanker-updated">—</strong></div>
+            <div class="info-item"><small>Reglas activas / totales</small><strong id="clanker-rules-count">—</strong></div>
         </div>
         <hr class="divider">
-        <p style="color:var(--text-muted,#94a3b8);font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Reglas cargadas</p>
-        <div id="clanker-rules-table" style="margin-bottom:16px;">
-            <span style="color:var(--text-faint,#64748b);font-size:0.85em;">Cargando...</span>
+        <p class="section-title mb-1">Reglas cargadas</p>
+        <div id="clanker-rules-table" class="mb-2">
+            <span class="faint text-sm">Cargando...</span>
         </div>
+
         {% if user.role == 'admin' %}
         <hr class="divider">
-        <p style="color:var(--text-muted,#94a3b8);font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">
-            Gestión de reglas <span class="admin-badge">Admin</span>
-        </p>
+        <p class="section-title mb-2">Gestión de reglas <span class="admin-badge">Admin</span></p>
         <div class="form-grid">
             <div class="sub-card">
                 <h3>⬆️ Subir fichero local</h3>
-                <p style="color:var(--text-faint,#64748b);font-size:0.82em;margin-bottom:10px;">Sube un .yaml con el nuevo conjunto de reglas. Se valida antes de aplicar y se hace backup del anterior.</p>
+                <p class="hint mb-1">Sube un .yaml con el nuevo conjunto de reglas. Se valida antes de aplicar y se hace backup del anterior.</p>
                 <div class="input-row">
-                    <input type="file" id="clanker-rules-file" accept=".yaml,.yml" style="flex:1;background:var(--bg-body,#0f172a);color:var(--text-primary,#e2e8f0);border:1px solid var(--border-input,#2d3f55);border-radius:7px;padding:8px 10px;">
-                    <button class="btn btn-secondary btn-sm" onclick="clankerUploadRules()">⬆️ Subir</button>
+                    <input type="file" id="clanker-rules-file" accept=".yaml,.yml">
+                    <button class="btn btn-secondary btn-sm" data-action="clanker-upload">⬆️ Subir</button>
                 </div>
-                <div class="test-result" id="clanker-upload-result" style="margin-top:8px;"></div>
+                <div class="test-result mt-1" id="clanker-upload-result"></div>
             </div>
             <div class="sub-card">
                 <h3>🌐 URL remota de actualización</h3>
-                <p style="color:var(--text-faint,#64748b);font-size:0.82em;margin-bottom:10px;">URL pública del fichero YAML. El sistema comprueba diariamente si hay versión más reciente.</p>
-                <div class="input-row" style="margin-bottom:8px;">
-                    <input type="url" id="clanker-url-input" placeholder="https://ejemplo.com/clanker" style="flex:1;">
-                    <button class="btn btn-secondary btn-sm" onclick="clankerSaveUrl()">💾 Guardar</button>
+                <p class="hint mb-1">URL pública del fichero YAML. El sistema comprueba diariamente si hay versión más reciente.</p>
+                <div class="input-row mb-1">
+                    <input type="url" id="clanker-url-input" placeholder="https://ejemplo.com/clanker">
+                    <button class="btn btn-secondary btn-sm" data-action="clanker-save-url">💾 Guardar</button>
                 </div>
-                <button class="btn btn-warning btn-sm" style="width:100%;" onclick="clankerUpdateNow()">🔄 Comprobar y actualizar ahora</button>
-                <div class="test-result" id="clanker-url-result" style="margin-top:8px;"></div>
+                <button class="btn btn-warning btn-sm w-100" data-action="clanker-update">🔄 Comprobar y actualizar ahora</button>
+                <div class="test-result mt-1" id="clanker-url-result"></div>
             </div>
         </div>
         {% endif %}
     </div>
 
-    <!-- Certificado TLS -->
     {% if user.role == 'admin' %}
-    <div class="card section-admin" id="ssl-panel" style="display:none;">
+    <div class="card section-admin hidden" id="ssl-panel">
         <div class="card-header">
             <div class="card-header-left">
                 <h2>🔒 Certificado TLS <span class="admin-badge">Solo admin</span></h2>
@@ -321,322 +237,28 @@
             <span class="badge-status info" id="ssl-badge">Comprobando...</span>
         </div>
         <div class="info-grid">
-            <div class="info-item">
-                <small>Expira el</small>
-                <strong id="ssl-expiry">—</strong>
-            </div>
-            <div class="info-item">
-                <small>Días restantes</small>
-                <strong id="ssl-days">—</strong>
-            </div>
-            <div class="info-item">
-                <small>Estado</small>
-                <strong id="ssl-state">—</strong>
-            </div>
+            <div class="info-item"><small>Expira el</small><strong id="ssl-expiry">—</strong></div>
+            <div class="info-item"><small>Días restantes</small><strong id="ssl-days">—</strong></div>
+            <div class="info-item"><small>Estado</small><strong id="ssl-state">—</strong></div>
         </div>
         <hr class="divider">
-        <p style="color:var(--text-muted,#94a3b8);font-size:0.83em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Renovar certificado</p>
-        <p style="color:var(--text-faint,#64748b);font-size:0.83em;margin-bottom:12px;">
-            Genera un nuevo certificado ECDSA P-256 autofirmado. Se hace backup del actual. Requiere reiniciar el servicio para aplicarlo.
-        </p>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <label style="color:var(--text-muted,#94a3b8);font-size:0.78em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">Días de validez</label>
-            <input type="number" id="ssl-days-input" value="365" min="1" max="365" style="width:90px;">
-            <button class="btn btn-primary" onclick="sslRenew()">🔄 Renovar ahora</button>
+        <p class="section-title mb-1">Renovar certificado</p>
+        <p class="hint mb-2">Genera un nuevo certificado ECDSA P-256 autofirmado. Se hace backup del actual. Requiere reiniciar el servicio para aplicarlo.</p>
+        <div class="row">
+            <label for="ssl-days-input">Días de validez</label>
+            <input type="number" id="ssl-days-input" value="365" min="1" max="365" class="input-sm w-auto">
+            <button class="btn btn-primary" data-action="ssl-renew">🔄 Renovar ahora</button>
         </div>
-        <div class="test-result" id="ssl-renew-result" style="margin-top:14px;"></div>
+        <div class="test-result mt-2" id="ssl-renew-result"></div>
     </div>
     {% endif %}
 
     <div class="save-bar">
-        <button type="button" class="btn btn-primary" style="padding:11px 28px" onclick="saveAll()">💾 Guardar toda mi configuración</button>
+        <button type="button" class="btn btn-primary" data-action="save-all">💾 Guardar toda mi configuración</button>
     </div>
 </div>
-
-<div class="toast" id="toast"></div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-    function showToast(msg, type='success') {
-        const t = document.getElementById('toast');
-        t.textContent = msg;
-        t.className   = `toast ${type} show`;
-        setTimeout(() => t.classList.remove('show'), 3500);
-    }
-
-    function showTest(id, state, msg) {
-        const el = document.getElementById(`test-${id}`);
-        el.className   = `test-result ${state}`;
-        el.textContent = msg;
-    }
-
-    function showResult(id, state, msg) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.className   = `test-result ${state}`;
-        el.textContent = msg;
-        el.style.display = 'flex';
-    }
-
-    function collectAll() {
-        return {
-            default_provider:    document.getElementById('default-provider').value,
-            imap_server:         document.getElementById('imap-server').value.trim(),
-            imap_port:           document.getElementById('imap-port').value.trim() || '993',
-            imap_user:           document.getElementById('imap-user').value.trim(),
-            imap_password:       document.getElementById('imap-password').value,
-            ms365_client_id:     document.getElementById('m365-client-id').value.trim(),
-            ms365_client_secret: document.getElementById('m365-client-secret').value.trim(),
-            ms365_tenant_id:     document.getElementById('m365-tenant-id').value.trim(),
-            ms365_user_email:    document.getElementById('m365-email').value.trim(),
-            gmail_client_id:     document.getElementById('gmail-client-id').value.trim(),
-            gmail_client_secret: document.getElementById('gmail-client-secret').value.trim(),
-        };
-    }
-
-    async function saveAll() {
-        try {
-            const r = await fetch('/api/settings/mail', {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify(collectAll())
-            });
-            if (!r.ok) {
-                const text = await r.text();
-                showToast('Error del servidor (' + r.status + '): ' + text.slice(0, 200), 'error');
-                console.error('saveAll HTTP error', r.status, text);
-                return;
-            }
-            const res = await r.json();
-            if (res.success) showToast('✓ Configuración guardada');
-            else showToast('Error al guardar: ' + (res.error || ''), 'error');
-        } catch (e) {
-            showToast('Error de red o parsing: ' + e.message, 'error');
-            console.error('saveAll exception', e);
-        }
-    }
-
-    async function saveGlobal() {
-        const apiKey = document.getElementById('vt-apikey')?.value.trim();
-        if (!apiKey) return;
-        try {
-            const r = await fetch('/api/settings/global', {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ VIRUSTOTAL_API_KEY: apiKey })
-            });
-            if (!r.ok) {
-                const text = await r.text();
-                showToast('Error del servidor (' + r.status + '): ' + text.slice(0, 200), 'error');
-                console.error('saveGlobal HTTP error', r.status, text);
-                return;
-            }
-            const res = await r.json();
-            if (res.success) showToast('✓ API Key de VirusTotal guardada');
-            else showToast('Error al guardar: ' + (res.error || ''), 'error');
-        } catch (e) {
-            showToast('Error de red o parsing: ' + e.message, 'error');
-            console.error('saveGlobal exception', e);
-        }
-    }
-
-    async function testConn(provider) {
-        const idMap = { imap:'imap', m365:'m365', virustotal:'vt' };
-        const sid   = idMap[provider];
-        showTest(sid, 'loading', '⏳ Probando...');
-
-        let payload = { provider };
-        if (provider === 'imap') {
-            payload = { provider,
-                server:   document.getElementById('imap-server').value.trim(),
-                port:     document.getElementById('imap-port').value.trim(),
-                user:     document.getElementById('imap-user').value.trim(),
-                password: document.getElementById('imap-password').value };
-        } else if (provider === 'm365') {
-            payload = { provider,
-                client_id:     document.getElementById('m365-client-id').value.trim(),
-                client_secret: document.getElementById('m365-client-secret').value.trim(),
-                tenant_id:     document.getElementById('m365-tenant-id').value.trim() };
-        } else if (provider === 'virustotal') {
-            payload = { provider, api_key: document.getElementById('vt-apikey').value.trim() };
-        }
-
-        try {
-            const r   = await fetch('/api/settings/test', {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify(payload)
-            });
-            const res = await r.json();
-            showTest(sid, res.success ? 'ok' : 'error', res.message);
-        } catch(e) {
-            showTest(sid, 'error', 'Error de red');
-        }
-    }
-
-    // Doble clic para mostrar/ocultar contraseñas
-    document.querySelectorAll('input[type=password]').forEach(inp => {
-        inp.title = 'Doble clic para mostrar/ocultar';
-        inp.addEventListener('dblclick', () => {
-            inp.type = inp.type === 'password' ? 'text' : 'password';
-        });
-    });
-
-    // ── GPU ──────────────────────────────────────────────────────────────────
-    (function(){
-        fetch('/api/settings/global').then(r => r.json()).then(data => {
-            const val = (data.USE_GPU || 'false').toLowerCase();
-            const tog = document.getElementById('use-gpu-toggle');
-            const txt = document.getElementById('gpu-status-text');
-            tog.checked = (val === 'true' || val === '1');
-            txt.textContent = tog.checked ? 'GPU activada' : 'No disponible';
-            tog.addEventListener('change', () => {
-                txt.textContent = tog.checked ? 'GPU activada' : 'GPU desactivada (CPU)';
-            });
-        }).catch(() => {
-            document.getElementById('gpu-status-text').textContent = 'No disponible';
-        });
-
-        window.saveGpuSetting = function() {
-            const tog = document.getElementById('use-gpu-toggle');
-            showResult('gpu-save-result', 'loading', '⏳ Guardando...');
-            fetch('/api/settings/global', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({USE_GPU: tog.checked ? 'true' : 'false'})
-            }).then(r => r.json()).then(data => {
-                if (data.success || data.ok) showResult('gpu-save-result', 'ok', '✓ Guardado. Re-entrena para aplicar.');
-                else showResult('gpu-save-result', 'error', 'Error al guardar');
-            }).catch(() => showResult('gpu-save-result', 'error', 'Error de conexión'));
-        };
-    })();
-
-    // ── Anti-Clanker ─────────────────────────────────────────────────────────
-    async function clankerLoadStatus() {
-        try {
-            const r = await fetch('/api/clanker/status');
-            const d = await r.json();
-            const badge = document.getElementById('clanker-badge');
-            if (!d.enabled) { badge.textContent = 'No disponible'; badge.className = 'badge-status missing'; return; }
-            badge.textContent = 'Activo'; badge.className = 'badge-status ok';
-            document.getElementById('clanker-version').textContent = d.rules_version || '-';
-            document.getElementById('clanker-updated').textContent = d.rules_updated || '-';
-            document.getElementById('clanker-rules-count').textContent = d.active_rules + ' / ' + d.total_rules;
-            const ui = document.getElementById('clanker-url-input');
-            if (ui && d.rules_url) ui.value = d.rules_url;
-            clankerLoadRules();
-        } catch(e) { document.getElementById('clanker-panel').style.display = 'none'; }
-    }
-
-    async function clankerLoadRules() {
-        const box = document.getElementById('clanker-rules-table');
-        try {
-            const r = await fetch('/api/clanker/rules');
-            const d = await r.json();
-            if (!d.rules || !d.rules.length) { box.innerHTML = '<span style="color:var(--text-faint,#64748b);font-size:0.85em;">Sin reglas.</span>'; return; }
-            const sevClass = { critical:'sev-critical', high:'sev-high', medium:'sev-medium', low:'sev-low' };
-            let html = '<div class="table-wrapper"><table class="rules-table"><thead><tr><th>ID</th><th>Categoría</th><th>Severidad</th><th>Descripción</th><th>Activa</th></tr></thead><tbody>';
-            for (const rule of d.rules) {
-                const enabled = rule.enabled !== false;
-                const sc = sevClass[rule.severity] || 'sev-low';
-                html += `<tr>
-                    <td><code class="small-code">${rule.id}</code></td>
-                    <td><span class="cat-badge">${rule.category}</span></td>
-                    <td><span class="sev-badge ${sc}">${rule.severity}</span></td>
-                    <td style="color:var(--text-muted,#94a3b8);">${rule.description || ''}</td>
-                    <td><div class="form-check-switch"><label class="toggle-switch" style="width:36px;height:20px;"><input type="checkbox" ${enabled ? 'checked' : ''} onchange="clankerToggleRule('${rule.id}', this)"><span class="toggle-slider"></span></label></div></td>
-                </tr>`;
-            }
-            html += '</tbody></table></div>';
-            box.innerHTML = html;
-        } catch(e) { box.innerHTML = '<span style="color:var(--text-faint,#64748b);font-size:0.85em;">Error cargando reglas.</span>'; }
-    }
-
-    async function clankerToggleRule(id, cb) {
-        try {
-            const r = await fetch('/api/clanker/rules/' + id + '/toggle', {method:'POST'});
-            const d = await r.json();
-            cb.checked = d.enabled;
-            clankerLoadStatus();
-        } catch(e) { alert('Error'); cb.checked = !cb.checked; }
-    }
-
-    async function clankerUploadRules() {
-        const input = document.getElementById('clanker-rules-file');
-        if (!input.files.length) { alert('Selecciona un fichero YAML'); return; }
-        showResult('clanker-upload-result', 'loading', '⏳ Validando...');
-        const fd = new FormData();
-        fd.append('file', input.files[0]);
-        try {
-            const r = await fetch('/api/clanker/upload_rules', {method:'POST', body:fd});
-            const d = await r.json();
-            if (d.success) { showResult('clanker-upload-result', 'ok', '✓ Subido: ' + d.rules_count + ' reglas.'); input.value = ''; clankerLoadStatus(); }
-            else showResult('clanker-upload-result', 'error', '✗ ' + d.error);
-        } catch(e) { showResult('clanker-upload-result', 'error', 'Error: ' + e); }
-    }
-
-    async function clankerSaveUrl() {
-        const url = document.getElementById('clanker-url-input').value.trim();
-        try {
-            const r = await fetch('/api/clanker/set_url', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url})});
-            const d = await r.json();
-            if (d.success) showResult('clanker-url-result', 'ok', '✓ ' + (url ? 'URL guardada.' : 'URL eliminada.'));
-            else showResult('clanker-url-result', 'error', '✗ ' + d.error);
-        } catch(e) { showResult('clanker-url-result', 'error', 'Error: ' + e); }
-    }
-
-    async function clankerUpdateNow() {
-        showResult('clanker-url-result', 'loading', '⏳ Comprobando...');
-        try {
-            const r = await fetch('/api/clanker/update_rules', {method:'POST'});
-            const d = await r.json();
-            if (d.success) { showResult('clanker-url-result', 'ok', '✓ ' + (d.message || 'Actualizado.')); clankerLoadStatus(); }
-            else showResult('clanker-url-result', 'warning', d.message || 'Sin actualizaciones.');
-        } catch(e) { showResult('clanker-url-result', 'error', 'Error: ' + e); }
-    }
-
-    clankerLoadStatus();
-
-    // ── TLS ──────────────────────────────────────────────────────────────────
-    async function sslLoadStatus() {
-        try {
-            const r = await fetch('/api/ssl/status');
-            const d = await r.json();
-            const panel = document.getElementById('ssl-panel');
-            if (!d.enabled) { if (panel) panel.style.display = 'none'; return; }
-            if (panel) panel.style.display = '';
-            const badge = document.getElementById('ssl-badge');
-            const days  = d.days_left ?? '?';
-            if (d.expired) { badge.textContent = 'Expirado'; badge.className = 'badge-status missing'; }
-            else if (d.warning) { badge.textContent = '⚠ ' + days + ' días'; badge.className = 'badge-status warn'; }
-            else { badge.textContent = 'Válido'; badge.className = 'badge-status ok'; }
-            document.getElementById('ssl-expiry').textContent = d.expiry || '—';
-            document.getElementById('ssl-days').textContent   = days + ' días';
-            document.getElementById('ssl-state').textContent  = d.expired ? '❌ Expirado' : d.warning ? '⚠ Próximo a expirar' : '✅ OK';
-            if (d.error) document.getElementById('ssl-state').textContent = '⚠ ' + d.error;
-        } catch(e) {
-            const p = document.getElementById('ssl-panel');
-            if (p) p.style.display = 'none';
-        }
-    }
-
-    async function sslRenew() {
-        const days = parseInt(document.getElementById('ssl-days-input').value) || 365;
-        showResult('ssl-renew-result', 'loading', '⏳ Generando certificado...');
-        try {
-            const r = await fetch('/api/ssl/renew', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({days})
-            });
-            const d = await r.json();
-            if (d.success) {
-                showResult('ssl-renew-result', 'ok',
-                    '✅ ' + d.message + (d.restart_required ? ' — Reinicia: systemctl restart email-detector' : ''));
-                sslLoadStatus();
-            } else {
-                showResult('ssl-renew-result', 'error', '❌ ' + d.error);
-            }
-        } catch(e) { showResult('ssl-renew-result', 'error', 'Error: ' + e); }
-    }
-
-    sslLoadStatus();
-</script>
+<script src="/static/js/settings.js"></script>
 {% endblock %}
