@@ -760,6 +760,55 @@ tbody tr:hover td { background: var(--bg-hover); }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .form-grid.cols-1 { grid-template-columns: 1fr; }
 
+/* Pestañas de configuración */
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.92em;
+  padding: 10px 16px;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+  transition: color .15s, background .15s, border-color .15s;
+}
+.tab-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-panel { animation: fadeIn .18s ease; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Tarjetas colapsables (proveedores) */
+.card-header-right { display: flex; align-items: center; gap: 10px; }
+.collapse-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 8px;
+  width: 32px; height: 32px;
+  cursor: pointer;
+  font-size: 0.9em;
+  flex-shrink: 0;
+  transition: transform .2s, color .15s, border-color .15s;
+}
+.collapse-toggle:hover { color: var(--text-primary); border-color: var(--text-faint); }
+.provider-card.collapsed .collapse-toggle { transform: rotate(-90deg); }
+.provider-card.collapsed .card-collapse { display: none; }
+
+.code-box {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 8px 0;
+  word-break: break-all;
+  letter-spacing: 0.08em;
+}
+
 .test-result {
   font-size: 0.85em;
   padding: 7px 13px;

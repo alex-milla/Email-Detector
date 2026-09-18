@@ -8,6 +8,12 @@
   var toast = window.EMD.toast;
 
   function $(id) { return document.getElementById(id); }
+  function escapeHtml(text) {
+    if (text === undefined || text === null) return '';
+    var div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
   function showResult(id, state, msg) {
     var el = $(id);
     if (!el) return;
@@ -331,12 +337,149 @@
     }
   }
 
+  /* ── Pestañas ───────────────────────────────────────────────────────────── */
+  function activateTab(name) {
+    var tabs = document.querySelectorAll('.tab-btn');
+    var exists = false;
+    tabs.forEach(function (b) {
+      var on = b.getAttribute('data-tab') === name;
+      if (on) exists = true;
+      b.classList.toggle('active', on);
+    });
+    if (!exists) {
+      name = 'mail';
+      tabs.forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === 'mail'); });
+    }
+    document.querySelectorAll('[data-tab-panel]').forEach(function (p) {
+      p.classList.toggle('hidden', p.getAttribute('data-tab-panel') !== name);
+    });
+    try { localStorage.setItem('emd_settings_tab', name); } catch (e) { /* privado */ }
+  }
+
+  function toggleCollapse(btn) {
+    var card = btn.closest('.provider-card');
+    if (!card) return;
+    var collapsed = card.classList.toggle('collapsed');
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  }
+
+  /* ── Seguridad: contraseña ──────────────────────────────────────────────── */
+  async function changePassword(uid) {
+    var p1 = ($('pwd-new') || {}).value || '';
+    var p2 = ($('pwd-confirm') || {}).value || '';
+    if (!p1 || p1.length < 8) { showResult('pwd-result', 'error', 'Mínimo 8 caracteres'); return; }
+    if (p1 !== p2) { showResult('pwd-result', 'error', 'Las contraseñas no coinciden'); return; }
+    showResult('pwd-result', 'loading', '⏳ Guardando...');
+    try {
+      var d = await window.EMD.fetchJSON('/api/users/' + uid + '/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: p1 })
+      });
+      if (d.success) {
+        showResult('pwd-result', 'ok', '✅ Contraseña actualizada');
+        $('pwd-new').value = '';
+        $('pwd-confirm').value = '';
+      } else {
+        showResult('pwd-result', 'error', '❌ ' + (d.error || 'Error'));
+      }
+    } catch (e) {
+      showResult('pwd-result', 'error', '❌ ' + e.message);
+    }
+  }
+
+  /* ── Seguridad: 2FA ─────────────────────────────────────────────────────── */
+  function render2FA(enabled) {
+    var body = $('tfa-body');
+    if (!body) return;
+    if (enabled) {
+      body.innerHTML = '<div class="row"><span class="feedback-applied benign">✅ 2FA activado</span>' +
+        '<button type="button" class="btn btn-danger btn-sm" data-action="tfa-disable">Desactivar</button></div>';
+    } else {
+      body.innerHTML = '<button type="button" class="btn btn-primary btn-sm" data-action="tfa-setup">📱 Activar 2FA</button>';
+    }
+  }
+
+  async function load2FA() {
+    var body = $('tfa-body');
+    if (!body) return;
+    var badge = $('tfa-badge');
+    try {
+      var d = await window.EMD.fetchJSON('/api/2fa/status');
+      if (!d.available) {
+        badge.textContent = 'No disponible';
+        badge.className = 'badge-status missing';
+        body.innerHTML = '<span class="faint text-sm">pyotp no instalado en el servidor.</span>';
+        return;
+      }
+      badge.textContent = d.enabled ? 'Activado' : 'Desactivado';
+      badge.className = 'badge-status ' + (d.enabled ? 'ok' : 'missing');
+      render2FA(d.enabled);
+    } catch (e) {
+      badge.textContent = 'No disponible';
+      badge.className = 'badge-status missing';
+    }
+  }
+
+  async function tfaSetup() {
+    try {
+      var d = await window.EMD.fetchJSON('/api/2fa/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      });
+      if (!d.success) { toast(d.error || 'Error', 'error'); return; }
+      var body = $('tfa-body');
+      body.innerHTML =
+        '<p class="hint">1) Añade esta clave en tu app (Google Authenticator, Authy…):</p>' +
+        '<div class="code-box">' + escapeHtml(d.secret) + '</div>' +
+        '<p class="hint">O usa este enlace otpauth:<br><code class="small-code">' + escapeHtml(d.uri) + '</code></p>' +
+        '<p class="hint">2) Introduce el código de 6 dígitos para confirmar:</p>' +
+        '<div class="row"><input type="text" id="tfa-code" class="input-sm w-auto" placeholder="123456" maxlength="6" inputmode="numeric">' +
+        '<button type="button" class="btn btn-primary btn-sm" data-action="tfa-confirm">Confirmar</button></div>' +
+        '<div class="test-result mt-1" id="tfa-result"></div>';
+    } catch (e) {
+      toast(e.message || 'Error', 'error');
+    }
+  }
+
+  async function tfaConfirm() {
+    var codeEl = $('tfa-code');
+    var code = codeEl ? codeEl.value.trim() : '';
+    if (!/^\d{6}$/.test(code)) { showResult('tfa-result', 'error', 'Introduce un código de 6 dígitos'); return; }
+    showResult('tfa-result', 'loading', '⏳ Verificando...');
+    try {
+      var d = await window.EMD.fetchJSON('/api/2fa/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code })
+      });
+      if (d.success) { showResult('tfa-result', 'ok', '✅ 2FA activado'); load2FA(); }
+      else { showResult('tfa-result', 'error', '❌ ' + (d.error || 'Código inválido')); }
+    } catch (e) {
+      showResult('tfa-result', 'error', '❌ ' + e.message);
+    }
+  }
+
+  async function tfaDisable() {
+    if (!confirm('¿Desactivar la autenticación en dos pasos?')) return;
+    try {
+      var d = await window.EMD.fetchJSON('/api/2fa/disable', { method: 'POST' });
+      toast(d.message || '2FA desactivado', 'success');
+      load2FA();
+    } catch (e) {
+      toast(e.message || 'No se pudo desactivar (solo admin)', 'error');
+    }
+  }
+
   /* ── Delegación de acciones ─────────────────────────────────────────────── */
   document.addEventListener('click', function (ev) {
     var btn = ev.target.closest('[data-action]');
     if (!btn) return;
     var action = btn.getAttribute('data-action');
-    if (action === 'save-all') saveAll();
+    if (action === 'tab') activateTab(btn.getAttribute('data-tab'));
+    else if (action === 'collapse') toggleCollapse(btn);
+    else if (action === 'save-all') saveAll();
     else if (action === 'save-global') saveGlobal();
     else if (action === 'test') testConn(btn.getAttribute('data-provider'));
     else if (action === 'save-gpu') saveGpu();
@@ -344,6 +487,10 @@
     else if (action === 'clanker-save-url') clankerSaveUrl();
     else if (action === 'clanker-update') clankerUpdate();
     else if (action === 'ssl-renew') sslRenew();
+    else if (action === 'change-password') changePassword(btn.getAttribute('data-user-id'));
+    else if (action === 'tfa-setup') tfaSetup();
+    else if (action === 'tfa-confirm') tfaConfirm();
+    else if (action === 'tfa-disable') tfaDisable();
   });
 
   /* Doble clic para mostrar/ocultar contraseñas */
@@ -354,6 +501,12 @@
     });
   });
 
-  clankerLoadStatus();
-  sslLoadStatus();
+  (function initSettings() {
+    var saved = 'mail';
+    try { saved = localStorage.getItem('emd_settings_tab') || 'mail'; } catch (e) { /* privado */ }
+    activateTab(saved);
+    clankerLoadStatus();
+    sslLoadStatus();
+    load2FA();
+  })();
 })();

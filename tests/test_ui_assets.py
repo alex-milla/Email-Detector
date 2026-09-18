@@ -81,6 +81,15 @@ class TestLayout:
         assert "onchange=" not in html
         assert os.path.isfile(os.path.join(STATIC, "js", "settings.js"))
 
+    def test_settings_has_tabs_security_and_collapse(self):
+        html = _read(os.path.join(TEMPLATES, "settings.html"))
+        assert 'data-action="tab"' in html
+        for tab in ("mail", "detection", "system"):
+            assert 'data-tab-panel="' + tab + '"' in html
+        assert 'data-action="change-password"' in html
+        assert 'data-action="collapse"' in html
+        assert "provider-card" in html
+
     def test_dashboard_page_migrated(self):
         html = _read(os.path.join(TEMPLATES, "index.html"))
         assert "/static/js/dashboard.js" in html

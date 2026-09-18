@@ -5,257 +5,329 @@
 {% block content %}
 <div class="container">
     <div class="page-header">
-        <h1>⚙️ Mi configuración de correo</h1>
-        <p>Configura tus propias cuentas de correo. Cada usuario tiene su perfil independiente.</p>
+        <h1>⚙️ Mi configuración</h1>
+        <p>Correo, detección y sistema. Cada usuario tiene su perfil independiente.</p>
     </div>
 
-    <!-- Proveedor por defecto -->
-    <div class="card">
-        <div class="card-header">
-            <div class="card-header-left">
-                <h2>📌 Proveedor por defecto</h2>
-                <p>Se usará al descargar correos desde el Dashboard</p>
-            </div>
-        </div>
-        <div class="default-select">
-            <label for="default-provider">Proveedor activo:</label>
-            <select id="default-provider">
-                <option value="imap"  {% if config.default_provider == 'imap'  %}selected{% endif %}>📬 IMAP genérico</option>
-                <option value="m365"  {% if config.default_provider == 'm365'  %}selected{% endif %}>🏢 Microsoft 365</option>
-                <option value="gmail" {% if config.default_provider == 'gmail' %}selected{% endif %}>📧 Gmail</option>
-            </select>
-            <button type="button" class="btn btn-primary" data-action="save-all">Guardar</button>
-        </div>
+    <div class="tabs" role="tablist">
+        <button type="button" class="tab-btn active" data-action="tab" data-tab="mail" role="tab">📬 Correo</button>
+        <button type="button" class="tab-btn" data-action="tab" data-tab="detection" role="tab">🛡️ Detección</button>
+        <button type="button" class="tab-btn" data-action="tab" data-tab="system" role="tab">⚙️ Sistema</button>
     </div>
 
-    <!-- IMAP -->
-    <div class="card">
-        <div class="card-header">
-            <div class="card-header-left">
-                <h2>📬 IMAP genérico</h2>
-                <p>Gmail App Password, Outlook, servidor propio…</p>
-            </div>
-            <span class="badge-status {{ 'ok' if config.imap_server and config.imap_user else 'missing' }}">
-                {{ '✓ Configurado' if config.imap_server and config.imap_user else '✗ Sin configurar' }}
-            </span>
-        </div>
-        <div class="form-grid">
-            <div class="form-group">
-                <label for="imap-server">Servidor IMAP</label>
-                <input type="text" id="imap-server" placeholder="imap.gmail.com" value="{{ config.imap_server }}">
-            </div>
-            <div class="form-group">
-                <label for="imap-port">Puerto</label>
-                <input type="number" id="imap-port" placeholder="993" value="{{ config.imap_port or '993' }}">
-            </div>
-            <div class="form-group">
-                <label for="imap-user">Usuario / Email</label>
-                <input type="email" id="imap-user" placeholder="usuario@dominio.com" value="{{ config.imap_user }}">
-            </div>
-            <div class="form-group">
-                <label for="imap-password">Contraseña / App Password</label>
-                <input type="password" id="imap-password" placeholder="••••••••" value="{{ config.imap_password }}">
-                <p class="hint">
-                    ℹ️ <strong>Gmail:</strong> usa una <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App Password</a>
-                    (necesitas <a href="https://myaccount.google.com/signinoptions/two-step-verification" target="_blank" rel="noopener">2FA activado</a>).
-                    Tu contraseña normal de Google ya no funciona para IMAP.
-                </p>
-            </div>
-        </div>
-        <div class="card-footer">
-            <button type="button" class="btn btn-primary" data-action="save-all">💾 Guardar</button>
-            <button type="button" class="btn btn-secondary" data-action="test" data-provider="imap">🧪 Probar conexión</button>
-            <div class="test-result" id="test-imap"></div>
-        </div>
-    </div>
+    <!-- ============================ TAB: CORREO ============================ -->
+    <section class="tab-panel" data-tab-panel="mail">
 
-    <!-- Microsoft 365 -->
-    <div class="card">
-        <div class="card-header">
-            <div class="card-header-left">
-                <h2>🏢 Microsoft 365</h2>
-                <p>OAuth2 con Microsoft Graph API — necesita registro en Azure AD</p>
+        <div class="card">
+            <div class="card-header">
+                <div class="card-header-left">
+                    <h2>📌 Proveedor por defecto</h2>
+                    <p>Se usará al descargar correos desde el Dashboard</p>
+                </div>
             </div>
-            <span class="badge-status {{ 'ok' if config.ms365_client_id and config.ms365_tenant_id else 'missing' }}">
-                {{ '✓ Configurado' if config.ms365_client_id and config.ms365_tenant_id else '✗ Sin configurar' }}
-            </span>
-        </div>
-        <div class="form-grid">
-            <div class="form-group">
-                <label for="m365-client-id">Client ID</label>
-                <input type="password" id="m365-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" value="{{ config.ms365_client_id }}">
+            <div class="default-select">
+                <label for="default-provider">Proveedor activo:</label>
+                <select id="default-provider">
+                    <option value="imap"  {% if config.default_provider == 'imap'  %}selected{% endif %}>📬 IMAP genérico</option>
+                    <option value="m365"  {% if config.default_provider == 'm365'  %}selected{% endif %}>🏢 Microsoft 365</option>
+                    <option value="gmail" {% if config.default_provider == 'gmail' %}selected{% endif %}>📧 Gmail</option>
+                </select>
+                <button type="button" class="btn btn-primary" data-action="save-all">Guardar</button>
             </div>
-            <div class="form-group">
-                <label for="m365-client-secret">Client Secret</label>
-                <input type="password" id="m365-client-secret" placeholder="••••••••" value="{{ config.ms365_client_secret }}">
-            </div>
-            <div class="form-group">
-                <label for="m365-tenant-id">Tenant ID</label>
-                <input type="password" id="m365-tenant-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" value="{{ config.ms365_tenant_id }}">
-            </div>
-            <div class="form-group">
-                <label for="m365-email">Email del buzón</label>
-                <input type="email" id="m365-email" placeholder="usuario@empresa.com" value="{{ config.ms365_user_email }}">
-            </div>
-        </div>
-        <div class="card-footer">
-            <button type="button" class="btn btn-primary" data-action="save-all">💾 Guardar</button>
-            <button type="button" class="btn btn-secondary" data-action="test" data-provider="m365">🧪 Probar conexión</button>
-            <a href="https://portal.azure.com" target="_blank" rel="noopener" class="btn btn-secondary">🔗 Azure Portal</a>
-            <div class="test-result" id="test-m365"></div>
-        </div>
-    </div>
-
-    <!-- Gmail -->
-    <div class="card">
-        <div class="card-header">
-            <div class="card-header-left">
-                <h2>📧 Gmail</h2>
-                <p>OAuth2 con Google Workspace API — necesita proyecto en Google Cloud</p>
-            </div>
-            <span class="badge-status {{ 'ok' if config.gmail_client_id else 'missing' }}">
-                {{ '✓ Configurado' if config.gmail_client_id else '✗ Sin configurar' }}
-            </span>
-        </div>
-        <div class="form-grid">
-            <div class="form-group">
-                <label for="gmail-client-id">Client ID</label>
-                <input type="password" id="gmail-client-id" placeholder="xxxx.apps.googleusercontent.com" value="{{ config.gmail_client_id }}">
-            </div>
-            <div class="form-group">
-                <label for="gmail-client-secret">Client Secret</label>
-                <input type="password" id="gmail-client-secret" placeholder="••••••••" value="{{ config.gmail_client_secret }}">
-            </div>
-        </div>
-        <div class="card-footer">
-            <button type="button" class="btn btn-primary" data-action="save-all">💾 Guardar</button>
-            <a href="https://console.cloud.google.com" target="_blank" rel="noopener" class="btn btn-secondary">🔗 Google Cloud Console</a>
-        </div>
-    </div>
-
-    {% if user.role == 'admin' %}
-    <div class="card section-admin">
-        <div class="card-header">
-            <div class="card-header-left">
-                <h2>🔍 VirusTotal <span class="admin-badge">Solo admin</span></h2>
-                <p>API Key global — compartida por todos los usuarios</p>
-            </div>
-            <span class="badge-status {{ 'ok' if global_cfg.get('VIRUSTOTAL_API_KEY') else 'missing' }}">
-                {{ '✓ Configurado' if global_cfg.get('VIRUSTOTAL_API_KEY') else '✗ Sin configurar' }}
-            </span>
-        </div>
-        <div class="form-grid cols-1">
-            <div class="form-group">
-                <label for="vt-apikey">API Key</label>
-                <input type="password" id="vt-apikey" placeholder="Pega aquí tu API Key" value="{{ global_cfg.get('VIRUSTOTAL_API_KEY', '') }}">
-            </div>
-        </div>
-        <div class="card-footer">
-            <button type="button" class="btn btn-primary" data-action="save-global">💾 Guardar API Key</button>
-            <button type="button" class="btn btn-secondary" data-action="test" data-provider="virustotal">🧪 Probar</button>
-            <div class="test-result" id="test-vt"></div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Aceleración GPU -->
-    <div class="card" id="card-gpu">
-        <div class="card-header">
-            <div class="card-header-left">
-                <h2>⚡ Aceleración GPU</h2>
-                <p>Activa GPU para XGBoost y LightGBM durante el entrenamiento (requiere CUDA)</p>
-            </div>
-        </div>
-        <div class="row">
-            <label for="use-gpu-toggle">Usar GPU en entrenamiento</label>
-            <label class="toggle-switch">
-                <input type="checkbox" id="use-gpu-toggle">
-                <span class="toggle-slider"></span>
-            </label>
-            <span id="gpu-status-text" class="faint text-sm">Cargando...</span>
-        </div>
-        <p class="hint">Solo tiene efecto con GPU NVIDIA y CUDA instalado. Requiere re-entrenar para aplicar.</p>
-        <div class="card-footer">
-            <button type="button" class="btn btn-primary" data-action="save-gpu">💾 Guardar</button>
-            <div class="test-result" id="gpu-save-result"></div>
-        </div>
-    </div>
-
-    <!-- Anti-Clanker -->
-    <div class="card" id="clanker-panel">
-        <div class="card-header">
-            <div class="card-header-left">
-                <h2>🤖 Anti-Clanker — Detector LLM/IA (Modelo 10)</h2>
-            </div>
-            <span class="badge-status info" id="clanker-badge">Comprobando...</span>
-        </div>
-        <div class="info-grid">
-            <div class="info-item"><small>Versión de reglas</small><strong id="clanker-version">—</strong></div>
-            <div class="info-item"><small>Última actualización</small><strong id="clanker-updated">—</strong></div>
-            <div class="info-item"><small>Reglas activas / totales</small><strong id="clanker-rules-count">—</strong></div>
-        </div>
-        <hr class="divider">
-        <p class="section-title mb-1">Reglas cargadas</p>
-        <div id="clanker-rules-table" class="mb-2">
-            <span class="faint text-sm">Cargando...</span>
         </div>
 
+        <!-- IMAP -->
+        <div class="card provider-card {% if config.default_provider != 'imap' %}collapsed{% endif %}">
+            <div class="card-header">
+                <div class="card-header-left">
+                    <h2>📬 IMAP genérico</h2>
+                    <p>Gmail App Password, Outlook, servidor propio…</p>
+                </div>
+                <div class="card-header-right">
+                    <span class="badge-status {{ 'ok' if config.imap_server and config.imap_user else 'missing' }}">
+                        {{ '✓ Configurado' if config.imap_server and config.imap_user else '✗ Sin configurar' }}
+                    </span>
+                    <button type="button" class="collapse-toggle" data-action="collapse"
+                            aria-expanded="{{ 'false' if config.default_provider != 'imap' else 'true' }}"
+                            title="Expandir/contraer">▾</button>
+                </div>
+            </div>
+            <div class="card-collapse">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="imap-server">Servidor IMAP</label>
+                        <input type="text" id="imap-server" placeholder="imap.gmail.com" value="{{ config.imap_server }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="imap-port">Puerto</label>
+                        <input type="number" id="imap-port" placeholder="993" value="{{ config.imap_port or '993' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="imap-user">Usuario / Email</label>
+                        <input type="email" id="imap-user" placeholder="usuario@dominio.com" value="{{ config.imap_user }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="imap-password">Contraseña / App Password</label>
+                        <input type="password" id="imap-password" placeholder="••••••••" value="{{ config.imap_password }}">
+                        <p class="hint">
+                            ℹ️ <strong>Gmail:</strong> usa una <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App Password</a>
+                            (necesitas <a href="https://myaccount.google.com/signinoptions/two-step-verification" target="_blank" rel="noopener">2FA activado</a>).
+                            Tu contraseña normal de Google ya no funciona para IMAP.
+                        </p>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="button" class="btn btn-primary" data-action="save-all">💾 Guardar</button>
+                    <button type="button" class="btn btn-secondary" data-action="test" data-provider="imap">🧪 Probar conexión</button>
+                    <div class="test-result" id="test-imap"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Microsoft 365 -->
+        <div class="card provider-card {% if config.default_provider != 'm365' %}collapsed{% endif %}">
+            <div class="card-header">
+                <div class="card-header-left">
+                    <h2>🏢 Microsoft 365</h2>
+                    <p>OAuth2 con Microsoft Graph API — necesita registro en Azure AD</p>
+                </div>
+                <div class="card-header-right">
+                    <span class="badge-status {{ 'ok' if config.ms365_client_id and config.ms365_tenant_id else 'missing' }}">
+                        {{ '✓ Configurado' if config.ms365_client_id and config.ms365_tenant_id else '✗ Sin configurar' }}
+                    </span>
+                    <button type="button" class="collapse-toggle" data-action="collapse"
+                            aria-expanded="{{ 'false' if config.default_provider != 'm365' else 'true' }}"
+                            title="Expandir/contraer">▾</button>
+                </div>
+            </div>
+            <div class="card-collapse">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="m365-client-id">Client ID</label>
+                        <input type="password" id="m365-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" value="{{ config.ms365_client_id }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="m365-client-secret">Client Secret</label>
+                        <input type="password" id="m365-client-secret" placeholder="••••••••" value="{{ config.ms365_client_secret }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="m365-tenant-id">Tenant ID</label>
+                        <input type="password" id="m365-tenant-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" value="{{ config.ms365_tenant_id }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="m365-email">Email del buzón</label>
+                        <input type="email" id="m365-email" placeholder="usuario@empresa.com" value="{{ config.ms365_user_email }}">
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="button" class="btn btn-primary" data-action="save-all">💾 Guardar</button>
+                    <button type="button" class="btn btn-secondary" data-action="test" data-provider="m365">🧪 Probar conexión</button>
+                    <a href="https://portal.azure.com" target="_blank" rel="noopener" class="btn btn-secondary">🔗 Azure Portal</a>
+                    <div class="test-result" id="test-m365"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gmail -->
+        <div class="card provider-card {% if config.default_provider != 'gmail' %}collapsed{% endif %}">
+            <div class="card-header">
+                <div class="card-header-left">
+                    <h2>📧 Gmail</h2>
+                    <p>OAuth2 con Google Workspace API — necesita proyecto en Google Cloud</p>
+                </div>
+                <div class="card-header-right">
+                    <span class="badge-status {{ 'ok' if config.gmail_client_id else 'missing' }}">
+                        {{ '✓ Configurado' if config.gmail_client_id else '✗ Sin configurar' }}
+                    </span>
+                    <button type="button" class="collapse-toggle" data-action="collapse"
+                            aria-expanded="{{ 'false' if config.default_provider != 'gmail' else 'true' }}"
+                            title="Expandir/contraer">▾</button>
+                </div>
+            </div>
+            <div class="card-collapse">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="gmail-client-id">Client ID</label>
+                        <input type="password" id="gmail-client-id" placeholder="xxxx.apps.googleusercontent.com" value="{{ config.gmail_client_id }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="gmail-client-secret">Client Secret</label>
+                        <input type="password" id="gmail-client-secret" placeholder="••••••••" value="{{ config.gmail_client_secret }}">
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="button" class="btn btn-primary" data-action="save-all">💾 Guardar</button>
+                    <a href="https://console.cloud.google.com" target="_blank" rel="noopener" class="btn btn-secondary">🔗 Google Cloud Console</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="save-bar">
+            <button type="button" class="btn btn-primary" data-action="save-all">💾 Guardar toda mi configuración de correo</button>
+        </div>
+    </section>
+
+    <!-- ========================== TAB: DETECCIÓN =========================== -->
+    <section class="tab-panel hidden" data-tab-panel="detection">
+
+        <!-- Anti-Clanker -->
+        <div class="card" id="clanker-panel">
+            <div class="card-header">
+                <div class="card-header-left">
+                    <h2>🤖 Anti-Clanker — Detector LLM/IA (Modelo 10)</h2>
+                </div>
+                <span class="badge-status info" id="clanker-badge">Comprobando...</span>
+            </div>
+            <div class="info-grid">
+                <div class="info-item"><small>Versión de reglas</small><strong id="clanker-version">—</strong></div>
+                <div class="info-item"><small>Última actualización</small><strong id="clanker-updated">—</strong></div>
+                <div class="info-item"><small>Reglas activas / totales</small><strong id="clanker-rules-count">—</strong></div>
+            </div>
+            <hr class="divider">
+            <p class="section-title mb-1">Reglas cargadas</p>
+            <div id="clanker-rules-table" class="mb-2">
+                <span class="faint text-sm">Cargando...</span>
+            </div>
+
+            {% if user.role == 'admin' %}
+            <hr class="divider">
+            <p class="section-title mb-2">Gestión de reglas <span class="admin-badge">Admin</span></p>
+            <div class="form-grid">
+                <div class="sub-card">
+                    <h3>⬆️ Subir fichero local</h3>
+                    <p class="hint mb-1">Sube un .yaml con el nuevo conjunto de reglas. Se valida antes de aplicar y se hace backup del anterior.</p>
+                    <div class="input-row">
+                        <input type="file" id="clanker-rules-file" accept=".yaml,.yml">
+                        <button type="button" class="btn btn-secondary btn-sm" data-action="clanker-upload">⬆️ Subir</button>
+                    </div>
+                    <div class="test-result mt-1" id="clanker-upload-result"></div>
+                </div>
+                <div class="sub-card">
+                    <h3>🌐 URL remota de actualización</h3>
+                    <p class="hint mb-1">URL pública del fichero YAML. El sistema comprueba diariamente si hay versión más reciente.</p>
+                    <div class="input-row mb-1">
+                        <input type="url" id="clanker-url-input" placeholder="https://ejemplo.com/clanker">
+                        <button type="button" class="btn btn-secondary btn-sm" data-action="clanker-save-url">💾 Guardar</button>
+                    </div>
+                    <button type="button" class="btn btn-warning btn-sm w-100" data-action="clanker-update">🔄 Comprobar y actualizar ahora</button>
+                    <div class="test-result mt-1" id="clanker-url-result"></div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- VirusTotal (admin) -->
         {% if user.role == 'admin' %}
-        <hr class="divider">
-        <p class="section-title mb-2">Gestión de reglas <span class="admin-badge">Admin</span></p>
-        <div class="form-grid">
-            <div class="sub-card">
-                <h3>⬆️ Subir fichero local</h3>
-                <p class="hint mb-1">Sube un .yaml con el nuevo conjunto de reglas. Se valida antes de aplicar y se hace backup del anterior.</p>
-                <div class="input-row">
-                    <input type="file" id="clanker-rules-file" accept=".yaml,.yml">
-                    <button class="btn btn-secondary btn-sm" data-action="clanker-upload">⬆️ Subir</button>
+        <div class="card section-admin">
+            <div class="card-header">
+                <div class="card-header-left">
+                    <h2>🔍 VirusTotal <span class="admin-badge">Solo admin</span></h2>
+                    <p>API Key global — compartida por todos los usuarios</p>
                 </div>
-                <div class="test-result mt-1" id="clanker-upload-result"></div>
+                <span class="badge-status {{ 'ok' if global_cfg.get('VIRUSTOTAL_API_KEY') else 'missing' }}">
+                    {{ '✓ Configurado' if global_cfg.get('VIRUSTOTAL_API_KEY') else '✗ Sin configurar' }}
+                </span>
             </div>
-            <div class="sub-card">
-                <h3>🌐 URL remota de actualización</h3>
-                <p class="hint mb-1">URL pública del fichero YAML. El sistema comprueba diariamente si hay versión más reciente.</p>
-                <div class="input-row mb-1">
-                    <input type="url" id="clanker-url-input" placeholder="https://ejemplo.com/clanker">
-                    <button class="btn btn-secondary btn-sm" data-action="clanker-save-url">💾 Guardar</button>
+            <div class="form-grid cols-1">
+                <div class="form-group">
+                    <label for="vt-apikey">API Key</label>
+                    <input type="password" id="vt-apikey" placeholder="Pega aquí tu API Key" value="{{ global_cfg.get('VIRUSTOTAL_API_KEY', '') }}">
                 </div>
-                <button class="btn btn-warning btn-sm w-100" data-action="clanker-update">🔄 Comprobar y actualizar ahora</button>
-                <div class="test-result mt-1" id="clanker-url-result"></div>
+            </div>
+            <div class="card-footer">
+                <button type="button" class="btn btn-primary" data-action="save-global">💾 Guardar API Key</button>
+                <button type="button" class="btn btn-secondary" data-action="test" data-provider="virustotal">🧪 Probar</button>
+                <div class="test-result" id="test-vt"></div>
             </div>
         </div>
         {% endif %}
-    </div>
+    </section>
 
-    {% if user.role == 'admin' %}
-    <div class="card section-admin hidden" id="ssl-panel">
-        <div class="card-header">
-            <div class="card-header-left">
-                <h2>🔒 Certificado TLS <span class="admin-badge">Solo admin</span></h2>
-                <p>Certificado ECDSA P-256 autofirmado del servidor</p>
+    <!-- ============================ TAB: SISTEMA =========================== -->
+    <section class="tab-panel hidden" data-tab-panel="system">
+
+        <!-- GPU -->
+        <div class="card" id="card-gpu">
+            <div class="card-header">
+                <div class="card-header-left">
+                    <h2>⚡ Aceleración GPU</h2>
+                    <p>Activa GPU para XGBoost y LightGBM durante el entrenamiento (requiere CUDA)</p>
+                </div>
             </div>
-            <span class="badge-status info" id="ssl-badge">Comprobando...</span>
+            <div class="row">
+                <label for="use-gpu-toggle">Usar GPU en entrenamiento</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="use-gpu-toggle">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span id="gpu-status-text" class="faint text-sm">Cargando...</span>
+            </div>
+            <p class="hint">Solo tiene efecto con GPU NVIDIA y CUDA instalado. Requiere re-entrenar para aplicar.</p>
+            <div class="card-footer">
+                <button type="button" class="btn btn-primary" data-action="save-gpu">💾 Guardar</button>
+                <div class="test-result" id="gpu-save-result"></div>
+            </div>
         </div>
-        <div class="info-grid">
-            <div class="info-item"><small>Expira el</small><strong id="ssl-expiry">—</strong></div>
-            <div class="info-item"><small>Días restantes</small><strong id="ssl-days">—</strong></div>
-            <div class="info-item"><small>Estado</small><strong id="ssl-state">—</strong></div>
-        </div>
-        <hr class="divider">
-        <p class="section-title mb-1">Renovar certificado</p>
-        <p class="hint mb-2">Genera un nuevo certificado ECDSA P-256 autofirmado. Se hace backup del actual. Requiere reiniciar el servicio para aplicarlo.</p>
-        <div class="row">
-            <label for="ssl-days-input">Días de validez</label>
-            <input type="number" id="ssl-days-input" value="365" min="1" max="365" class="input-sm w-auto">
-            <button class="btn btn-primary" data-action="ssl-renew">🔄 Renovar ahora</button>
-        </div>
-        <div class="test-result mt-2" id="ssl-renew-result"></div>
-    </div>
-    {% endif %}
 
-    <div class="save-bar">
-        <button type="button" class="btn btn-primary" data-action="save-all">💾 Guardar toda mi configuración</button>
-    </div>
+        <!-- Seguridad -->
+        <div class="card" id="security-card">
+            <div class="card-header">
+                <div class="card-header-left">
+                    <h2>🔐 Seguridad</h2>
+                    <p>Contraseña y autenticación en dos pasos (2FA)</p>
+                </div>
+                <span class="badge-status info" id="tfa-badge">Comprobando...</span>
+            </div>
+            <div class="form-grid">
+                <div class="sub-card">
+                    <h3>🔑 Contraseña</h3>
+                    <p class="hint mb-1">Cambia la contraseña de tu cuenta.</p>
+                    <div class="form-group mb-1">
+                        <label for="pwd-new">Nueva contraseña</label>
+                        <input type="password" id="pwd-new" autocomplete="new-password" placeholder="mínimo 8 caracteres">
+                    </div>
+                    <div class="form-group mb-1">
+                        <label for="pwd-confirm">Confirmar contraseña</label>
+                        <input type="password" id="pwd-confirm" autocomplete="new-password">
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" data-action="change-password" data-user-id="{{ user.id }}">💾 Cambiar contraseña</button>
+                    <div class="test-result mt-1" id="pwd-result"></div>
+                </div>
+                <div class="sub-card">
+                    <h3>📱 Autenticación en dos pasos</h3>
+                    <p class="hint mb-1">Añade un código temporal (TOTP) además de la contraseña.</p>
+                    <div id="tfa-body"><span class="faint text-sm">Cargando...</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TLS (admin) -->
+        {% if user.role == 'admin' %}
+        <div class="card section-admin hidden" id="ssl-panel">
+            <div class="card-header">
+                <div class="card-header-left">
+                    <h2>🔒 Certificado TLS <span class="admin-badge">Solo admin</span></h2>
+                    <p>Certificado ECDSA P-256 autofirmado del servidor</p>
+                </div>
+                <span class="badge-status info" id="ssl-badge">Comprobando...</span>
+            </div>
+            <div class="info-grid">
+                <div class="info-item"><small>Expira el</small><strong id="ssl-expiry">—</strong></div>
+                <div class="info-item"><small>Días restantes</small><strong id="ssl-days">—</strong></div>
+                <div class="info-item"><small>Estado</small><strong id="ssl-state">—</strong></div>
+            </div>
+            <hr class="divider">
+            <p class="section-title mb-1">Renovar certificado</p>
+            <p class="hint mb-2">Genera un nuevo certificado ECDSA P-256 autofirmado. Se hace backup del actual. Requiere reiniciar el servicio para aplicarlo.</p>
+            <div class="row">
+                <label for="ssl-days-input">Días de validez</label>
+                <input type="number" id="ssl-days-input" value="365" min="1" max="365" class="input-sm w-auto">
+                <button type="button" class="btn btn-primary" data-action="ssl-renew">🔄 Renovar ahora</button>
+            </div>
+            <div class="test-result mt-2" id="ssl-renew-result"></div>
+        </div>
+        {% endif %}
+    </section>
 </div>
 {% endblock %}
 
