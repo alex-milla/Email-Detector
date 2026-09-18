@@ -1,7 +1,7 @@
 {
-  "tag_name": "v2.3.3.1",
-  "name": "Email Malware Detector v2.3.3.1",
-  "body": "## What's New in v2.3.3.1\n\n### Correccion del error al entrenar\n- Soluciona `TypeError: Object of type int32 is not JSON serializable` al guardar `models/model_metadata.json` durante el entrenamiento.\n- La metadata contiene escalares numpy (`int32`/`float32`); se añade un serializador que los convierte a tipos nativos.\n- Aplicado a `train_model.py` (ensemble) y `train_clanker_model.py` (Anti-Clanker).\n\n### Notas\n- Fix exclusivamente de scripts de entrenamiento; sin cambios en la UI ni en la prediccion.\n- Sin dependencias nuevas ni migracion de BD; `install.sh` no requiere cambios.\n- Tras actualizar, vuelve a lanzar *Preparar el modelo* en Entrenamiento.\n- Suite de tests: 129 tests + 7 skips (3 nuevos de serializacion).\n",
+  "tag_name": "v2.3.3.2",
+  "name": "Email Malware Detector v2.3.3.2",
+  "body": "## What's New in v2.3.3.2\n\n### Correccion: Dashboard y Entrenamiento no cargaban\n- Un entrenamiento fallido truncaba `models/model_metadata.json` (JSON invalido). `get_model_meta()` lanzaba `JSONDecodeError` y tumbaba el Dashboard (`/`) y Entrenamiento (`/training`), las unicas rutas que consultan ese fichero.\n- `get_model_meta()` ahora tolera JSON ausente o corrupto y devuelve un objeto vacio.\n- `predict_email()` y `_load_checksums()` tambien toleran metadata/checksums corruptos con un error claro.\n\n### Robustez del entrenamiento\n- `model_metadata.json`, `model_checksums.json` y `anti_clanker_cols.json` se guardan de forma **atomica** (`tmp` + `os.replace`) en `train_model.py` y `train_clanker_model.py`, de modo que un fallo al escribir nunca deja el fichero a medias.\n\n### Notas\n- Sin dependencias nuevas ni migracion de BD; `install.sh` no requiere cambios.\n- Si el servidor tiene `model_metadata.json` corrupto, reentrena una vez; se regenerara correctamente.\n- Suite de tests: 133 tests + 7 skips.\n",
   "draft": false,
   "prerelease": false
 }
