@@ -5,6 +5,9 @@ Tests de estructura de la UI (Fase 0 del rediseno): assets y referencias.
 
 import os
 
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-ci")
+os.environ.setdefault("EMAIL_DETECTOR_RELAX_SCRIPT_CHECK", "1")
+
 PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 STATIC = os.path.join(PROJECT_DIR, "web", "static")
 TEMPLATES = os.path.join(PROJECT_DIR, "web", "templates")
@@ -89,6 +92,31 @@ class TestLayout:
         assert 'data-action="change-password"' in html
         assert 'data-action="collapse"' in html
         assert "provider-card" in html
+
+    def test_training_page_renders(self):
+        from web.app import app
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["user_id"] = 1
+                sess["username"] = "tester"
+                sess["user_role"] = "admin"
+            resp = client.get("/training")
+        assert resp.status_code == 200
+        body = resp.get_data(as_text=True)
+        assert 'id="trainingStatus"' in body
+        assert 'data-tab-panel="maintenance"' in body
+
+    def test_training_has_state_and_guided_tabs(self):
+        html = _read(os.path.join(TEMPLATES, "training.html"))
+        assert 'id="trainingStatus"' in html
+        assert 'data-model-ready' in html
+        assert 'data-action="tab"' in html
+        for tab in ("setup", "maintenance", "models"):
+            assert 'data-tab-panel="' + tab + '"' in html
+        assert 'class="checklist"' in html
+        assert "Puesta en marcha" in html
+        assert "Mantenimiento" in html
+        assert "advanced-block" in html
 
     def test_dashboard_page_migrated(self):
         html = _read(os.path.join(TEMPLATES, "index.html"))

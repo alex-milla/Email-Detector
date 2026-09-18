@@ -30,9 +30,20 @@ def register_routes(app):
                        if os.path.exists(os.path.join(LABELED_DIR, "benign")) else 0
         malicious_count = len(list(Path(os.path.join(LABELED_DIR, "malicious")).glob("*.eml"))) \
                           if os.path.exists(os.path.join(LABELED_DIR, "malicious")) else 0
+        processed_dir = os.path.join(PROJECT_DIR, "data", "processed")
+        try:
+            processed_csv_count = sum(
+                1 for f in os.listdir(processed_dir) if f.endswith(".csv")
+            )
+        except OSError:
+            processed_csv_count = 0
         return render_template("training.html",
             model_exists=model_exists, model_meta=model_meta,
             benign_count=benign_count, malicious_count=malicious_count,
+            has_features=processed_csv_count > 0,
+            processed_csv_count=processed_csv_count,
+            anti_clanker_trained=bool(model_meta.get("anti_clanker_trained")),
+            model_ready=bool(model_exists and model_meta.get("best_model")),
             user=current_user(), active_page='training')
 
     @app.route("/model/info")

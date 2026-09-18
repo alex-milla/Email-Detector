@@ -227,9 +227,16 @@ python scripts/retrain_clanker.py                 # usa data/processed/*.csv
 python scripts/retrain_clanker.py --synthetic     # fuerza dataset sintético
 ```
 
-En **Entrenamiento → Paso 3 — Reentrenar Anti-Clanker** (solo admin) hay dos
+En **Entrenamiento → Puesta en marcha → 3. Anti-Clanker** (solo admin) hay dos
 botones: *Reentrenar con CSVs* y *Generar sintético + Reentrenar*. El proceso
 corre en background y no toca `email_classifier.joblib`.
+
+La página de Entrenamiento está organizada en tres pestañas: **Puesta en
+marcha** (solo la primera vez: obtener datos, entrenar el modelo base y, si se
+quiere, preparar el Anti-Clanker), **Mantenimiento** (lo habitual: reentrenar
+con las correcciones marcadas) y **Modelos** (avanzado, admin: ranking y
+activación de modelos). Una tarjeta de estado superior indica los pasos que
+faltan y ofrece la acción recomendada.
 
 ### Actualizar reglas Anti-Clanker manualmente
 
