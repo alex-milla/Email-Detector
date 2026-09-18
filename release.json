@@ -1,7 +1,7 @@
 {
-  "tag_name": "v2.3.2.1",
-  "name": "Email Malware Detector v2.3.2.1",
-  "body": "## What's New in v2.3.2.1\n\n### Correccion del detalle de correos descargados\n- El modal de detalle usaba una cache con el resumen de `/fetch-emails` (sin `metadata`), por lo que mostraba \"Sin cabeceras de autenticacion\" (y no mostraba URLs ni entropia).\n- Ahora `openDetail` consulta `/history/<id>` cuando el registro cacheado no tiene `metadata`, y `renderCard` solo cachea resultados completos.\n- Respaldo de badges SPF/DKIM/DMARC/ARC a partir de las features para registros antiguos.\n\n### Notas\n- Fix exclusivamente de frontend (`web/static/js/dashboard.js`); sin dependencias nuevas ni migracion de BD.\n- Refresca el navegador (Ctrl+F5) tras actualizar.\n- Suite de tests: 124 tests + 7 skips.\n",
+  "tag_name": "v2.3.3",
+  "name": "Email Malware Detector v2.3.3",
+  "body": "## What's New in v2.3.3\n\n### Rediseno de Entrenamiento\n- Nueva **tarjeta de estado** con checklist (Datos, Caracteristicas, Modelo base y Anti-Clanker opcional) y una accion recomendada segun el estado.\n- **Tres pestanas** para separar la preparacion inicial del uso habitual:\n  - **Puesta en marcha** (solo la primera vez): obtener datos (corpus publico o `.eml` propios), entrenar el modelo base y, opcionalmente, preparar el Anti-Clanker.\n  - **Mantenimiento**: correcciones pendientes y boton principal *Reentrenar con mis correcciones*; opciones avanzadas plegables.\n  - **Modelos** (avanzado, admin): ranking ROC AUC, activacion de modelos y estado de reglas Anti-Clanker.\n- Botones con requisitos/avisos y visibilidad \"solo admin\"; se mantiene la ejecucion en background con recarga automatica.\n\n### Notas\n- Sin dependencias nuevas ni migracion de base de datos; `install.sh` no requiere cambios.\n- La seleccion de pestana se recuerda en el navegador; tras actualizar, refresca con Ctrl+F5.\n- Suite de tests: 126 tests + 7 skips.\n",
   "draft": false,
   "prerelease": false
 }

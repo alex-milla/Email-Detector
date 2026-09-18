@@ -1,8 +1,7 @@
 {
-  "version": "2.3.2.1",
+  "version": "2.3.3",
   "release_date": "2026-09-18",
-  "release_id": 391421840,
-  "changelog": "2.3.2.1 - Corrige el detalle de los correos descargados: carga el registro completo y muestra las cabeceras SPF/DKIM/DMARC/ARC, URLs y entropia",
+  "changelog": "2.3.3 - Rediseno de Entrenamiento: estado guiado y pestanas (Puesta en marcha, Mantenimiento y Modelos) para separar la preparacion inicial del uso habitual",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.2.1.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.3.zip"
 }
