@@ -1,8 +1,8 @@
 {
   "version": "2.2.0",
   "release_date": "2026-09-18",
-  "release_id": "",
+  "release_id": 391131173,
   "changelog": "2.2.0 — Anti-Clanker v1.2.0: 11 reglas nuevas (CSS sobre-ingenierizado, Clipboard API abuse, Prompt Injection), 4 features DOM nuevas, bug fix html_comment zone",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.2.0.zip"
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.2.1.zip"
 }
