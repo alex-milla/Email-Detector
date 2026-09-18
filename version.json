@@ -1,7 +1,7 @@
 {
   "version": "2.2.4",
   "release_date": "2026-09-18",
-  "release_id": null,
+  "release_id": 391373025,
   "changelog": "2.2.4 - Logs de acceso y error a fichero en modo standalone (python web/app.py) con rotacion",
   "min_version": "1.0.0",
   "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.2.4.zip"
