@@ -190,10 +190,10 @@ rules:
     added_date: "2025-01-01"
     source: "Forgetful Foes and Absentminded AIs"
 
-  # ═══════════════════════════════════════════════════════════════════════════════
-  #  Reglas v1.1.0 — Basadas en artículo "Forgetful Foes and Absentminded AIs"
-  #  Añadidas: 2026-04-19
-  # ═══════════════════════════════════════════════════════════════════════════════
+  # =========================================================================
+  #  Reglas v1.1.0 - Basadas en articulo "Forgetful Foes and Absentminded AIs"
+  #  Anadidas: 2026-04-19
+  # =========================================================================
 
   - id: CLK-016
     category: iterative_prompting
