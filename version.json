@@ -1,8 +1,7 @@
 {
-  "version": "2.3.8",
+  "version": "2.3.9",
   "release_date": "2026-09-18",
-  "changelog": "2.3.8 - Fix updater: instala dependencias con el python del venv (evita el error externally-managed-environment / PEP 668)",
+  "changelog": "2.3.9 - Sistema EDL: descarga y consulta local de listas externas de URLs, dominios e IPs maliciosas",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.8.zip",
-  "release_id": 391532534
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.9.zip"
 }
