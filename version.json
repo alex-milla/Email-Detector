@@ -1,8 +1,7 @@
 {
-  "version": "2.3.7",
+  "version": "2.3.8",
   "release_date": "2026-09-18",
-  "changelog": "2.3.7 - Anti-Clanker: selector multi-idioma (96 idiomas, desplegable con buscador) e identificacion offline con langid (ko, ja, zh, ru, ar, hi...)",
+  "changelog": "2.3.8 - Fix updater: instala dependencias con el python del venv (evita el error externally-managed-environment / PEP 668)",
   "min_version": "1.0.0",
-  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.7.zip",
-  "release_id": 391525118
+  "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.8.zip"
 }
