@@ -1,6 +1,7 @@
 {
   "version": "2.3.3.1",
   "release_date": "2026-09-18",
+  "release_id": 391453858,
   "changelog": "2.3.3.1 - Corrige el error al entrenar (TypeError: Object of type int32 is not JSON serializable) serializando tipos numpy en model_metadata.json",
   "min_version": "1.0.0",
   "zip_url": "https://github.com/alex-milla/Email-Detector/archive/v2.3.3.1.zip"
