@@ -3,6 +3,9 @@
 Lee clanker_rules.yaml y genera un vector de features numérico a partir del
 HTML raw de un correo. Se integra con extract_features.py del ensemble.
 
+v1.3.0 — Añade la categoría clickfix (execCommand, Win+R, fake-CAPTCHA,
+PowerShell codificado y LOLBins). El desofuscado y la extracción de los
+indicadores originales los completa clickfix_decoder.py.
 v1.2.0 — Añade detección de CSS sobre-ingenierizado, Clipboard API abuse
 (ClickFix attacks) y Prompt Injection (OWASP Top 10 LLM 2026).
 v1.1.0 — Añade análisis estructural del DOM y nuevas categorías de reglas
@@ -226,6 +229,7 @@ def extract_clanker_features(html_raw: str) -> Dict[str, Any]:
         "overengineered_html", "iterative_prompting", "hex_suffix",
         "placeholder_href", "docstring_comment", "overengineered_html",
         "overengineered_css", "clipboard_abuse", "prompt_injection",
+        "clickfix",
     ]
     for cat in categories:
         features[f"clanker_score_{cat}"] = 0.0

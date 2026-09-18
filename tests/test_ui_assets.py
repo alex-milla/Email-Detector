@@ -23,6 +23,12 @@ class TestAssets:
         for rel in ("css/app.css", "js/app.js", "theme.js", "vendor/chart.umd.min.js"):
             assert os.path.isfile(os.path.join(STATIC, *rel.split("/"))), rel
 
+    def test_dashboard_has_clickfix_section(self):
+        js = _read(os.path.join(STATIC, "js", "dashboard.js"))
+        assert "renderClickfixSection" in js
+        assert "payload_urls" in js
+        assert "payload_domains" in js
+
     def test_app_css_has_tokens_and_components(self):
         css = _read(os.path.join(STATIC, "css", "app.css"))
         for token in ("--bg-body", "--accent", "--text-primary"):

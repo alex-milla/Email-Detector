@@ -36,6 +36,13 @@ try:
 except Exception:
     _CLANKER_FEATS_AVAILABLE = False
 
+# Importar motor ClickFix (soft-fail si no está disponible)
+try:
+    from clickfix_decoder import analyze_clickfix, extract_clickfix_features
+    _CLICKFIX_AVAILABLE = True
+except Exception:
+    _CLICKFIX_AVAILABLE = False
+
 # ── Detección de QR (v2.0) — soft-fail si no están disponibles ──
 try:
     from qr_decoder import decode_qr_from_bytes, is_available as qr_available
@@ -143,6 +150,11 @@ def get_attachment_risk(filename):
 # Límites de seguridad contra DoS por archivos enormes
 MAX_EML_SIZE_BYTES = 50 * 1024 * 1024      # 50 MB total por .eml
 MAX_ATTACHMENT_SIZE_BYTES = 25 * 1024 * 1024  # 25 MB por adjunto
+
+# Adjuntos que pueden ser páginas señuelo ClickFix
+HTML_ATTACHMENT_EXTS = {".html", ".htm", ".xhtml", ".svg"}
+HTML_ATTACHMENT_MIME_TYPES = {"text/html", "application/xhtml+xml", "image/svg+xml"}
+MAX_HTML_ATTACHMENT_BYTES = 1 * 1024 * 1024  # 1 MB por adjunto HTML
 
 
 def get_attachment_hashes(part):
@@ -502,6 +514,22 @@ def extract_features_from_eml(eml_path):
         (get_attachment_risk(fn) for fn in attachments), default=0
     )
 
+    # ── Adjuntos HTML/SVG (posibles páginas señuelo ClickFix) ──
+    html_attachments = []
+    for part in msg.walk():
+        fn = part.get_filename()
+        if not fn:
+            continue
+        ext = os.path.splitext(fn.lower())[1]
+        if ext not in HTML_ATTACHMENT_EXTS and \
+                part.get_content_type() not in HTML_ATTACHMENT_MIME_TYPES:
+            continue
+        payload = part.get_payload(decode=True)
+        if not payload or len(payload) > MAX_HTML_ATTACHMENT_BYTES:
+            continue
+        content = payload.decode("utf-8", errors="ignore")[:MAX_BODY_CHARS]
+        html_attachments.append({"filename": fn, "content": content})
+
     # ── Análisis de códigos QR (NUEVO en v2.0) ──
     qr_codes = _scan_email_for_qr_codes(msg)
 
@@ -639,6 +667,16 @@ def extract_features_from_eml(eml_path):
         except Exception:
             pass
 
+    # ── Motor ClickFix: deteccion, desofuscado e indicadores originales ──
+    clickfix_analysis = None
+    if _CLICKFIX_AVAILABLE:
+        try:
+            clickfix_analysis = analyze_clickfix(
+                body_html, body_text, html_attachments)
+            features.update(extract_clickfix_features(clickfix_analysis))
+        except Exception:
+            clickfix_analysis = None
+
     # Metadatos (no van al modelo, útiles para VirusTotal, Anti-Clanker y GUI)
     metadata = {
         "filename":          os.path.basename(eml_path),
@@ -653,6 +691,7 @@ def extract_features_from_eml(eml_path):
         "auth_results":       auth_detail,
         "auth_summary":       auth_summary,
         "raw_headers":        raw_headers,
+        "clickfix":           clickfix_analysis,
     }
 
     return features, metadata

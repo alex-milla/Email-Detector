@@ -73,6 +73,22 @@ NEW_FEATURES_V120 = [
     "clanker_event_handler_count",
 ]
 
+# Features introducidas en Anti-Clanker v1.3.0 (motor ClickFix)
+NEW_FEATURES_V130 = [
+    "clanker_score_clickfix",
+    "clanker_clickfix_detected",
+    "clanker_clickfix_high_confidence",
+    "clanker_clickfix_score",
+    "clanker_clickfix_clipboard_api_count",
+    "clanker_clickfix_lure_phrase_count",
+    "clanker_clickfix_decoded_command_count",
+    "clanker_clickfix_payload_url_count",
+    "clanker_clickfix_payload_domain_count",
+    "clanker_clickfix_payload_ip_count",
+    "clanker_clickfix_has_win_r",
+    "clanker_clickfix_has_encoded_command",
+]
+
 
 def _load_dataset(csv_paths):
     frames = []
@@ -143,6 +159,9 @@ def main():
     missing_new = [f for f in NEW_FEATURES_V120 if f not in clanker_cols]
     if missing_new:
         print(f"  AVISO: faltan features v1.2.0 en el CSV: {', '.join(missing_new)}")
+    missing_v130 = [f for f in NEW_FEATURES_V130 if f not in clanker_cols]
+    if missing_v130:
+        print(f"  AVISO: faltan features v1.3.0 en el CSV: {', '.join(missing_v130)}")
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.3, random_state=42, stratify=y)
@@ -188,6 +207,12 @@ def main():
 
     print("  Features v1.2.0:")
     for name in NEW_FEATURES_V120:
+        if name in clanker_cols:
+            imp = dict(ranked).get(name, 0.0)
+            print(f"    {name:38s} {imp / total:6.2%}")
+
+    print("  Features v1.3.0 (ClickFix):")
+    for name in NEW_FEATURES_V130:
         if name in clanker_cols:
             imp = dict(ranked).get(name, 0.0)
             print(f"    {name:38s} {imp / total:6.2%}")

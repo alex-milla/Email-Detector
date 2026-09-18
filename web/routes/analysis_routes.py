@@ -329,16 +329,28 @@ def register_routes(app):
         attachments = md.get("attachments") or []
         att_hashes = md.get("attachment_hashes") or []
         qr_codes = md.get("qr_codes_found") or []
+        clickfix = item.get("clickfix") or md.get("clickfix") or {}
+
+        cf_urls = clickfix.get("payload_urls") or []
+        cf_domains = clickfix.get("payload_domains") or []
+        cf_ips = clickfix.get("payload_ips") or []
+        ioc_urls = list(dict.fromkeys(list(urls) + list(cf_urls)))
 
         iocs = {
-            "urls": urls,
+            "urls": ioc_urls,
             "attachment_hashes": [
                 {"filename": h.get("filename", ""), "sha256": h.get("sha256", ""),
                  "md5": h.get("md5", ""), "size": h.get("size", 0)}
                 for h in att_hashes if h.get("sha256")
             ],
             "qr_payloads": [q.get("raw_payload", "") for q in qr_codes],
-            "domains": list(set(urlparse(u).netloc for u in urls if u.startswith("http"))),
+            "domains": list(dict.fromkeys(
+                [urlparse(u).netloc for u in urls if u.startswith("http")]
+                + cf_domains
+            )),
+            "clickfix_urls": cf_urls,
+            "clickfix_domains": cf_domains,
+            "clickfix_ips": cf_ips,
         }
 
         report = {
@@ -371,6 +383,19 @@ def register_routes(app):
             "attachment_count": len(attachments),
             "url_count": len(urls),
             "qr_count": len(qr_codes),
+            "clickfix": {
+                "detected": bool(clickfix.get("clickfix_detected")),
+                "high_confidence": bool(clickfix.get("high_confidence")),
+                "score": clickfix.get("clickfix_score", 0),
+                "techniques": clickfix.get("techniques") or [],
+                "lure_phrases": clickfix.get("lure_phrases") or [],
+                "raw_commands": clickfix.get("raw_commands") or [],
+                "decoded_commands": clickfix.get("decoded_commands") or [],
+                "payload_urls": cf_urls,
+                "payload_domains": cf_domains,
+                "payload_ips": cf_ips,
+                "source_attachments": clickfix.get("source_attachments") or [],
+            },
         }
         return jsonify(report)
 

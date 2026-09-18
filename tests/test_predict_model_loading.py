@@ -41,3 +41,25 @@ def test_corrupt_base_model_does_not_raise(monkeypatch, tmp_path):
     bad.write_bytes(b"not a joblib file")
     monkeypatch.setattr(predict, "MODEL_PATH", str(bad))
     assert predict.load_all_models({}) == {}
+
+
+def test_apply_clickfix_high_confidence_escalates():
+    import predict
+    final, risk = predict._apply_clickfix({"high_confidence": True}, "BENIGNO", 5.0)
+    assert final == "MALICIOSO"
+    assert risk >= 90.0
+
+
+def test_apply_clickfix_low_confidence_keeps_verdict():
+    import predict
+    final, risk = predict._apply_clickfix(
+        {"high_confidence": False, "clickfix_detected": True}, "BENIGNO", 12.0)
+    assert final == "BENIGNO"
+    assert risk == 12.0
+
+
+def test_apply_clickfix_none_safe():
+    import predict
+    final, risk = predict._apply_clickfix(None, "BENIGNO", 3.0)
+    assert final == "BENIGNO"
+    assert risk == 3.0

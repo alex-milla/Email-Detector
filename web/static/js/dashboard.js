@@ -222,6 +222,9 @@
       html += '</div>';
     }
 
+    // ClickFix
+    html += renderClickfixSection(r.clickfix || md.clickfix);
+
     // VirusTotal
     if (vt && Object.keys(vt).length > 0) {
       var ok = !vts.malicious_files && !vts.malicious_urls;
@@ -322,6 +325,72 @@
     return '<div class="detail-item"><div class="label">' + label + '</div><div class="value">' + (value === undefined || value === null ? '-' : value) + '</div></div>';
   }
 
+  function clickfixTags(cf) {
+    var tags = (cf.techniques || []).slice();
+    if (cf.has_win_r) tags.push('Win+R');
+    if (cf.has_encoded_command) tags.push('base64/-enc');
+    if (cf.has_powershell) tags.push('PowerShell');
+    return tags;
+  }
+
+  function renderClickfixSection(cf) {
+    if (!cf) return '';
+    var detected = cf.detected || cf.clickfix_detected;
+    if (!detected) return '';
+    var score = (cf.score !== undefined && cf.score !== null) ? cf.score : (cf.clickfix_score || 0);
+    var high = cf.high_confidence;
+    var urls = cf.payload_urls || [];
+    var domains = cf.payload_domains || [];
+    var ips = cf.payload_ips || [];
+    var decoded = cf.decoded_commands || [];
+    var raw = cf.raw_commands || [];
+    var lures = cf.lure_phrases || [];
+    var sources = cf.source_attachments || [];
+
+    var html = '<div class="detail-section"><h4>🖱️ ClickFix' +
+      (high ? ' <span class="risk-badge pred-malicioso">alta confianza</span>' : '') +
+      '</h4>' +
+      '<div class="alert ' + (high ? 'alert-error' : 'alert-warning') + '">' +
+      'Vector de copiado/pegado detectado (score ' + score + ').' +
+      (high ? ' Comando ofuscado con indicadores extraídos.' : '') +
+      '</div>';
+
+    var tags = clickfixTags(cf);
+    if (tags.length) {
+      html += '<div class="auth-badges">' + tags.map(function (t) {
+        return '<span class="risk-badge">' + escapeHtml(t) + '</span>';
+      }).join('') + '</div>';
+    }
+    if (lures.length) {
+      html += '<div class="faint text-sm mt-1">Señuelos: ' +
+        lures.slice(0, 6).map(escapeHtml).join(' · ') + '</div>';
+    }
+    if (sources.length) {
+      html += '<div class="faint text-sm mt-1">Adjuntos implicados: ' +
+        sources.map(escapeHtml).join(', ') + '</div>';
+    }
+    if (decoded.length) {
+      html += '<div class="text-sm mt-2"><strong>Comando desofuscado:</strong>' +
+        decoded.slice(0, 3).map(function (c) {
+          return '<pre class="header-value">' + escapeHtml(c.slice(0, 1000)) + '</pre>';
+        }).join('') + '</div>';
+    } else if (raw.length) {
+      html += '<div class="text-sm mt-2"><strong>Comando (ofuscado):</strong>' +
+        '<pre class="header-value">' + escapeHtml(raw[0].slice(0, 1000)) + '</pre></div>';
+    }
+    if (urls.length || domains.length || ips.length) {
+      html += '<div class="mt-1"><strong class="muted text-sm">Indicadores originales:</strong>';
+      urls.forEach(function (u) {
+        html += '<div class="ioc-row">🔗 <a href="' + escapeHtml(u) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(u) + '</a></div>';
+      });
+      domains.forEach(function (d) { html += '<div class="ioc-row">🌐 <code>' + escapeHtml(d) + '</code></div>'; });
+      ips.forEach(function (ip) { html += '<div class="ioc-row">📡 <code>' + escapeHtml(ip) + '</code></div>'; });
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
   async function doFeedback(dbId, label) {
     try {
       var data = await window.EMD.fetchJSON('/feedback/' + dbId, {
@@ -371,6 +440,7 @@
         '</div></div>' +
       '</div>' +
       renderAuthSection(auth.results, auth.summary, r.auth_analysis, auth.headers, auth) +
+      renderClickfixSection(r.clickfix) +
       '<div class="detail-section"><h4>🛡️ VirusTotal</h4><div class="text-sm">' +
         'Archivos maliciosos: <strong>' + ((r.virustotal || {}).malicious_files || 0) + '</strong><br>' +
         'URLs maliciosas: <strong>' + ((r.virustotal || {}).malicious_urls || 0) + '</strong><br>' +

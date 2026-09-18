@@ -225,6 +225,20 @@ def _analyze_auth(auth_summary, ml_prob, threshold, vt_alert):
     }
 
 
+def _apply_clickfix(clickfix, final, risk):
+    """Escala a MALICIOSO cuando ClickFix se detecta con alta confianza.
+
+    Un ClickFix de alta confianza implica comando PowerShell ofuscado +
+    vector de clipboard/Win+R + indicadores de payload: es concluyente.
+    """
+    if not clickfix or not clickfix.get("high_confidence"):
+        return final, risk
+    risk = min(100.0, max(float(risk), 90.0))
+    if final != "MALICIOSO":
+        final = "MALICIOSO"
+    return final, risk
+
+
 def predict_email(eml_path, use_virustotal=True):
     logger.info("Analizando: %s", os.path.basename(eml_path))
     features, meta_eml = extract_features_from_eml(eml_path)
@@ -263,11 +277,31 @@ def predict_email(eml_path, use_virustotal=True):
         logger.info("Anti-Clanker: score=%.3f", clanker_result["score"])
     # ─────────────────────────────────────────────────────────────────────────
 
+    # ── ClickFix: indicadores originales del comando ofuscado ────────────────
+    clickfix = meta_eml.get("clickfix") or {}
+    if clickfix.get("clickfix_detected"):
+        logger.info(
+            "ClickFix: score=%.3f  alta_confianza=%s  IoCs=%d",
+            clickfix.get("clickfix_score", 0),
+            clickfix.get("high_confidence"),
+            len(clickfix.get("payload_urls", []))
+            + len(clickfix.get("payload_domains", []))
+            + len(clickfix.get("payload_ips", [])),
+        )
+    # ─────────────────────────────────────────────────────────────────────────
+
+    # URLs a consultar en VirusTotal: las del correo + las decodificadas
+    # del payload ClickFix (el indicador original que el atacante oculta).
+    vt_urls = list(meta_eml.get("urls_found", []))
+    for url in clickfix.get("payload_urls", []):
+        if url and url not in vt_urls:
+            vt_urls.append(url)
+
     vt_results = None
     if use_virustotal:
         vt_results = check_email_artifacts(
             attachment_hashes=meta_eml.get("attachment_hashes", []),
-            urls=meta_eml.get("urls_found", []),
+            urls=vt_urls,
             max_checks=6)
 
     vt_alert = bool(vt_results and (
@@ -289,6 +323,10 @@ def predict_email(eml_path, use_virustotal=True):
     if auth_analysis.get("force_malicious") and final == "BENIGNO":
         final = "MALICIOSO"
     # ─────────────────────────────────────────────────────────────────
+
+    # ── ClickFix: escalada a MALICIOSO si hay alta confianza ──
+    final, risk = _apply_clickfix(clickfix, final, risk)
+    # ─────────────────────────────────────────────────────────
 
     if   risk >= 80: level = "CRITICO"
     elif risk >= 60: level = "ALTO"
@@ -314,6 +352,7 @@ def predict_email(eml_path, use_virustotal=True):
         "models_count":      n_models,
         "disabled_models":   list(get_disabled_models()),
         "anti_clanker":      clanker_result,
+        "clickfix":          clickfix,
         "entropy_analysis": {
             "body_entropy":                   features.get("body_entropy", 0),
             "subject_entropy":                features.get("subject_entropy", 0),
@@ -331,6 +370,7 @@ def predict_email(eml_path, use_virustotal=True):
             "auth_results":      meta_eml.get("auth_results", []),
             "auth_summary":      meta_eml.get("auth_summary", {}),
             "raw_headers":       meta_eml.get("raw_headers", {}),
+            "clickfix":          clickfix,
         },
     }
     logger.info("Resultado: %s  Riesgo: %s (%.1f%%)", final, level, risk)
