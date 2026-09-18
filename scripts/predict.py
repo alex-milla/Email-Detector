@@ -239,6 +239,23 @@ def _apply_clickfix(clickfix, final, risk):
     return final, risk
 
 
+def _apply_hidden_prompt(hidden, final, risk):
+    """Escala si hay prompt injection en contenido oculto.
+
+    * Prompt de inyección oculto -> MALICIOSO (es concluyente).
+    * Texto oculto en idioma no esperado -> solo sube el riesgo.
+    """
+    if not hidden:
+        return final, risk
+    if hidden.get("high_confidence"):
+        risk = min(100.0, max(float(risk), 90.0))
+        if final != "MALICIOSO":
+            final = "MALICIOSO"
+    elif hidden.get("lang_other"):
+        risk = min(100.0, float(risk) + 10.0)
+    return final, risk
+
+
 def predict_email(eml_path, use_virustotal=True):
     logger.info("Analizando: %s", os.path.basename(eml_path))
     features, meta_eml = extract_features_from_eml(eml_path)
@@ -328,6 +345,17 @@ def predict_email(eml_path, use_virustotal=True):
     final, risk = _apply_clickfix(clickfix, final, risk)
     # ─────────────────────────────────────────────────────────
 
+    # ── Contenido oculto / prompt injection ──
+    hidden = meta_eml.get("hidden_text") or {}
+    if hidden.get("hidden_detected"):
+        logger.info(
+            "Contenido oculto: %d bloques, idioma=%s, prompts=%d",
+            len(hidden.get("entries", [])), hidden.get("language"),
+            len(hidden.get("prompt_matches", [])),
+        )
+    final, risk = _apply_hidden_prompt(hidden, final, risk)
+    # ─────────────────────────────────────────────────────────
+
     if   risk >= 80: level = "CRITICO"
     elif risk >= 60: level = "ALTO"
     elif risk >= 40: level = "MEDIO"
@@ -353,6 +381,7 @@ def predict_email(eml_path, use_virustotal=True):
         "disabled_models":   list(get_disabled_models()),
         "anti_clanker":      clanker_result,
         "clickfix":          clickfix,
+        "hidden_text":       hidden,
         "entropy_analysis": {
             "body_entropy":                   features.get("body_entropy", 0),
             "subject_entropy":                features.get("subject_entropy", 0),
@@ -371,6 +400,7 @@ def predict_email(eml_path, use_virustotal=True):
             "auth_summary":      meta_eml.get("auth_summary", {}),
             "raw_headers":       meta_eml.get("raw_headers", {}),
             "clickfix":          clickfix,
+            "hidden_text":       hidden,
         },
     }
     logger.info("Resultado: %s  Riesgo: %s (%.1f%%)", final, level, risk)

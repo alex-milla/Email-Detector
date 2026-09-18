@@ -213,6 +213,17 @@
                     <div class="test-result mt-1" id="clanker-url-result"></div>
                 </div>
             </div>
+            <hr class="divider">
+            <p class="section-title mb-1">Idiomas esperados en contenido oculto <span class="admin-badge">Admin</span></p>
+            <p class="hint mb-1">Idiomas que tu organización recibe habitualmente. El texto oculto en otros idiomas sube la sospecha (sin forzar MALICIOSO).</p>
+            {% set _hidden_langs = (global_cfg.get('HIDDEN_TEXT_LANGS', 'es,en') or 'es,en').split(',') %}
+            <div id="hidden-langs" class="mb-2">
+                {% for code, label in [('es','Español'), ('en','Inglés'), ('fr','Francés'), ('de','Alemán'), ('pt','Portugués'), ('it','Italiano'), ('ca','Catalán')] %}
+                <label class="mr-2"><input type="checkbox" class="hidden-lang-cb" value="{{ code }}" {% if code in _hidden_langs %}checked{% endif %}> {{ label }}</label>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" data-action="save-hidden-langs">💾 Guardar idiomas</button>
+            <div class="test-result mt-1" id="hidden-langs-result"></div>
             {% endif %}
         </div>
 

@@ -63,3 +63,26 @@ def test_apply_clickfix_none_safe():
     final, risk = predict._apply_clickfix(None, "BENIGNO", 3.0)
     assert final == "BENIGNO"
     assert risk == 3.0
+
+
+def test_apply_hidden_prompt_escalates():
+    import predict
+    hidden = {"high_confidence": True, "lang_other": False}
+    final, risk = predict._apply_hidden_prompt(hidden, "BENIGNO", 4.0)
+    assert final == "MALICIOSO"
+    assert risk >= 90.0
+
+
+def test_apply_hidden_prompt_lang_other_bumps_risk():
+    import predict
+    hidden = {"high_confidence": False, "lang_other": True}
+    final, risk = predict._apply_hidden_prompt(hidden, "BENIGNO", 30.0)
+    assert final == "BENIGNO"
+    assert risk == 40.0
+
+
+def test_apply_hidden_prompt_none_safe():
+    import predict
+    final, risk = predict._apply_hidden_prompt(None, "BENIGNO", 3.0)
+    assert final == "BENIGNO"
+    assert risk == 3.0

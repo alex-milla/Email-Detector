@@ -3,6 +3,9 @@
 Lee clanker_rules.yaml y genera un vector de features numérico a partir del
 HTML raw de un correo. Se integra con extract_features.py del ensemble.
 
+v1.4.0 — Añade la zona hidden_text y features clanker_hidden_* para
+contenido oculto / prompt injection (CSS oculto, atributos/metadatos,
+Unicode invisible). Lo calcula hidden_text.py.
 v1.3.0 — Añade la categoría clickfix (execCommand, Win+R, fake-CAPTCHA,
 PowerShell codificado y LOLBins). El desofuscado y la extracción de los
 indicadores originales los completa clickfix_decoder.py.
@@ -19,6 +22,13 @@ from typing import Dict, Any, Optional
 from functools import lru_cache
 
 logger = logging.getLogger(__name__)
+
+# Detección de contenido oculto / prompt injection (soft-fail)
+try:
+    from hidden_text import extract_hidden_text, extract_hidden_features
+    _HIDDEN_TEXT_AVAILABLE = True
+except Exception:
+    _HIDDEN_TEXT_AVAILABLE = False
 
 # ── Constantes ────────────────────────────────────────────────────────────────
 INSTALL_DIR  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -81,7 +91,7 @@ def get_active_rules():
 
 
 # ── Extracción de zonas del HTML ─────────────────────────────────────────────
-def _extract_zones(html_raw: str) -> Dict[str, str]:
+def _extract_zones(html_raw: str, hidden_blob: str = "") -> Dict[str, str]:
     """Extrae zonas del HTML para aplicar cada regla en su target correcto."""
     zones: Dict[str, str] = {
         "html_comment": "",
@@ -90,6 +100,7 @@ def _extract_zones(html_raw: str) -> Dict[str, str]:
         "src_attr":     "",
         "inline_style": "",
         "script_block": "",
+        "hidden_text":  hidden_blob,
     }
     # Comentarios HTML — incluir delimitadores <!-- --> para que los patrones
     # que empiezan con <!-- puedan hacer match
@@ -207,10 +218,15 @@ def _extract_dom_features(html_raw: str) -> Dict[str, Any]:
 
 
 # ── Feature extraction principal ─────────────────────────────────────────────
-def extract_clanker_features(html_raw: str) -> Dict[str, Any]:
+def extract_clanker_features(
+    html_raw: str, hidden_result: Optional[Dict] = None
+) -> Dict[str, Any]:
     """
     Recibe el HTML raw de un correo y devuelve un diccionario de features
     compatible con el vector de features global del ensemble.
+
+    ``hidden_result`` permite reutilizar el análisis de contenido oculto ya
+    calculado (evita parsear dos veces el HTML).
     """
     # Features base
     features: Dict[str, Any] = {
@@ -234,14 +250,29 @@ def extract_clanker_features(html_raw: str) -> Dict[str, Any]:
     for cat in categories:
         features[f"clanker_score_{cat}"] = 0.0
 
+    # ── Contenido oculto / prompt injection (una sola vez) ──
+    if hidden_result is None and _HIDDEN_TEXT_AVAILABLE and html_raw:
+        try:
+            hidden_result = extract_hidden_text(html_raw)
+        except Exception:
+            hidden_result = None
+
     if not html_raw:
         # Aún devolvemos las features DOM (todas cero)
         dom_feats = _extract_dom_features("")
         features.update(dom_feats)
+        if hidden_result is not None:
+            features.update(extract_hidden_features(hidden_result))
         return features
 
+    hidden_blob = ""
+    if hidden_result:
+        hidden_blob = "\n".join(
+            entry.get("text", "") for entry in hidden_result.get("entries", [])
+        )
+
     rules = get_active_rules()
-    zones = _extract_zones(html_raw)
+    zones = _extract_zones(html_raw, hidden_blob)
 
     matched_categories = set()
     suspicious_comments = 0
@@ -286,6 +317,10 @@ def extract_clanker_features(html_raw: str) -> Dict[str, Any]:
     # ── Añadir features estructurales del DOM ──
     dom_feats = _extract_dom_features(html_raw)
     features.update(dom_feats)
+
+    # ── Añadir features de contenido oculto / prompt injection ──
+    if hidden_result is not None and _HIDDEN_TEXT_AVAILABLE:
+        features.update(extract_hidden_features(hidden_result))
 
     # ── Bonus estructural al score ──
     # Un HTML excesivamente limpio (muchos divs, mucho inline style, profundidad alta)

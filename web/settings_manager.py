@@ -11,7 +11,7 @@ ENV_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".env")
 load_dotenv(ENV_PATH)
 
 # Clave de VirusTotal sigue siendo global (en .env)
-ALLOWED_GLOBAL = {"VIRUSTOTAL_API_KEY", "WEB_HOST", "WEB_PORT", "SECRET_KEY", "USE_GPU", "DISABLED_MODELS"}
+ALLOWED_GLOBAL = {"VIRUSTOTAL_API_KEY", "WEB_HOST", "WEB_PORT", "SECRET_KEY", "USE_GPU", "DISABLED_MODELS", "HIDDEN_TEXT_LANGS"}
 
 
 def read_global_env():

@@ -1,10 +1,12 @@
 meta:
-  version: "1.3.0"
+  version: "1.4.0"
   updated_at: "2026-09-18"
   author: "Email Malware Detector Project"
   description: "Reglas para detectar artefactos de LLMs en correos maliciosos"
   update_url: ""
+  hidden_text_langs: ["es", "en", "fr", "de", "pt", "it", "ca"]
   changelog:
+    - "v1.4.0: Prompt injection en contenido oculto (zona hidden_text, campo lang): CSS oculto, atributos/metadatos y Unicode invisible"
     - "v1.3.0: Categoria clickfix (execCommand, Win+R, fake-CAPTCHA, PowerShell codificado, LOLBins)"
     - "v1.2.0: Deteccion de CSS sobre-ingenierizado, Clipboard API abuse (ClickFix), Prompt Injection"
     - "v1.1.0: Reglas iterativas, hex suffix, placeholder href, docstrings, overengineered HTML"
@@ -554,3 +556,86 @@ rules:
     description: "Intento de excluir rutas de Microsoft Defender - evasion ClickFix"
     added_date: "2026-09-18"
     source: "ClickFix research 2026"
+
+  # ── Prompt Injection en contenido oculto ──
+  # Texto no visible para humanos (CSS oculto, atributos/metadatos, Unicode
+  # invisible) que contiene instrucciones dirigidas a un analizador de IA.
+  # El campo 'lang' permite ampliar idiomas sin tocar codigo.
+
+  - id: PI-HID-001
+    category: prompt_injection
+    lang: en
+    pattern: '(?:ignore|disregard|forget)\s+(?:all\s+)?(?:the\s+)?(?:previous|prior|above|earlier)\s+instructions'
+    target: hidden_text
+    severity: critical
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Prompt injection oculto: ignorar instrucciones previas (EN)"
+    added_date: "2026-09-18"
+    source: "OWASP LLM Top 10"
+
+  - id: PI-HID-002
+    category: prompt_injection
+    lang: en
+    pattern: '(?:mark\s+(?:this|it|the\s+email)(?:\s+(?:email|message))?\s+as\s+(?:safe|legitimate|benign|clean)|this\s+(?:email|message)\s+is\s+(?:safe|legitimate|benign))'
+    target: hidden_text
+    severity: critical
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Prompt injection oculto: forzar veredicto benigno (EN)"
+    added_date: "2026-09-18"
+    source: "OWASP LLM Top 10"
+
+  - id: PI-HID-003
+    category: prompt_injection
+    lang: en
+    pattern: '(?:do\s+not\s+(?:classify|flag|report|detect)|(?:system|user|assistant)\s*prompt|<\|\s*(?:im_start|system|user|assistant)\s*\|>)'
+    target: hidden_text
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Prompt injection oculto: no detectar / roles de LLM (EN)"
+    added_date: "2026-09-18"
+    source: "OWASP LLM Top 10"
+
+  - id: PI-HID-010
+    category: prompt_injection
+    lang: es
+    pattern: 'ignora\s+(?:todas\s+)?(?:las\s+)?instrucciones\s+(?:previas|anteriores)'
+    target: hidden_text
+    severity: critical
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Prompt injection oculto: ignorar instrucciones previas (ES)"
+    added_date: "2026-09-18"
+    source: "OWASP LLM Top 10"
+
+  - id: PI-HID-011
+    category: prompt_injection
+    lang: es
+    pattern: 'marca\s+(?:este|esto|el\s+correo)(?:\s+(?:correo|mensaje))?\s+como\s+(?:seguro|leg[ií]timo|benigno|limpio)'
+    target: hidden_text
+    severity: critical
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Prompt injection oculto: forzar veredicto benigno (ES)"
+    added_date: "2026-09-18"
+    source: "OWASP LLM Top 10"
+
+  - id: PI-HID-012
+    category: prompt_injection
+    lang: es
+    pattern: '(?:no\s+(?:lo\s+|la\s+)?(?:detectes|clasifiques|reportes)|eres\s+un(?:a)?\s+(?:asistente|ia|modelo))'
+    target: hidden_text
+    severity: high
+    confidence: high
+    fp_risk: low
+    enabled: true
+    description: "Prompt injection oculto: no detectar / rol de IA (ES)"
+    added_date: "2026-09-18"
+    source: "OWASP LLM Top 10"

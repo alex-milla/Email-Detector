@@ -225,6 +225,9 @@
     // ClickFix
     html += renderClickfixSection(r.clickfix || md.clickfix);
 
+    // Contenido oculto / prompt injection
+    html += renderHiddenSection(r.hidden_text || md.hidden_text);
+
     // VirusTotal
     if (vt && Object.keys(vt).length > 0) {
       var ok = !vts.malicious_files && !vts.malicious_urls;
@@ -240,6 +243,44 @@
     $('modalTitle').textContent = escapeHtml(r.filename) || 'Detalle';
     $('modalBody').innerHTML = html;
     window.EMD.openModal('detailModal');
+  }
+
+  function renderHiddenSection(h) {
+    if (!h) return '';
+    var detected = h.detected || h.hidden_detected;
+    if (!detected) return '';
+    var high = h.high_confidence;
+    var other = h.lang_other;
+    var lang = h.language || '?';
+    var entries = h.entries || [];
+    var prompts = h.prompt_matches || [];
+    var zw = h.zero_width_count || 0;
+    var bidi = h.bidi_override_count || 0;
+    var html = '<div class="detail-section"><h4>🫥 Contenido oculto / Prompt injection' +
+      (high ? ' <span class="risk-badge pred-malicioso">inyección</span>' : '') + '</h4>' +
+      '<div class="alert ' + (high ? 'alert-error' : (other ? 'alert-warning' : 'alert-success')) + '">' +
+      entries.length + ' bloque(s) oculto(s) · idioma: ' + escapeHtml(lang) +
+      (other ? ' (no esperado)' : '') +
+      (high ? ' · prompt de inyección detectado' : '') + '</div>';
+    if (zw || bidi) {
+      html += '<div class="faint text-sm mt-1">Caracteres invisibles: ' + zw +
+        ' · control bidi: ' + bidi + '</div>';
+    }
+    if (prompts.length) {
+      html += '<div class="mt-1"><strong class="muted text-sm">Coincidencias de prompt:</strong>';
+      prompts.slice(0, 5).forEach(function (p) {
+        html += '<div class="ioc-row">⚠️ [' + escapeHtml(p.lang || '') + '] <code>' +
+          escapeHtml(p.snippet || '') + '</code></div>';
+      });
+      html += '</div>';
+    }
+    entries.slice(0, 10).forEach(function (e) {
+      html += '<div class="qr-block"><div class="faint text-sm mb-1">Oculto por: ' +
+        escapeHtml(e.reason || '') + (e.tag ? ' &lt;' + escapeHtml(e.tag) + '&gt;' : '') +
+        '</div><pre class="header-value">' + escapeHtml(e.text || '') + '</pre></div>';
+    });
+    html += '</div>';
+    return html;
   }
 
   var AUTH_ORDER = ['spf', 'dkim', 'dmarc', 'arc'];
@@ -441,6 +482,7 @@
       '</div>' +
       renderAuthSection(auth.results, auth.summary, r.auth_analysis, auth.headers, auth) +
       renderClickfixSection(r.clickfix) +
+      renderHiddenSection(r.hidden_text) +
       '<div class="detail-section"><h4>🛡️ VirusTotal</h4><div class="text-sm">' +
         'Archivos maliciosos: <strong>' + ((r.virustotal || {}).malicious_files || 0) + '</strong><br>' +
         'URLs maliciosas: <strong>' + ((r.virustotal || {}).malicious_urls || 0) + '</strong><br>' +

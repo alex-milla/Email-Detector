@@ -73,6 +73,19 @@ NEW_FEATURES_V120 = [
     "clanker_event_handler_count",
 ]
 
+# Features introducidas en Anti-Clanker v1.4.0 (contenido oculto / prompt injection)
+NEW_FEATURES_V140 = [
+    "clanker_hidden_text_count",
+    "clanker_hidden_text_chars",
+    "clanker_hidden_text_ratio",
+    "clanker_hidden_css_count",
+    "clanker_hidden_attr_count",
+    "clanker_hidden_prompt_matches",
+    "clanker_zero_width_count",
+    "clanker_bidi_override_count",
+    "clanker_hidden_lang_other",
+]
+
 # Features introducidas en Anti-Clanker v1.3.0 (motor ClickFix)
 NEW_FEATURES_V130 = [
     "clanker_score_clickfix",
@@ -162,6 +175,9 @@ def main():
     missing_v130 = [f for f in NEW_FEATURES_V130 if f not in clanker_cols]
     if missing_v130:
         print(f"  AVISO: faltan features v1.3.0 en el CSV: {', '.join(missing_v130)}")
+    missing_v140 = [f for f in NEW_FEATURES_V140 if f not in clanker_cols]
+    if missing_v140:
+        print(f"  AVISO: faltan features v1.4.0 en el CSV: {', '.join(missing_v140)}")
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.3, random_state=42, stratify=y)
@@ -213,6 +229,12 @@ def main():
 
     print("  Features v1.3.0 (ClickFix):")
     for name in NEW_FEATURES_V130:
+        if name in clanker_cols:
+            imp = dict(ranked).get(name, 0.0)
+            print(f"    {name:38s} {imp / total:6.2%}")
+
+    print("  Features v1.4.0 (contenido oculto):")
+    for name in NEW_FEATURES_V140:
         if name in clanker_cols:
             imp = dict(ranked).get(name, 0.0)
             print(f"    {name:38s} {imp / total:6.2%}")

@@ -11,6 +11,7 @@ Herramienta de detección de correos maliciosos mediante modelos de aprendizaje 
 - **Detección de QR (v2.0)**: escanea imágenes inline y adjuntas, resuelve redirecciones HTTP/meta/JS y alimenta 9 nuevas features ML
 - **Modelo 10 — Anti-Clanker**: detecta correos generados por LLMs mediante reglas YAML actualizables
 - **Motor ClickFix (v1.3.0)**: detecta el engaño de copiar/pegar PowerShell ofuscado, lo desofusca (Base64/UTF-16LE, `fromCharCode`, `atob`, escapes, concatenación) y extrae la URL/dominio/IP original (C2). Escala a MALICIOSO con alta confianza
+- **Contenido oculto / Prompt injection (v1.4.0)**: detecta instrucciones dirigidas a una IA escondidas al ojo humano (CSS oculto, atributos/metadatos, Unicode invisible/bidi) y las marca. Multi-idioma configurable por el admin
 - Sistema **multiusuario**: admins y usuarios limitados
 - Re-entrenamiento con feedback manual o archivos `.eml`
 - Soporte opcional de **GPU** (CUDA) para el modelo Anti-Clanker
@@ -63,6 +64,7 @@ email-detector/
 │   ├── url_resolver.py     # Resolución de redirecciones HTTP/meta/JS
 │   ├── extract_clanker_features.py  # Features Anti-Clanker
 │   ├── clickfix_decoder.py          # Motor ClickFix (detección, desofuscado, IoCs)
+│   ├── hidden_text.py               # Contenido oculto / prompt injection (multi-idioma)
 │   ├── update_clanker_rules.py      # Auto-actualización de reglas
 │   ├── train_clanker_model.py       # Reentrena solo el Modelo 10 (Anti-Clanker)
 │   ├── retrain_clanker.py           # Orquestador: dataset + reentrenar Anti-Clanker
@@ -96,6 +98,7 @@ Variables principales:
 | `USE_GPU` | `true` para habilitar GPU en Anti-Clanker |
 | `CLANKER_RULES_URL` | URL para auto-actualizar reglas Anti-Clanker |
 | `QR_USE_JS_RESOLVER` | `true` (default) para resolver redirecciones JS con Playwright; `false` para solo HTTP+meta |
+| `HIDDEN_TEXT_LANGS` | Idiomas esperados en contenido oculto (coma). Por defecto `es,en`; el resto sube sospecha |
 
 ## Actualización
 
@@ -262,6 +265,27 @@ El motor ClickFix analiza el cuerpo HTML, el texto plano y los adjuntos
 Las features `clanker_clickfix_*` alimentan el Modelo 10: reentrena el
 Anti-Clanker para que el modelo las aproveche. Las reglas YAML de la categoría
 `clickfix` (CLK-033…CLK-041) se actualizan como el resto de reglas Anti-Clanker.
+
+### Contenido oculto / Prompt injection (v1.4.0)
+
+Detecta prompts maliciosos ocultos al ojo humano dentro del correo:
+
+- **CSS visual**: `display:none`, `visibility:hidden`, `font-size:0`, color igual
+  al fondo, off-screen, `mso-hide:all`, `clip`, `transform:scale(0)`... en
+  estilos inline y reglas `<style>`.
+- **Atributos/metadatos**: `hidden`, `aria-hidden`, `alt`, `title`,
+  `aria-label`, `<title>`, meta description/keywords, `<noscript>`.
+- **Unicode invisible**: zero-width, BOM, soft hyphen y control bidi (RLO/LRO).
+- **Comentarios HTML** (reglas CLK-030/031/032).
+
+Si encuentra un **patrón de prompt injection** en ese texto oculto, **escala a
+MALICIOSO** y muestra el texto, el motivo y la coincidencia. El texto oculto en
+un idioma **no esperado** sube el riesgo (sin forzar MALICIOSO); el texto oculto
+legítimo (p. ej. el *preheader* de marketing) no escala.
+
+Idiomas esperados: opción de admin en *Configuración → Detección → Anti-Clanker*
+o variable `HIDDEN_TEXT_LANGS` en `.env` (por defecto `es,en`). Los patrones se
+amplían por idioma en `config/clanker_rules.yaml` (campo `lang`).
 
 ### Actualizar reglas Anti-Clanker manualmente
 

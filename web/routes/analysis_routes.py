@@ -330,6 +330,7 @@ def register_routes(app):
         att_hashes = md.get("attachment_hashes") or []
         qr_codes = md.get("qr_codes_found") or []
         clickfix = item.get("clickfix") or md.get("clickfix") or {}
+        hidden = item.get("hidden_text") or md.get("hidden_text") or {}
 
         cf_urls = clickfix.get("payload_urls") or []
         cf_domains = clickfix.get("payload_domains") or []
@@ -395,6 +396,17 @@ def register_routes(app):
                 "payload_domains": cf_domains,
                 "payload_ips": cf_ips,
                 "source_attachments": clickfix.get("source_attachments") or [],
+            },
+            "hidden_text": {
+                "detected": bool(hidden.get("hidden_detected")),
+                "high_confidence": bool(hidden.get("high_confidence")),
+                "lang_other": bool(hidden.get("lang_other")),
+                "language": hidden.get("language", ""),
+                "score": hidden.get("score", 0),
+                "entries": hidden.get("entries") or [],
+                "prompt_matches": hidden.get("prompt_matches") or [],
+                "zero_width_count": hidden.get("zero_width_count", 0),
+                "bidi_override_count": hidden.get("bidi_override_count", 0),
             },
         }
         return jsonify(report)

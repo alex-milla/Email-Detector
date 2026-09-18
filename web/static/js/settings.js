@@ -472,6 +472,32 @@
     }
   }
 
+  async function saveHiddenLangs() {
+    var boxes = document.querySelectorAll('.hidden-lang-cb');
+    if (!boxes.length) return;
+    var langs = [];
+    boxes.forEach(function (cb) { if (cb.checked) langs.push(cb.value); });
+    if (!langs.length) {
+      showResult('hidden-langs-result', 'error', 'Selecciona al menos un idioma');
+      return;
+    }
+    showResult('hidden-langs-result', 'loading', '⏳ Guardando...');
+    try {
+      var res = await window.EMD.fetchJSON('/api/settings/global', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ HIDDEN_TEXT_LANGS: langs.join(',') })
+      });
+      if (res.success) {
+        showResult('hidden-langs-result', 'ok', '✓ Idiomas guardados: ' + langs.join(', '));
+      } else {
+        showResult('hidden-langs-result', 'error', 'Error: ' + (res.error || ''));
+      }
+    } catch (e) {
+      showResult('hidden-langs-result', 'error', e.message);
+    }
+  }
+
   /* ── Delegación de acciones ─────────────────────────────────────────────── */
   document.addEventListener('click', function (ev) {
     var btn = ev.target.closest('[data-action]');
@@ -486,6 +512,7 @@
     else if (action === 'clanker-upload') clankerUpload();
     else if (action === 'clanker-save-url') clankerSaveUrl();
     else if (action === 'clanker-update') clankerUpdate();
+    else if (action === 'save-hidden-langs') saveHiddenLangs();
     else if (action === 'ssl-renew') sslRenew();
     else if (action === 'change-password') changePassword(btn.getAttribute('data-user-id'));
     else if (action === 'tfa-setup') tfaSetup();

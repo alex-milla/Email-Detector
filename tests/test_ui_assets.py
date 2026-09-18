@@ -29,6 +29,18 @@ class TestAssets:
         assert "payload_urls" in js
         assert "payload_domains" in js
 
+    def test_dashboard_has_hidden_section(self):
+        js = _read(os.path.join(STATIC, "js", "dashboard.js"))
+        assert "renderHiddenSection" in js
+        assert "hidden_text" in js
+
+    def test_settings_has_hidden_lang_option(self):
+        html = _read(os.path.join(TEMPLATES, "settings.html"))
+        assert 'id="hidden-langs"' in html
+        assert 'save-hidden-langs' in html
+        js = _read(os.path.join(STATIC, "js", "settings.js"))
+        assert "saveHiddenLangs" in js
+
     def test_app_css_has_tokens_and_components(self):
         css = _read(os.path.join(STATIC, "css", "app.css"))
         for token in ("--bg-body", "--accent", "--text-primary"):

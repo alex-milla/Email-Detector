@@ -43,6 +43,13 @@ try:
 except Exception:
     _CLICKFIX_AVAILABLE = False
 
+# Importar motor de contenido oculto / prompt injection (soft-fail)
+try:
+    from hidden_text import extract_hidden_text, extract_hidden_features
+    _HIDDEN_TEXT_AVAILABLE = True
+except Exception:
+    _HIDDEN_TEXT_AVAILABLE = False
+
 # ── Detección de QR (v2.0) — soft-fail si no están disponibles ──
 try:
     from qr_decoder import decode_qr_from_bytes, is_available as qr_available
@@ -659,11 +666,31 @@ def extract_features_from_eml(eml_path):
         "qr_url_length_max":          qr_url_length_max,
     }
 
+    # ── Contenido oculto / prompt injection (una sola pasada) ──
+    hidden_analysis = None
+    if _HIDDEN_TEXT_AVAILABLE:
+        hidden_source = body_html
+        for att in html_attachments:
+            hidden_source += "\n" + att.get("content", "")
+        if hidden_source.strip():
+            try:
+                hidden_analysis = extract_hidden_text(hidden_source)
+                features.update(extract_hidden_features(hidden_analysis))
+            except Exception:
+                hidden_analysis = None
+
     # ── Anti-Clanker features (integradas al vector de entrenamiento) ──
     if _CLANKER_FEATS_AVAILABLE and body_html:
         try:
-            clanker_feats = extract_clanker_features(body_html)
+            clanker_feats = extract_clanker_features(
+                body_html, hidden_result=hidden_analysis)
             features.update(clanker_feats)
+        except TypeError:
+            try:
+                clanker_feats = extract_clanker_features(body_html)
+                features.update(clanker_feats)
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -692,6 +719,7 @@ def extract_features_from_eml(eml_path):
         "auth_summary":       auth_summary,
         "raw_headers":        raw_headers,
         "clickfix":           clickfix_analysis,
+        "hidden_text":        hidden_analysis,
     }
 
     return features, metadata
