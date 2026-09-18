@@ -318,15 +318,17 @@ def register_routes(app):
         if not item:
             return jsonify({"error": "No encontrado"}), 404
 
-        md = item.get("metadata", {})
-        feats = item.get("features", {})
-        vt = item.get("virustotal", {})
-        auth = md.get("auth_results", [])
+        md = item.get("metadata") or {}
+        feats = item.get("features") or {}
+        vt = item.get("virustotal") or {}
+        auth = md.get("auth_results", []) or []
+        auth_summary = md.get("auth_summary") or item.get("auth_analysis") or {}
+        raw_headers = md.get("raw_headers") or {}
 
-        urls = md.get("urls_found", [])
-        attachments = md.get("attachments", [])
-        att_hashes = md.get("attachment_hashes", [])
-        qr_codes = md.get("qr_codes_found", [])
+        urls = md.get("urls_found") or []
+        attachments = md.get("attachments") or []
+        att_hashes = md.get("attachment_hashes") or []
+        qr_codes = md.get("qr_codes_found") or []
 
         iocs = {
             "urls": urls,
@@ -351,18 +353,21 @@ def register_routes(app):
             "model": item.get("model_used", ""),
             "authentication": {
                 "results": auth,
+                "summary": auth_summary,
+                "headers": raw_headers,
                 "spf_pass": feats.get("spf_pass", 0),
                 "dkim_pass": feats.get("dkim_pass", 0),
                 "dmarc_pass": feats.get("dmarc_pass", 0),
                 "arc_pass": feats.get("arc_pass", 0),
             },
+            "auth_analysis": item.get("auth_analysis") or {},
             "indicators": iocs,
             "virustotal": {
-                "malicious_files": vt.get("summary", {}).get("malicious_files", 0),
-                "malicious_urls": vt.get("summary", {}).get("malicious_urls", 0),
-                "total_checked": vt.get("summary", {}).get("total_checked", 0),
+                "malicious_files": (vt.get("summary") or {}).get("malicious_files", 0),
+                "malicious_urls": (vt.get("summary") or {}).get("malicious_urls", 0),
+                "total_checked": (vt.get("summary") or {}).get("total_checked", 0),
             },
-            "entropy": item.get("entropy_analysis", {}),
+            "entropy": item.get("entropy_analysis") or {},
             "attachment_count": len(attachments),
             "url_count": len(urls),
             "qr_count": len(qr_codes),

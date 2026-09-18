@@ -226,6 +226,214 @@ def _scan_email_for_qr_codes(msg):
     return found
 
 
+AUTH_METHODS = ("spf", "dkim", "dmarc", "arc")
+
+_AUTH_METHOD_RE = re.compile(
+    r'\b(spf|dkim|dmarc|arc)\s*=\s*([a-z]+)', re.IGNORECASE
+)
+
+_AUTH_DOMAIN_PATTERNS = (
+    re.compile(r'header\.d\s*=\s*([^;\s()]+)', re.IGNORECASE),
+    re.compile(r'header\.i\s*=\s*@?([^;\s()]+)', re.IGNORECASE),
+    re.compile(r'header\.from\s*=\s*@?([^;\s()]+)', re.IGNORECASE),
+    re.compile(r'smtp\.mailfrom\s*=\s*([^;\s()]+)', re.IGNORECASE),
+    re.compile(r'smtp\.helo\s*=\s*([^;\s()]+)', re.IGNORECASE),
+    re.compile(r'\bdomain\s+of\s+([^;\s()]+)', re.IGNORECASE),
+    re.compile(r'envelope-from\s*=?\s*([^;\s()]+)', re.IGNORECASE),
+    re.compile(r'\bdomain\s*=\s*([^;\s()]+)', re.IGNORECASE),
+    re.compile(r'\bhelo\s*=\s*([^;\s()]+)', re.IGNORECASE),
+)
+
+_AUTH_RESULT_SEVERITY = {
+    "fail": 6, "permerror": 5, "temperror": 4, "softfail": 3,
+    "policy": 2, "neutral": 1, "none": 0, "pass": -1,
+}
+
+
+def _clean_auth_value(value):
+    value = (value or "").strip().strip('"').strip("'")
+    return value.rstrip(";,.")
+
+
+def _extract_auth_domain(token):
+    for pattern in _AUTH_DOMAIN_PATTERNS:
+        match = pattern.search(token)
+        if match:
+            domain = _clean_auth_value(match.group(1))
+            domain = domain.split("@")[-1]
+            if domain:
+                return domain
+    return ""
+
+
+def _parse_authentication_results(raw_headers):
+    """Parsea cabeceras Authentication-Results de forma tolerante.
+
+    Devuelve una lista de dicts con method/result/server/domain/raw.
+    """
+    details = []
+    for hdr in raw_headers:
+        text = str(hdr)
+        tokens = text.split(";")
+        server = tokens[0].strip() if tokens else ""
+        seen_in_header = set()
+        for token in tokens[1:]:
+            for match in _AUTH_METHOD_RE.finditer(token):
+                method = match.group(1).lower()
+                result = match.group(2).lower()
+                domain = _extract_auth_domain(token)
+                key = (method, result, domain)
+                if key in seen_in_header:
+                    continue
+                seen_in_header.add(key)
+                details.append({
+                    "method": method,
+                    "result": result,
+                    "server": server,
+                    "domain": domain,
+                    "raw": token.strip()[:500],
+                })
+    return details
+
+
+def _parse_received_spf(raw_headers):
+    """Extrae resultado/dominio de las cabeceras Received-SPF."""
+    details = []
+    for hdr in raw_headers:
+        text = str(hdr)
+        first = text.split(";")[0].strip()
+        result = first.split()[0].lower() if first else ""
+        if not result:
+            continue
+        domain = _extract_auth_domain(text)
+        details.append({
+            "method": "spf",
+            "result": result,
+            "server": "",
+            "domain": domain,
+            "raw": text.strip()[:500],
+        })
+    return details
+
+
+def _parse_dkim_signatures(raw_headers):
+    """Extrae firmas DKIM presentes (dominio y selector) como respaldo."""
+    details = []
+    for hdr in raw_headers:
+        text = str(hdr)
+        domain_match = re.search(r'\bd\s*=\s*([^;\s]+)', text)
+        selector_match = re.search(r'\bs\s*=\s*([^;\s]+)', text)
+        domain = _clean_auth_value(domain_match.group(1)) if domain_match else ""
+        selector = _clean_auth_value(selector_match.group(1)) if selector_match else ""
+        details.append({
+            "method": "dkim",
+            "result": "present",
+            "server": "",
+            "domain": domain,
+            "selector": selector,
+            "raw": text.strip()[:500],
+        })
+    return details
+
+
+def _build_auth_summary(details):
+    """Resume el mejor/peor resultado por método para mostrar en la UI."""
+    summary = {}
+    for method in AUTH_METHODS:
+        entries = [d for d in details if d.get("method") == method]
+        if not entries:
+            summary[method] = {"present": False, "result": "", "domain": ""}
+            continue
+        worst = min(
+            entries,
+            key=lambda d: _AUTH_RESULT_SEVERITY.get(d.get("result", ""), 0),
+        )
+        result = worst.get("result", "")
+        domain = worst.get("domain") or next(
+            (d.get("domain") for d in entries if d.get("domain")), ""
+        )
+        summary[method] = {
+            "present": True,
+            "result": result,
+            "domain": domain,
+            "pass": 1 if result == "pass" else 0,
+            "fail": 1 if result in ("fail", "softfail", "permerror") else 0,
+        }
+    present = [m for m in AUTH_METHODS if summary[m]["present"]]
+    summary["present"] = bool(present)
+    summary["any_fail"] = any(summary[m].get("fail") for m in AUTH_METHODS)
+    summary["all_pass"] = all(
+        summary[m].get("pass") for m in ("spf", "dkim", "dmarc")
+        if summary[m]["present"]
+    ) and bool(summary["spf"]["present"] and summary["dkim"]["present"]
+              and summary["dmarc"]["present"])
+    return summary
+
+
+def _collect_raw_headers(msg, max_value_len=2000, max_per_name=3):
+    """Recopila cabeceras relevantes (acotadas) para auditoría del correo."""
+    names = (
+        "Authentication-Results", "Received-SPF", "DKIM-Signature",
+        "ARC-Seal", "ARC-Message-Signature", "ARC-Authentication-Results",
+        "Return-Path", "Reply-To", "Received",
+    )
+    collected = {}
+    for name in names:
+        values = msg.get_all(name) or []
+        trimmed = [str(v)[:max_value_len] for v in values[:max_per_name]]
+        if trimmed:
+            collected[name] = trimmed
+    return collected
+
+
+def _parse_auth_headers(msg):
+    """Devuelve (auth_detail, auth_summary, flags) desde las cabeceras."""
+    ar_headers = msg.get_all("Authentication-Results") or []
+    rspf_headers = msg.get_all("Received-SPF") or []
+    dkim_headers = msg.get_all("DKIM-Signature") or []
+
+    details = _parse_authentication_results(ar_headers)
+    details += _parse_received_spf(rspf_headers)
+
+    arc_seal = msg.get("ARC-Seal") or ""
+    arc_msg = msg.get("ARC-Message-Signature") or ""
+    arc_auth = msg.get("ARC-Authentication-Results") or ""
+    has_arc_headers = bool(arc_seal or arc_msg or arc_auth)
+    if has_arc_headers and "cv=pass" in str(arc_seal).lower():
+        details.append({
+            "method": "arc", "result": "pass", "server": "",
+            "domain": "", "raw": "cv=pass",
+        })
+
+    summary = _build_auth_summary(details)
+
+    # Respaldo: firmas DKIM sin resultado en Authentication-Results
+    if dkim_headers and not any(d["method"] == "dkim" for d in details):
+        present = _parse_dkim_signatures(dkim_headers)
+        details.extend(present)
+        dk = next(
+            (d for d in present if d.get("domain")),
+            present[0],
+        )
+        summary["dkim"] = {
+            "present": True,
+            "result": "present",
+            "domain": dk.get("domain", ""),
+            "pass": 0,
+            "fail": 0,
+        }
+
+    flags = {
+        "spf_pass": 1 if summary["spf"].get("pass") else 0,
+        "dkim_pass": 1 if summary["dkim"].get("pass") else 0,
+        "dmarc_pass": 1 if summary["dmarc"].get("pass") else 0,
+        "arc_pass": 1 if summary["arc"].get("pass") else (
+            1 if "cv=pass" in str(arc_seal).lower() else 0
+        ),
+    }
+    return details, summary, flags
+
+
 def extract_features_from_eml(eml_path):
     """
     FUNCIÓN PRINCIPAL: lee un archivo .eml y devuelve un diccionario
@@ -344,45 +552,12 @@ def extract_features_from_eml(eml_path):
             urls.append(u)
 
     # ── Cabeceras de autenticación (SPF, DKIM, DMARC, ARC) ──
-    spf_pass = 0
-    dkim_pass = 0
-    dmarc_pass = 0
-    arc_pass = 0
-    auth_detail = []
-    raw_auth_headers = msg.get_all("Authentication-Results") or []
-    for hdr in raw_auth_headers:
-        hdr_lower = hdr.lower()
-        parts = hdr_lower.split(";")
-        server = parts[0].strip() if parts else ""
-        for part in parts[1:]:
-            part = part.strip()
-            if part.startswith("spf="):
-                val = part.split("=", 1)[1].split()[0].strip()
-                if val == "pass":
-                    spf_pass = 1
-                auth_detail.append({"method": "spf", "result": val, "server": server})
-            elif part.startswith("dkim="):
-                val = part.split("=", 1)[1].split()[0].strip()
-                if val == "pass":
-                    dkim_pass = 1
-                auth_detail.append({"method": "dkim", "result": val, "server": server})
-            elif part.startswith("dmarc="):
-                val = part.split("=", 1)[1].split()[0].strip()
-                if val == "pass":
-                    dmarc_pass = 1
-                auth_detail.append({"method": "dmarc", "result": val, "server": server})
-            elif part.startswith("arc="):
-                val = part.split("=", 1)[1].split()[0].strip()
-                if val == "pass":
-                    arc_pass = 1
-                auth_detail.append({"method": "arc", "result": val, "server": server})
-    # ARC también puede venir en cabeceras específicas ARC-Seal, ARC-Message
-    arc_seal = msg.get("ARC-Seal", "") or ""
-    arc_msg = msg.get("ARC-Message", "") or ""
-    arc_auth = msg.get("ARC-Authentication-Results", "") or ""
-    has_arc_headers = 1 if (arc_seal or arc_msg or arc_auth) else 0
-    if has_arc_headers and "cv=pass" in arc_seal.lower():
-        arc_pass = 1
+    auth_detail, auth_summary, auth_flags = _parse_auth_headers(msg)
+    spf_pass = auth_flags["spf_pass"]
+    dkim_pass = auth_flags["dkim_pass"]
+    dmarc_pass = auth_flags["dmarc_pass"]
+    arc_pass = auth_flags["arc_pass"]
+    raw_headers = _collect_raw_headers(msg)
 
     # ── Anomalías en cabeceras ──
     header_anomalies  = 0
@@ -476,6 +651,8 @@ def extract_features_from_eml(eml_path):
         "body_html":          body_html,
         "qr_codes_found":     qr_codes,
         "auth_results":       auth_detail,
+        "auth_summary":       auth_summary,
+        "raw_headers":        raw_headers,
     }
 
     return features, metadata

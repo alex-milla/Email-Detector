@@ -153,21 +153,7 @@
       feedbackBarHtml(dbId, fb);
 
     // Autenticación
-    var auth = md.auth_results;
-    if (auth && auth.length > 0) {
-      var seen = {};
-      var authHtml = '';
-      auth.forEach(function (a) {
-        var key = a.method + a.result;
-        if (seen[key]) return;
-        seen[key] = true;
-        authHtml += authBadge(a.method, a.result) + ' ';
-      });
-      if (r.features && r.features.arc_pass !== undefined) {
-        authHtml += authBadge('ARC', r.features.arc_pass ? 'pass' : 'none');
-      }
-      html += '<div class="detail-section"><h4>🔐 Autenticación</h4><div class="detail-item">' + authHtml + '</div></div>';
-    }
+    html += renderAuthSection(md.auth_results, md.auth_summary, r.auth_analysis, md.raw_headers);
 
     // Entropía
     html += '<div class="detail-section"><h4>📊 Análisis de entropía</h4><div class="detail-grid">' +
@@ -253,10 +239,75 @@
     window.EMD.openModal('detailModal');
   }
 
+  var AUTH_ORDER = ['spf', 'dkim', 'dmarc', 'arc'];
+
+  function authResultClass(result) {
+    var r = String(result || '').toLowerCase();
+    if (r === 'pass') return 'pred-benigno';
+    if (r === 'fail' || r === 'softfail' || r === 'permerror' || r === 'temperror') return 'pred-malicioso';
+    return 'risk-MEDIO';
+  }
+  function authResultIcon(result) {
+    var r = String(result || '').toLowerCase();
+    if (r === 'pass') return '✅';
+    if (r === 'present') return '✍️';
+    if (r === '' || r === 'none') return '➖';
+    return '❌';
+  }
   function authBadge(method, result) {
-    var cls = result === 'pass' ? 'pred-benigno' : (result === 'fail' ? 'pred-malicioso' : 'risk-MEDIO');
-    var icon = result === 'pass' ? '✅' : (result === 'fail' ? '❌' : '⚠️');
-    return '<span class="risk-badge ' + cls + '">' + icon + ' ' + String(method).toUpperCase() + '=' + escapeHtml(result) + '</span>';
+    var cls = authResultClass(result);
+    var icon = authResultIcon(result);
+    return '<span class="risk-badge ' + cls + '">' + icon + ' ' + String(method).toUpperCase() + '=' + escapeHtml(result || 'none') + '</span>';
+  }
+  function renderAuthBadges(summary) {
+    var out = '';
+    AUTH_ORDER.forEach(function (m) {
+      var s = summary && summary[m];
+      if (!s || !s.present) return;
+      out += authBadge(m, s.result);
+    });
+    return out;
+  }
+  function renderRawHeaders(headers) {
+    if (!headers || !Object.keys(headers).length) return '';
+    var body = '';
+    Object.keys(headers).forEach(function (name) {
+      body += '<div class="header-row"><div class="header-name">' + escapeHtml(name) + '</div>';
+      (headers[name] || []).forEach(function (v) {
+        body += '<pre class="header-value">' + escapeHtml(v) + '</pre>';
+      });
+      body += '</div>';
+    });
+    return '<details class="headers-block"><summary>Ver cabeceras de autenticación</summary>' + body + '</details>';
+  }
+  function renderAuthSection(details, summary, analysis, rawHeaders) {
+    details = details || [];
+    var html = '<div class="detail-section"><h4>🔐 Autenticación</h4>';
+    var badges = renderAuthBadges(summary);
+    if (badges) {
+      html += '<div class="auth-badges">' + badges + '</div>';
+    } else if (!details.length) {
+      html += '<div class="faint text-sm">Sin cabeceras de autenticación (SPF/DKIM/DMARC)</div>';
+    }
+    if (details.length) {
+      html += '<table class="auth-table"><thead><tr>' +
+        '<th>Método</th><th>Resultado</th><th>Dominio</th><th>Servidor</th>' +
+        '</tr></thead><tbody>';
+      details.forEach(function (d) {
+        html += '<tr><td>' + escapeHtml(String(d.method || '').toUpperCase()) + '</td>' +
+          '<td>' + authResultIcon(d.result) + ' ' + escapeHtml(d.result || '') + '</td>' +
+          '<td class="faint">' + (escapeHtml(d.domain) || '—') + '</td>' +
+          '<td class="faint clip-sm">' + (escapeHtml(d.server) || '—') + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+    var warnings = (analysis && analysis.warnings) || [];
+    if (warnings.length) {
+      html += '<div class="alert alert-error mt-1">⚠️ ' + warnings.map(escapeHtml).join('<br>⚠️ ') + '</div>';
+    }
+    html += renderRawHeaders(rawHeaders);
+    html += '</div>';
+    return html;
   }
   function detailItem(label, value) {
     return '<div class="detail-item"><div class="label">' + label + '</div><div class="value">' + (value === undefined || value === null ? '-' : value) + '</div></div>';
@@ -287,7 +338,7 @@
   }
 
   function renderReportModal(r) {
-    var authIcon = function (v) { return v == 1 ? '✅' : '❌'; };
+    var auth = r.authentication || {};
     var iocSection = function (title, items, fn) {
       if (!items || !items.length) return '';
       return '<div class="mt-1"><strong class="muted text-sm">' + title + ':</strong>' + items.map(fn).join('') + '</div>';
@@ -310,16 +361,11 @@
           '<span class="risk-badge risk-' + escapeHtml(r.risk_level) + '">' + escapeHtml(r.risk_level) + ' — ' + r.risk_score + '%</span>' +
         '</div></div>' +
       '</div>' +
-      '<div class="detail-section"><h4>🔐 Autenticación</h4><div class="detail-grid">' +
-        '<span>SPF ' + authIcon(r.authentication.spf_pass) + '</span>' +
-        '<span>DKIM ' + authIcon(r.authentication.dkim_pass) + '</span>' +
-        '<span>DMARC ' + authIcon(r.authentication.dmarc_pass) + '</span>' +
-        '<span>ARC ' + authIcon(r.authentication.arc_pass) + '</span>' +
-      '</div></div>' +
+      renderAuthSection(auth.results, auth.summary, r.auth_analysis, auth.headers) +
       '<div class="detail-section"><h4>🛡️ VirusTotal</h4><div class="text-sm">' +
-        'Archivos maliciosos: <strong>' + r.virustotal.malicious_files + '</strong><br>' +
-        'URLs maliciosas: <strong>' + r.virustotal.malicious_urls + '</strong><br>' +
-        'Consultas: ' + (r.virustotal.total_checked || 0) +
+        'Archivos maliciosos: <strong>' + ((r.virustotal || {}).malicious_files || 0) + '</strong><br>' +
+        'URLs maliciosas: <strong>' + ((r.virustotal || {}).malicious_urls || 0) + '</strong><br>' +
+        'Consultas: ' + ((r.virustotal || {}).total_checked || 0) +
       '</div></div>' +
       '<div class="detail-section"><h4>🔗 Indicadores (IoCs)</h4>' +
         (urlsHtml + hashesHtml + domainsHtml || '<span class="faint text-sm">Sin indicadores extraídos</span>') +

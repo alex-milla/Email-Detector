@@ -67,10 +67,16 @@ def _load_checksums():
 
 
 def load_all_models(metadata):
-    available = metadata.get("models_available", [])
+    available = metadata.get("models_available") or []
     disabled  = get_disabled_models()
     loaded    = {}
     checksums = _load_checksums()
+
+    if not available:
+        logger.warning(
+            "model_metadata.json no define 'models_available'; "
+            "se usará el modelo base si existe"
+        )
 
     if os.path.isdir(ALL_MODELS_DIR):
         for name in available:
@@ -92,8 +98,16 @@ def load_all_models(metadata):
                     logger.warning("%s: %s", name, e)
     if not loaded and os.path.exists(MODEL_PATH):
         active = [n for n in available if n not in disabled]
-        name   = active[0] if active else available[0]
-        loaded[name] = joblib.load(MODEL_PATH)
+        if active:
+            name = active[0]
+        elif available:
+            name = available[0]
+        else:
+            name = "email_classifier"
+        try:
+            loaded[name] = joblib.load(MODEL_PATH)
+        except Exception as e:
+            logger.warning("Modelo base '%s': %s", name, e)
     return loaded
 
 
@@ -141,6 +155,73 @@ def _clanker_predict(html_raw: str, weight: float = 0.15) -> dict:
         return {"model": "anti_clanker", "score": 0.0, "available": False}
 
 
+def _get_auth_risk_weight():
+    try:
+        return max(0.0, min(2.0, float(os.getenv("AUTH_RISK_WEIGHT", "1.0"))))
+    except (TypeError, ValueError):
+        return 1.0
+
+
+def _analyze_auth(auth_summary, ml_prob, threshold, vt_alert):
+    """
+    Complementa la detección con el resultado de SPF/DKIM/DMARC.
+
+    Devuelve avisos y una penalización de riesgo. Solo promueve a
+    MALICIOSO cuando ya hay indicios previos (VT o probabilidad ML
+    elevada) y existe un fallo duro de autenticación.
+    """
+    summary = auth_summary or {}
+    weight = _get_auth_risk_weight()
+    warnings = []
+
+    if not summary.get("present"):
+        return {
+            "present": False,
+            "warnings": ["Sin cabeceras de autenticación (SPF/DKIM/DMARC)"],
+            "risk_penalty": 0.0,
+            "spf_fail": False,
+            "dkim_fail": False,
+            "dmarc_fail": False,
+            "force_malicious": False,
+        }
+
+    spf = summary.get("spf", {}) or {}
+    dkim = summary.get("dkim", {}) or {}
+    dmarc = summary.get("dmarc", {}) or {}
+
+    dmarc_fail = dmarc.get("result") in ("fail", "permerror", "softfail")
+    spf_fail = spf.get("result") in ("fail", "softfail", "permerror")
+    dkim_fail = dkim.get("result") in ("fail", "permerror")
+
+    penalty = 0.0
+    if dmarc_fail:
+        penalty += 15.0
+        warnings.append(f"DMARC no superado ({dmarc.get('result', 'fail')})")
+    if spf_fail and dkim_fail:
+        penalty += 10.0
+        warnings.append("SPF y DKIM fallan simultáneamente")
+    elif spf_fail or dkim_fail:
+        penalty += 5.0
+        method = "SPF" if spf_fail else "DKIM"
+        warnings.append(f"{method} no superado")
+    if not dmarc.get("present"):
+        warnings.append("Sin verificación DMARC en las cabeceras")
+
+    penalty *= weight
+    already_suspicious = bool(vt_alert or ml_prob >= max(0.2, threshold * 0.5))
+    force_malicious = bool(already_suspicious and (dmarc_fail or (spf_fail and dkim_fail)))
+
+    return {
+        "present": True,
+        "warnings": warnings,
+        "risk_penalty": round(penalty, 2),
+        "spf_fail": spf_fail,
+        "dkim_fail": dkim_fail,
+        "dmarc_fail": dmarc_fail,
+        "force_malicious": force_malicious,
+    }
+
+
 def predict_email(eml_path, use_virustotal=True):
     logger.info("Analizando: %s", os.path.basename(eml_path))
     features, meta_eml = extract_features_from_eml(eml_path)
@@ -156,7 +237,10 @@ def predict_email(eml_path, use_virustotal=True):
     n_models    = len(models_dict)
 
     if n_models == 0:
-        return {"error": "No hay modelos habilitados. Habilita al menos uno en /training."}
+        return {
+            "error": "No hay modelos disponibles. Revisa models/model_metadata.json "
+                     "(campo 'models_available') o entrena en /training."
+        }
 
     logger.info("Modelos activos: %d (%s)", n_models, ", ".join(models_dict.keys()))
     proba, individual = ensemble_predict(models_dict, features, model_meta)
@@ -185,6 +269,17 @@ def predict_email(eml_path, use_virustotal=True):
     risk  = proba[1] * 100
     if vt_alert:
         risk = max(risk, 90)
+
+    # ── Autenticación (SPF/DKIM/DMARC): complementa la detección ──
+    auth_analysis = _analyze_auth(
+        meta_eml.get("auth_summary", {}),
+        float(proba[1]), threshold, vt_alert,
+    )
+    if auth_analysis.get("risk_penalty"):
+        risk = min(100.0, risk + auth_analysis["risk_penalty"])
+    if auth_analysis.get("force_malicious") and final == "BENIGNO":
+        final = "MALICIOSO"
+    # ─────────────────────────────────────────────────────────────────
 
     if   risk >= 80: level = "CRITICO"
     elif risk >= 60: level = "ALTO"
@@ -217,11 +312,16 @@ def predict_email(eml_path, use_virustotal=True):
             "attachment_content_entropy_max": features.get("attachment_content_entropy_max", 0),
         },
         "virustotal": vt_results,
+        "auth_analysis": auth_analysis,
         "features":   features,
         "metadata": {
-            "urls_found":      meta_eml.get("urls_found", []),
-            "attachments":     meta_eml.get("attachments", []),
-            "qr_codes_found":  meta_eml.get("qr_codes_found", []),
+            "urls_found":        meta_eml.get("urls_found", []),
+            "attachments":       meta_eml.get("attachments", []),
+            "attachment_hashes": meta_eml.get("attachment_hashes", []),
+            "qr_codes_found":    meta_eml.get("qr_codes_found", []),
+            "auth_results":      meta_eml.get("auth_results", []),
+            "auth_summary":      meta_eml.get("auth_summary", {}),
+            "raw_headers":       meta_eml.get("raw_headers", {}),
         },
     }
     logger.info("Resultado: %s  Riesgo: %s (%.1f%%)", final, level, risk)
